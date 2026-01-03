@@ -89,7 +89,13 @@
         <select id="aCat"></select>
       </div>
 
-      <div class="muted small">اختر 3 صور (بالضبط)</div>
+      <!-- مهم: زر صغير لتحديث الأصناف لو كانت فاضية -->
+      <div class="row actions" style="margin-top:10px">
+        <button id="btnReloadCats" class="ghost" type="button">تحديث الأصناف</button>
+        <div id="catsHint" class="muted small"></div>
+      </div>
+
+      <div class="muted small" style="margin-top:10px">اختر 3 صور (بالضبط)</div>
       <input id="aImages" type="file" accept="image/*" multiple />
       <div id="imgPreview" class="preview"></div>
 
@@ -123,8 +129,7 @@
       </div>
 
       <div class="row">
-        <!-- ✅ نوع الإيميل لتقليل invalid-email -->
-        <input id="email" type="email" placeholder="Email" autocomplete="email" />
+        <input id="email" placeholder="Email" autocomplete="email" />
       </div>
 
       <div class="row" style="margin-top:10px">
