@@ -4,14 +4,13 @@ import { escapeHtml, formatPrice } from "./utils.js";
 
 import {
   collection,
-  doc,
   getDoc,
   getDocs,
+  doc,
   limit,
   orderBy,
   query,
-  startAfter,
-  where
+  startAfter
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 export function initListings(){
@@ -25,86 +24,95 @@ export function initListings(){
   };
 }
 
-async function openDetails(id, data=null, fromHash=false){
-  // إذا جاي من قائمة وفيه data جاهز
-  let listing = data;
-
-  // إذا جاي من رابط أو data = null -> جيبها من Firestore
-  if (!listing){
-    const ref = doc(db, "listings", id);
-    const snap = await getDoc(ref);
-    if (!snap.exists()){
-      alert("الإعلان غير موجود أو تم حذفه.");
-      return;
+/**
+ * openDetails يدعم حالتين:
+ * 1) openDetails(id, data) من الكارد (data موجود)
+ * 2) openDetails(id, null, true) من رابط hash => يجلب الداتا من Firestore
+ */
+async function openDetails(id, data = null, fromHash = false){
+  try{
+    if (!data){
+      const snap = await getDoc(doc(db, "listings", id));
+      if (!snap.exists()) return alert("الإعلان غير موجود أو تم حذفه.");
+      data = snap.data();
     }
-    listing = snap.data();
-  }
 
-  UI.state.currentListing = { id, ...listing };
+    UI.state.currentListing = { id, ...data };
 
-  // افتح صفحة التفاصيل كاملة
-  UI.showDetailsPage();
+    // افتح صفحة التفاصيل كاملة (مو بطاقة تحت)
+    UI.showDetailsPage();
 
-  UI.renderGallery(listing.images || []);
-  UI.el.dTitle.textContent = listing.title || "";
-  UI.el.dMeta.textContent = `${listing.city || ""} • ${listing.category || ""}`;
-  UI.el.dPrice.textContent = formatPrice(listing.price, listing.currency);
-  UI.el.dDesc.textContent = listing.description || "";
+    UI.renderGallery(data.images || []);
+    UI.el.dTitle.textContent = data.title || "";
+    UI.el.dMeta.textContent = `${data.city || ""} • ${data.category || ""}`;
+    UI.el.dPrice.textContent = formatPrice(data.price, data.currency);
+    UI.el.dDesc.textContent = data.description || "";
 
-  // لو مش من hash، حط hash ليسهل مشاركة/رجعة
-  if (!fromHash){
-    history.replaceState(null, "", `#listing=${encodeURIComponent(id)}`);
+    // ثبّت رابط المشاركة (اختياري) عبر hash
+    if (!fromHash){
+      const newHash = `#listing=${encodeURIComponent(id)}`;
+      if (location.hash !== newHash) history.replaceState(null, "", newHash);
+    }
+  }catch(e){
+    alert(e?.message || "فشل فتح الإعلان");
   }
 }
 
-async function loadListings(reset=true){
+/**
+ * ✅ بدون where() نهائياً => ما في Index
+ * - نجيب آخر الإعلانات حسب createdAt
+ * - نفلتر محلياً: isActive + keyword + (city/category عند تطبيق)
+ */
+async function loadListings(reset = true){
   if (reset){
     UI.el.listings.innerHTML = "";
     UI.state.lastDoc = null;
     UI.el.btnMore.disabled = false;
   }
 
-  // ✅ دائماً نظهر فقط الفعّالة
-  const wh = [ where("isActive","==",true) ];
-
-  // ✅ keyword search محلي
-  const keyword = (UI.el.qSearch.value || "").trim().toLowerCase();
-
-  // ✅ city/category filters فقط بعد Apply
-  if (UI.state.filtersActive){
-    if (UI.el.cityFilter.value) wh.push(where("city","==", UI.el.cityFilter.value));
-    if (UI.el.catFilter.value) wh.push(where("category","==", UI.el.catFilter.value));
-  }
-
   let qy = query(
-    collection(db,"listings"),
-    ...wh,
-    orderBy("createdAt","desc"),
-    limit(10)
+    collection(db, "listings"),
+    orderBy("createdAt", "desc"),
+    limit(12)
   );
 
   if (UI.state.lastDoc){
     qy = query(
-      collection(db,"listings"),
-      ...wh,
-      orderBy("createdAt","desc"),
+      collection(db, "listings"),
+      orderBy("createdAt", "desc"),
       startAfter(UI.state.lastDoc),
-      limit(10)
+      limit(12)
     );
   }
 
   const snap = await getDocs(qy);
 
   if (snap.docs.length){
-    UI.state.lastDoc = snap.docs[snap.docs.length-1];
+    UI.state.lastDoc = snap.docs[snap.docs.length - 1];
   }else{
     if (!reset) UI.el.btnMore.disabled = true;
   }
 
+  // فلاتر محلية
+  const keyword = (UI.el.qSearch.value || "").trim().toLowerCase();
+
+  const useFilters = !!UI.state.filtersActive;
+  const cityVal = useFilters ? (UI.el.cityFilter.value || "") : "";
+  const catVal  = useFilters ? (UI.el.catFilter.value || "") : "";
+
+  let added = 0;
+
   snap.forEach(ds=>{
     const data = ds.data();
 
-    // فلترة محلية بالكلمة
+    // ✅ فقط الفعّال
+    if (data.isActive === false) return;
+
+    // ✅ فلترة مدينة/صنف فقط بعد "تطبيق"
+    if (cityVal && data.city !== cityVal) return;
+    if (catVal && data.category !== catVal) return;
+
+    // ✅ كلمة البحث (عنوان/وصف)
     if (keyword){
       const t = String(data.title || "").toLowerCase();
       const d = String(data.description || "").toLowerCase();
@@ -130,7 +138,11 @@ async function loadListings(reset=true){
     card.querySelector("button").onclick = () => openDetails(ds.id, data);
 
     UI.el.listings.appendChild(card);
+    added++;
   });
 
   UI.setEmptyState(UI.el.listings.children.length === 0);
+
+  // إذا ما أضفنا شي بسبب فلترة محلية، زر المزيد يبقى شغال لأنه ممكن الصفحة التالية فيها نتائج
+  // (بس إذا ما في docs أصلاً سكّرناه فوق)
 }
