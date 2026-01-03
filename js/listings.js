@@ -1,50 +1,38 @@
-import { db } from "./firebase.js";
+import { db, auth } from "./firebase.js";
 import { UI } from "./ui.js";
 import { escapeHtml, formatPrice } from "./utils.js";
-import {
-  collection, getDocs, limit, orderBy, query, startAfter, where
-} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-/**
- * سلوك مثل Marktplaats:
- * - الافتراضي: كل الإعلانات (بدون فلترة مدينة/صنف)
- * - البحث: فلترة محلية على النتائج
- * - زر "تطبيق": يفعّل فلترة city/category
- */
-let filtersApplied = false;
+import {
+  collection, getDocs, limit, orderBy, query, startAfter, where, doc, deleteDoc
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 export function initListings(){
   UI.actions.loadListings = loadListings;
   UI.actions.openAdd = openAdd;
   UI.actions.openDetails = openDetails;
 
-  // زر تطبيق = تفعيل فلترة المدينة/الصنف
-  const oldApply = UI.el.btnApply.onclick;
-  UI.el.btnApply.onclick = () => {
-    filtersApplied = true;
-    UI.actions.loadListings(true);
-    if (oldApply && oldApply !== UI.el.btnApply.onclick) oldApply();
-  };
-
-  // زر مسح = رجوع للعرض العام + مسح البحث
-  const oldReset = UI.el.btnReset.onclick;
-  UI.el.btnReset.onclick = () => {
-    filtersApplied = false;
-    UI.el.cityFilter.value = "";
-    UI.el.catFilter.value = "";
-    UI.el.qSearch.value = "";
-    UI.actions.loadListings(true);
-    if (oldReset && oldReset !== UI.el.btnReset.onclick) oldReset();
-  };
-
-  // زر المراسلة من التفاصيل
   UI.el.btnChat.onclick = () => {
     if (!UI.state.currentListing) return;
     UI.actions.openChat(UI.state.currentListing.id, UI.state.currentListing.title);
   };
 
-  // أول ما يفتح الموقع: عرض عام
-  filtersApplied = false;
+  // ✅ زر حذف الإعلان
+  UI.el.btnDelete.onclick = async () => {
+    const listing = UI.state.currentListing;
+    if (!listing) return;
+
+    const ok = confirm("⚠️ هل أنت متأكد من حذف الإعلان؟ لا يمكن التراجع.");
+    if (!ok) return;
+
+    try{
+      await deleteDoc(doc(db, "listings", listing.id));
+      alert("تم حذف الإعلان ✅");
+      UI.hide(UI.el.details);
+      await UI.actions.loadListings(true);
+    }catch(e){
+      alert(e?.message || "فشل حذف الإعلان");
+    }
+  };
 }
 
 function openAdd(){
@@ -65,6 +53,13 @@ function openDetails(id, data){
   UI.el.dMeta.textContent = `${data.city || ""} • ${data.category || ""}`;
   UI.el.dPrice.textContent = formatPrice(data.price, data.currency);
   UI.el.dDesc.textContent = data.description || "";
+
+  // ✅ إظهار زر الحذف فقط لصاحب الإعلان
+  if (auth.currentUser && auth.currentUser.uid === data.ownerId){
+    UI.show(UI.el.btnDelete);
+  } else {
+    UI.hide(UI.el.btnDelete);
+  }
 }
 
 async function loadListings(reset=true){
@@ -74,14 +69,9 @@ async function loadListings(reset=true){
     UI.el.btnMore.disabled = false;
   }
 
-  // ✅ الافتراضي: كل الإعلانات (فقط isActive + orderBy createdAt)
   const wh = [ where("isActive","==",true) ];
-
-  // ✅ لا نضيف فلترة city/category إلا إذا المستخدم ضغط "تطبيق"
-  if (filtersApplied){
-    if (UI.el.cityFilter.value) wh.push(where("city","==", UI.el.cityFilter.value));
-    if (UI.el.catFilter.value) wh.push(where("category","==", UI.el.catFilter.value));
-  }
+  if (UI.el.cityFilter.value) wh.push(where("city","==", UI.el.cityFilter.value));
+  if (UI.el.catFilter.value) wh.push(where("category","==", UI.el.catFilter.value));
 
   let qy = query(collection(db,"listings"), ...wh, orderBy("createdAt","desc"), limit(10));
   if (UI.state.lastDoc){
@@ -92,46 +82,37 @@ async function loadListings(reset=true){
   if (snap.docs.length) UI.state.lastDoc = snap.docs[snap.docs.length-1];
 
   const keyword = (UI.el.qSearch.value || "").trim().toLowerCase();
-  let addedNow = 0;
+  let added = 0;
 
   snap.forEach(ds=>{
     const data = ds.data();
 
-    // ✅ البحث يبقى محلي فقط
+    // فلترة بحث محلية
     if (keyword){
       const t = String(data.title || "").toLowerCase();
       const d = String(data.description || "").toLowerCase();
       if (!t.includes(keyword) && !d.includes(keyword)) return;
     }
 
-    const imgs = Array.isArray(data.images) ? data.images : [];
-    const img0 = imgs[0] || "";
-
+    const img = (data.images && data.images[0]) ? data.images[0] : "";
     const card = document.createElement("div");
     card.className = "cardItem";
-
-    // كرت بسيط + صورة أولى (الأسهم بس رح نعملها بالتفاصيل)
     card.innerHTML = `
-      <img src="${img0}" alt="" />
+      <img src="${img}" alt="" />
       <div class="p">
         <div class="t">${escapeHtml(data.title || "بدون عنوان")}</div>
         <div class="m">${escapeHtml(data.city||"")} • ${escapeHtml(data.category||"")}</div>
         <div class="pr">${escapeHtml(formatPrice(data.price, data.currency))}</div>
-        <button class="secondary">عرض الإعلان</button>
+        <button class="secondary">عرض</button>
       </div>
     `;
-
-    // ✅ فتح التفاصيل عند الضغط على الزر أو على الكرت
-    const open = () => openDetails(ds.id, data);
-    card.querySelector("button").onclick = (e) => { e.stopPropagation(); open(); };
-    card.onclick = open;
-
+    card.querySelector("button").onclick = () => openDetails(ds.id, data);
     UI.el.listings.appendChild(card);
-    addedNow++;
+    added++;
   });
 
   UI.setEmptyState(UI.el.listings.children.length === 0);
 
-  // زر المزيد
+  // pagination
   if (!snap.docs.length && !reset) UI.el.btnMore.disabled = true;
 }
