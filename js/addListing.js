@@ -1,14 +1,12 @@
 import { db, auth } from "./firebase.js";
-import { CLOUDINARY } from "./config.js";
+import { CLOUDINARY, MAX_IMAGES } from "./config.js";
 import { UI } from "./ui.js";
 import { requireAuth } from "./auth.js";
 import { fileToResizedJpeg } from "./utils.js";
 
 import {
-  doc, setDoc, collection, serverTimestamp
+  addDoc, collection, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
-
-const MAX_IMAGES = 3;
 
 export function initAddListing(){
   UI.el.btnClear.onclick = clearForm;
@@ -28,7 +26,9 @@ function clearForm(){
 }
 
 function previewImages(){
-  const files = Array.from(UI.el.aImages.files || []).slice(0, MAX_IMAGES);
+  const filesAll = Array.from(UI.el.aImages.files || []);
+  const files = filesAll.slice(0, MAX_IMAGES);
+
   UI.el.imgPreview.innerHTML = "";
   files.forEach(f=>{
     const img = document.createElement("img");
@@ -36,7 +36,8 @@ function previewImages(){
     img.src = URL.createObjectURL(f);
     UI.el.imgPreview.appendChild(img);
   });
-  if ((UI.el.aImages.files || []).length > MAX_IMAGES){
+
+  if (filesAll.length > MAX_IMAGES){
     UI.el.uploadStatus.textContent = `تم اختيار أول ${MAX_IMAGES} صور فقط.`;
   } else {
     UI.el.uploadStatus.textContent = "";
@@ -63,40 +64,27 @@ async function publish(){
   }
 
   UI.el.btnPublish.disabled = true;
+  UI.el.uploadStatus.textContent = "جاري رفع الصور...";
 
   try{
-    // ✅ جهّز listingId قبل رفع الصور
-    const listingRef = doc(collection(db, "listings"));
-    const listingId = listingRef.id;
-
-    UI.el.uploadStatus.textContent = "جاري رفع الصور...";
-
     const images = [];
     for (let i=0;i<files.length;i++){
       UI.el.uploadStatus.textContent = `رفع صورة ${i+1}/${files.length} ...`;
       const resized = await fileToResizedJpeg(files[i], 1280, 0.82);
-
-      // ✅ فولدر منظم: souq/listings/<uid>/<listingId>
-      const folder = `${CLOUDINARY.folder}/${auth.currentUser.uid}/${listingId}`;
-
-      const uploaded = await uploadToCloudinary(resized, folder);
-      images.push({
-        url: uploaded.secure_url,
-        publicId: uploaded.public_id
-      });
+      const uploaded = await uploadToCloudinary(resized);
+      images.push(uploaded.secure_url); // نخليها string بسيط الآن
     }
 
     UI.el.uploadStatus.textContent = "جاري نشر الإعلان...";
 
-    // ✅ اكتب الإعلان بنفس الـ id
-    await setDoc(listingRef, {
+    await addDoc(collection(db,"listings"), {
       title,
       description,
       price,
       currency,
       city,
       category,
-      images, // [{url, publicId}]
+      images,
       ownerId: auth.currentUser.uid,
       isActive: true,
       createdAt: serverTimestamp()
@@ -106,7 +94,7 @@ async function publish(){
     clearForm();
     UI.hide(UI.el.addBox);
 
-    // تأخير بسيط لظهور createdAt
+    // أعد تحميل بعد لحظة لحتى createdAt يوصل
     setTimeout(() => UI.actions.loadListings(true), 800);
 
   }catch(e){
@@ -116,8 +104,8 @@ async function publish(){
   }
 }
 
-async function uploadToCloudinary(file, folder){
-  const { cloudName, uploadPreset } = CLOUDINARY;
+async function uploadToCloudinary(file){
+  const { cloudName, uploadPreset, folder } = CLOUDINARY;
   const url = `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`;
 
   const fd = new FormData();
@@ -128,5 +116,5 @@ async function uploadToCloudinary(file, folder){
   const res = await fetch(url, { method:"POST", body: fd });
   const data = await res.json();
   if (!res.ok) throw new Error(data?.error?.message || "Cloudinary upload failed");
-  return data; // فيه secure_url و public_id
+  return data;
 }
