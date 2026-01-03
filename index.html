@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
+
   <header class="topbar">
     <div class="brand">Souq Syria</div>
     <div id="authBar" class="authbar"></div>
@@ -14,31 +15,18 @@
 
   <main class="container">
 
-    <!-- LOGIN -->
-    <section id="loginBox" class="card">
-      <h2>تسجيل الدخول</h2>
+    <!-- SEARCH + FILTERS -->
+    <section class="card searchCard">
       <div class="row">
-        <input id="email" placeholder="Email" autocomplete="email" />
+        <input id="qSearch" placeholder="بحث عن إعلان..." />
       </div>
-      <div class="row">
-        <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
-      </div>
-      <div class="row actions">
-        <button id="btnLogin">دخول</button>
-        <button id="btnRegister" class="secondary">تسجيل</button>
-      </div>
-      <button id="btnGoogle" class="secondary full">دخول عبر Google</button>
-      <p class="muted small">نسخة أولى: دخول بالإيميل + Google. (الرقم لاحقًا)</p>
-    </section>
 
-    <!-- FILTERS -->
-    <section id="filters" class="card">
-      <h3>فلترة</h3>
-      <div class="grid">
+      <div class="grid" style="margin-top:10px">
         <select id="cityFilter"></select>
         <select id="catFilter"></select>
       </div>
-      <div class="row actions">
+
+      <div class="row actions" style="margin-top:10px">
         <button id="btnApply" class="secondary">تطبيق</button>
         <button id="btnReset" class="ghost">مسح</button>
       </div>
@@ -50,7 +38,10 @@
         <h3>الإعلانات</h3>
         <button id="btnMore" class="secondary">تحميل المزيد</button>
       </div>
-      <div id="listings" class="list"></div>
+      <div id="listings" class="cardsGrid"></div>
+      <div id="emptyState" class="muted small" style="display:none;margin-top:10px">
+        لا يوجد نتائج حالياً
+      </div>
     </section>
 
     <!-- DETAILS -->
@@ -74,7 +65,7 @@
       </div>
     </section>
 
-    <!-- ADD LISTING (Marketplace style: separate panel) -->
+    <!-- ADD LISTING -->
     <section id="addBox" class="card hidden">
       <button id="btnAddBack" class="ghost">رجوع</button>
       <h2>إعلان جديد</h2>
@@ -98,7 +89,6 @@
 
       <div class="muted small">اختر 3 صور (بالضبط)</div>
       <input id="aImages" type="file" accept="image/*" multiple />
-
       <div id="imgPreview" class="preview"></div>
 
       <div class="row actions">
@@ -117,10 +107,36 @@
         <input id="chatInput" placeholder="اكتب رسالة..." />
         <button id="btnSend">إرسال</button>
       </div>
-      <p class="muted small">المحادثات تُحذف تلقائيًا بعد أسبوع.</p>
+      <p class="muted small">المحادثات تُحذف تلقائيًا بعد أسبوع (لاحقًا بتنظيف تلقائي).</p>
     </section>
 
   </main>
+
+  <!-- AUTH MODAL -->
+  <div id="authModal" class="modal hidden">
+    <div class="modalCard">
+      <div class="modalHead">
+        <div style="font-weight:900">تسجيل الدخول</div>
+        <button id="btnCloseAuth" class="ghost">إغلاق</button>
+      </div>
+
+      <div class="row">
+        <input id="email" placeholder="Email" autocomplete="email" />
+      </div>
+
+      <div class="row" style="margin-top:10px">
+        <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
+      </div>
+
+      <div class="row actions" style="margin-top:12px">
+        <button id="btnLogin">دخول</button>
+        <button id="btnRegister" class="secondary">تسجيل</button>
+      </div>
+
+      <button id="btnGoogle" class="secondary full" style="margin-top:10px">دخول عبر Google</button>
+      <p class="muted small" style="margin-top:8px">نسخة أولى: Email + Google</p>
+    </div>
+  </div>
 
   <script type="module" src="./app.js"></script>
 </body>
