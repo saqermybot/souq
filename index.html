@@ -38,7 +38,9 @@
         <h3>الإعلانات</h3>
         <button id="btnMore" class="secondary">تحميل المزيد</button>
       </div>
+
       <div id="listings" class="cardsGrid"></div>
+
       <div id="emptyState" class="muted small" style="display:none;margin-top:10px">
         لا يوجد نتائج حالياً
       </div>
@@ -121,7 +123,8 @@
       </div>
 
       <div class="row">
-        <input id="email" placeholder="Email" autocomplete="email" />
+        <!-- ✅ نوع الإيميل لتقليل invalid-email -->
+        <input id="email" type="email" placeholder="Email" autocomplete="email" />
       </div>
 
       <div class="row" style="margin-top:10px">
