@@ -16,17 +16,16 @@ export function initListings(){
     UI.actions.openChat(UI.state.currentListing.id, UI.state.currentListing.title);
   };
 
-  // ✅ زر حذف الإعلان
   UI.el.btnDelete.onclick = async () => {
     const listing = UI.state.currentListing;
     if (!listing) return;
 
-    const ok = confirm("⚠️ هل أنت متأكد من حذف الإعلان؟ لا يمكن التراجع.");
+    const ok = confirm("⚠️ هل أنت متأكد من حذف الإعلان؟");
     if (!ok) return;
 
     try{
       await deleteDoc(doc(db, "listings", listing.id));
-      alert("تم حذف الإعلان ✅");
+      alert("تم حذف الإعلان ✅ (وسيتم حذف الصور تلقائياً)");
       UI.hide(UI.el.details);
       await UI.actions.loadListings(true);
     }catch(e){
@@ -42,19 +41,31 @@ function openAdd(){
   UI.el.imgPreview.innerHTML = "";
 }
 
+// ✅ استخراج رابط الصورة من الشكل الجديد/القديم
+function firstImageUrl(data){
+  if (!data.images || !Array.isArray(data.images) || !data.images.length) return "";
+  const x = data.images[0];
+  if (typeof x === "string") return x;        // قديم
+  return x?.url || "";                        // جديد
+}
+
+function allImageUrls(data){
+  if (!data.images || !Array.isArray(data.images)) return [];
+  return data.images.map(x => typeof x === "string" ? x : (x?.url || "")).filter(Boolean);
+}
+
 function openDetails(id, data){
   UI.resetOverlays();
   UI.show(UI.el.details);
 
   UI.state.currentListing = { id, ...data };
 
-  UI.renderGallery(data.images || []);
+  UI.renderGallery(allImageUrls(data));
   UI.el.dTitle.textContent = data.title || "";
   UI.el.dMeta.textContent = `${data.city || ""} • ${data.category || ""}`;
   UI.el.dPrice.textContent = formatPrice(data.price, data.currency);
   UI.el.dDesc.textContent = data.description || "";
 
-  // ✅ إظهار زر الحذف فقط لصاحب الإعلان
   if (auth.currentUser && auth.currentUser.uid === data.ownerId){
     UI.show(UI.el.btnDelete);
   } else {
@@ -82,19 +93,18 @@ async function loadListings(reset=true){
   if (snap.docs.length) UI.state.lastDoc = snap.docs[snap.docs.length-1];
 
   const keyword = (UI.el.qSearch.value || "").trim().toLowerCase();
-  let added = 0;
 
   snap.forEach(ds=>{
     const data = ds.data();
 
-    // فلترة بحث محلية
     if (keyword){
       const t = String(data.title || "").toLowerCase();
       const d = String(data.description || "").toLowerCase();
       if (!t.includes(keyword) && !d.includes(keyword)) return;
     }
 
-    const img = (data.images && data.images[0]) ? data.images[0] : "";
+    const img = firstImageUrl(data);
+
     const card = document.createElement("div");
     card.className = "cardItem";
     card.innerHTML = `
@@ -106,13 +116,16 @@ async function loadListings(reset=true){
         <button class="secondary">عرض</button>
       </div>
     `;
-    card.querySelector("button").onclick = () => openDetails(ds.id, data);
+
+    // ✅ فتح التفاصيل عند الضغط على الكرت أو زر عرض
+    card.onclick = (e) => {
+      // إذا ضغط زر "عرض" أو أي مكان من الكرت نفس النتيجة
+      openDetails(ds.id, data);
+    };
+
     UI.el.listings.appendChild(card);
-    added++;
   });
 
   UI.setEmptyState(UI.el.listings.children.length === 0);
-
-  // pagination
   if (!snap.docs.length && !reset) UI.el.btnMore.disabled = true;
 }
