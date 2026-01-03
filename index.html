@@ -9,7 +9,10 @@
 <body>
 
   <header class="topbar">
-    <div class="brand">Souq Syria</div>
+    <div class="brand">
+      <span class="dot"></span>
+      Souq Syria
+    </div>
     <div id="authBar" class="authbar"></div>
   </header>
 
@@ -30,6 +33,10 @@
         <button id="btnApply" class="secondary">تطبيق</button>
         <button id="btnReset" class="ghost">مسح</button>
       </div>
+
+      <div class="muted small" style="margin-top:8px">
+        ملاحظة: الموقع يعرض كل الإعلانات تلقائياً، الفلاتر تُفعَّل فقط عند الضغط على "تطبيق".
+      </div>
     </section>
 
     <!-- LISTINGS -->
@@ -38,78 +45,91 @@
         <h3>الإعلانات</h3>
         <button id="btnMore" class="secondary">تحميل المزيد</button>
       </div>
-
       <div id="listings" class="cardsGrid"></div>
-
       <div id="emptyState" class="muted small" style="display:none;margin-top:10px">
         لا يوجد نتائج حالياً
       </div>
     </section>
 
-    <!-- DETAILS -->
-    <section id="details" class="card hidden">
-      <button id="btnBack" class="ghost">رجوع</button>
+    <!-- DETAILS PAGE (Full Page) -->
+    <section id="detailsPage" class="page hidden">
+      <div class="pageInner card">
+        <div class="pageHead">
+          <button id="btnBack" class="ghost">رجوع</button>
+          <button id="btnShare" class="secondary">مشاركة</button>
+        </div>
 
-      <div class="gallery">
-        <button id="gPrev" class="gbtn">‹</button>
-        <img id="gImg" class="gimg" alt="image" />
-        <button id="gNext" class="gbtn">›</button>
-      </div>
-      <div id="gDots" class="dots"></div>
+        <div class="gallery">
+          <button id="gPrev" class="gbtn">‹</button>
+          <img id="gImg" class="gimg" alt="image" />
+          <button id="gNext" class="gbtn">›</button>
+        </div>
+        <div id="gDots" class="dots"></div>
 
-      <h2 id="dTitle"></h2>
-      <div class="muted" id="dMeta"></div>
-      <div class="price" id="dPrice"></div>
-      <p id="dDesc"></p>
+        <h2 id="dTitle"></h2>
+        <div class="muted" id="dMeta"></div>
+        <div class="price" id="dPrice"></div>
+        <p id="dDesc"></p>
 
-      <div class="row actions">
-        <button id="btnChat">مراسلة</button>
+        <div class="row actions">
+          <button id="btnChat">مراسلة</button>
+        </div>
       </div>
     </section>
 
     <!-- ADD LISTING -->
-    <section id="addBox" class="card hidden">
-      <button id="btnAddBack" class="ghost">رجوع</button>
-      <h2>إعلان جديد</h2>
+    <section id="addBox" class="page hidden">
+      <div class="pageInner card">
+        <div class="pageHead">
+          <button id="btnAddBack" class="ghost">رجوع</button>
+          <div class="muted small" id="uploadStatus"></div>
+        </div>
 
-      <input id="aTitle" placeholder="العنوان" />
-      <textarea id="aDesc" placeholder="الوصف" rows="4"></textarea>
+        <h2>إعلان جديد</h2>
 
-      <div class="grid">
-        <input id="aPrice" type="number" placeholder="السعر" />
-        <select id="aCurrency">
-          <option value="SYP">SYP</option>
-          <option value="USD">USD</option>
-          <option value="EUR">EUR</option>
-        </select>
+        <input id="aTitle" placeholder="العنوان" />
+        <textarea id="aDesc" placeholder="الوصف" rows="4"></textarea>
+
+        <div class="grid">
+          <input id="aPrice" type="number" placeholder="السعر" />
+          <select id="aCurrency">
+            <option value="SYP">SYP</option>
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+          </select>
+        </div>
+
+        <div class="grid">
+          <select id="aCity"></select>
+          <select id="aCat"></select>
+        </div>
+
+        <div class="muted small">اختر من 1 إلى 3 صور (حد أقصى 3)</div>
+        <input id="aImages" type="file" accept="image/*" multiple />
+        <div id="imgPreview" class="preview"></div>
+
+        <div class="row actions">
+          <button id="btnPublish">نشر</button>
+          <button id="btnClear" class="secondary">مسح</button>
+        </div>
       </div>
-
-      <div class="grid">
-        <select id="aCity"></select>
-        <select id="aCat"></select>
-      </div>
-
-      <div class="muted small">اختر حتى 3 صور (اختياري)</div>
-      <input id="aImages" type="file" accept="image/*" multiple />
-      <div id="imgPreview" class="preview"></div>
-
-      <div class="row actions">
-        <button id="btnPublish">نشر</button>
-        <button id="btnClear" class="secondary">مسح</button>
-      </div>
-      <div id="uploadStatus" class="muted small"></div>
     </section>
 
     <!-- CHAT -->
-    <section id="chatBox" class="card hidden">
-      <button id="btnChatBack" class="ghost">رجوع</button>
-      <h3 id="chatTitle">محادثة</h3>
-      <div id="chatMsgs" class="chatmsgs"></div>
-      <div class="row">
-        <input id="chatInput" placeholder="اكتب رسالة..." />
-        <button id="btnSend">إرسال</button>
+    <section id="chatBox" class="page hidden">
+      <div class="pageInner card">
+        <div class="pageHead">
+          <button id="btnChatBack" class="ghost">رجوع</button>
+          <h3 id="chatTitle" style="margin:0">محادثة</h3>
+        </div>
+
+        <div id="chatMsgs" class="chatmsgs"></div>
+        <div class="row">
+          <input id="chatInput" placeholder="اكتب رسالة..." />
+          <button id="btnSend">إرسال</button>
+        </div>
+        <p class="muted small">المحادثات تُحذف تلقائيًا لاحقاً (ميزة قادمة).</p>
       </div>
-      <p class="muted small">المحادثات تُحذف تلقائيًا بعد أسبوع (لاحقًا بتنظيف تلقائي).</p>
     </section>
 
   </main>
@@ -136,8 +156,19 @@
       </div>
 
       <button id="btnGoogle" class="secondary full" style="margin-top:10px">دخول عبر Google</button>
-      <p class="muted small" style="margin-top:8px">نسخة أولى: Email + Google</p>
+      <p class="muted small" style="margin-top:8px">Email + Google</p>
     </div>
+  </div>
+
+  <!-- IMAGE MODAL (Fullscreen) -->
+  <div id="imgModal" class="imgModal hidden">
+    <div class="imgTop">
+      <div id="imgCounter" class="imgCounter"></div>
+      <button id="imgClose" class="ghost">إغلاق</button>
+    </div>
+    <button id="imgPrev" class="imgNav">‹</button>
+    <img id="imgFull" class="imgFull" alt="full" />
+    <button id="imgNext" class="imgNav">›</button>
   </div>
 
   <script type="module" src="./app.js"></script>
