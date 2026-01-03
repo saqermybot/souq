@@ -46,6 +46,27 @@
       </div>
     </section>
 
+    <!-- DETAILS -->
+    <section id="details" class="card hidden">
+      <button id="btnBack" class="ghost">رجوع</button>
+
+      <div class="gallery">
+        <button id="gPrev" class="gbtn">‹</button>
+        <img id="gImg" class="gimg" alt="image" />
+        <button id="gNext" class="gbtn">›</button>
+      </div>
+      <div id="gDots" class="dots"></div>
+
+      <h2 id="dTitle"></h2>
+      <div class="muted" id="dMeta"></div>
+      <div class="price" id="dPrice"></div>
+      <p id="dDesc"></p>
+
+      <div class="row actions">
+        <button id="btnChat">مراسلة</button>
+      </div>
+    </section>
+
     <!-- ADD LISTING -->
     <section id="addBox" class="card hidden">
       <button id="btnAddBack" class="ghost">رجوع</button>
@@ -68,7 +89,7 @@
         <select id="aCat"></select>
       </div>
 
-      <div class="muted small">اختر صور (حد أقصى 3)</div>
+      <div class="muted small">اختر حتى 3 صور (اختياري)</div>
       <input id="aImages" type="file" accept="image/*" multiple />
       <div id="imgPreview" class="preview"></div>
 
@@ -92,44 +113,6 @@
     </section>
 
   </main>
-
-  <!-- DETAILS PAGE (Route) -->
-  <section id="detailsPage" class="detailsPage hidden">
-    <header class="detailsTop">
-      <button id="btnBack" class="ghost">رجوع</button>
-      <div class="detailsTitleMini">تفاصيل الإعلان</div>
-      <div class="detailsTopRight">
-        <button id="btnShare" class="ghost">🔗 مشاركة</button>
-      </div>
-    </header>
-
-    <div class="detailsBody">
-      <div class="gallery">
-        <button id="gPrev" class="gbtn">‹</button>
-        <img id="gImg" class="gimg" alt="image" />
-        <button id="gNext" class="gbtn">›</button>
-      </div>
-      <div id="gDots" class="dots"></div>
-
-      <h2 id="dTitle"></h2>
-      <div class="muted" id="dMeta"></div>
-      <div class="price" id="dPrice"></div>
-      <p id="dDesc"></p>
-
-      <div class="row actions">
-        <button id="btnChat">مراسلة</button>
-      </div>
-    </div>
-  </section>
-
-  <!-- Fullscreen Image Viewer -->
-  <div id="imgModal" class="imgModal hidden">
-    <button id="imgClose" class="imgClose">✕</button>
-    <button id="imgPrev" class="imgNav imgPrev">‹</button>
-    <img id="imgFull" class="imgFull" alt="full" />
-    <button id="imgNext" class="imgNav imgNext">›</button>
-    <div id="imgCounter" class="imgCounter"></div>
-  </div>
 
   <!-- AUTH MODAL -->
   <div id="authModal" class="modal hidden">
