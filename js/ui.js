@@ -7,7 +7,10 @@ export const UI = {
     lastDoc: null,
     currentListing: null,
     gallery: { imgs: [], idx: 0 },
-    chatUnsub: null
+    chatUnsub: null,
+
+    // ✅ جديد: الفلاتر مفعلة فقط بعد زر "تطبيق"
+    filtersActive: false
   },
   actions: {
     openAuth: () => {},
@@ -46,16 +49,27 @@ export const UI = {
     this.el.btnAddBack.onclick = () => this.hide(this.el.addBox);
     this.el.btnChatBack.onclick = () => this.actions.closeChat();
 
-    // filters
-    this.el.btnApply.onclick = () => this.actions.loadListings(true);
-    this.el.btnReset.onclick = () => {
-      this.el.cityFilter.value="";
-      this.el.catFilter.value="";
-      this.el.qSearch.value="";
+    // ✅ Filters behavior (مهم)
+    // Apply = فعّل الفلاتر (مدينة/صنف)
+    this.el.btnApply.onclick = () => {
+      this.state.filtersActive = true;
       this.actions.loadListings(true);
     };
+
+    // Reset = الغِ الفلاتر وارجع تعرض الكل
+    this.el.btnReset.onclick = () => {
+      this.el.cityFilter.value = "";
+      this.el.catFilter.value = "";
+      this.el.qSearch.value = "";
+
+      this.state.filtersActive = false; // ✅ يرجع Browse mode
+      this.actions.loadListings(true);
+    };
+
+    // More
     this.el.btnMore.onclick = () => this.actions.loadListings(false);
 
+    // ✅ Search typing: يفلتر فقط بالكلمة بدون تفعيل city/cat إلا إذا عمل Apply
     this.el.qSearch.addEventListener("input", debounce(() => {
       this.actions.loadListings(true);
     }, 250));
@@ -69,6 +83,14 @@ export const UI = {
     this.el.authModal.addEventListener("click", (e)=>{
       if (e.target === this.el.authModal) this.actions.closeAuth();
     });
+
+    // ✅ Image modal (إذا عندك من قبل)
+    if (this.el.imgClose) {
+      this.el.imgClose.onclick = () => this.hide(this.el.imgModal);
+      this.el.imgModal.addEventListener("click", (e)=>{
+        if (e.target === this.el.imgModal) this.hide(this.el.imgModal);
+      });
+    }
   },
 
   show(el){ el.classList.remove("hidden"); },
