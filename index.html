@@ -38,9 +38,7 @@
         <h3>الإعلانات</h3>
         <button id="btnMore" class="secondary">تحميل المزيد</button>
       </div>
-
       <div id="listings" class="cardsGrid"></div>
-
       <div id="emptyState" class="muted small" style="display:none;margin-top:10px">
         لا يوجد نتائج حالياً
       </div>
@@ -64,6 +62,7 @@
 
       <div class="row actions">
         <button id="btnChat">مراسلة</button>
+        <button id="btnDelete" class="ghost hidden">حذف الإعلان</button>
       </div>
     </section>
 
@@ -89,13 +88,7 @@
         <select id="aCat"></select>
       </div>
 
-      <!-- مهم: زر صغير لتحديث الأصناف لو كانت فاضية -->
-      <div class="row actions" style="margin-top:10px">
-        <button id="btnReloadCats" class="ghost" type="button">تحديث الأصناف</button>
-        <div id="catsHint" class="muted small"></div>
-      </div>
-
-      <div class="muted small" style="margin-top:10px">اختر 3 صور (بالضبط)</div>
+      <div class="muted small">اختر صور (حد أقصى 3)</div>
       <input id="aImages" type="file" accept="image/*" multiple />
       <div id="imgPreview" class="preview"></div>
 
