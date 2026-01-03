@@ -5,26 +5,35 @@ import {
   createUserWithEmailAndPassword,
   signOut,
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
 import { UI } from "./ui.js";
 
 export function initAuth() {
-  // modal open/close
   UI.actions.openAuth = () => UI.show(UI.el.authModal);
   UI.actions.closeAuth = () => UI.hide(UI.el.authModal);
 
-  // Email/Password
+  // ✅ عالج رجعة redirect (مهم جداً)
+  getRedirectResult(auth).then((res)=>{
+    if (res?.user) {
+      UI.actions.closeAuth();
+      toast("تم تسجيل الدخول ✅");
+    }
+  }).catch(()=>{});
+
   UI.el.btnLogin.onclick = async () => {
     try {
-      const email = UI.el.email.value.trim();
+      const email = normalizeEmail(UI.el.email.value);
       const pass = UI.el.password.value;
 
       if (!email || !pass) return alert("اكتب الإيميل والباسورد");
       await signInWithEmailAndPassword(auth, email, pass);
 
       UI.actions.closeAuth();
+      toast("تم تسجيل الدخول ✅");
     } catch (e) {
       alert(prettyAuthError(e));
     }
@@ -32,29 +41,38 @@ export function initAuth() {
 
   UI.el.btnRegister.onclick = async () => {
     try {
-      const email = UI.el.email.value.trim();
+      const email = normalizeEmail(UI.el.email.value);
       const pass = UI.el.password.value;
 
       if (!email || !pass) return alert("اكتب الإيميل والباسورد");
       await createUserWithEmailAndPassword(auth, email, pass);
 
       UI.actions.closeAuth();
+      toast("تم إنشاء الحساب ✅");
     } catch (e) {
       alert(prettyAuthError(e));
     }
   };
 
-  // Google (POPUP بدل REDIRECT) ✅
   UI.el.btnGoogle.onclick = async () => {
-    try {
-      const provider = new GoogleAuthProvider();
-      // (اختياري) provider.addScope("email");
+    const provider = new GoogleAuthProvider();
 
+    try {
+      // ✅ جرّب Popup أولاً
       await signInWithPopup(auth, provider);
       UI.actions.closeAuth();
+      toast("تم تسجيل الدخول ✅");
     } catch (e) {
-      // إذا Safari/Chrome على iOS حجب الـ popup
-      // رح يطلع popup-blocked / operation-not-supported-in-this-environment
+      // ✅ إذا انحجب popup على iOS، نروح Redirect تلقائياً
+      const code = e?.code || "";
+      if (
+        code === "auth/popup-blocked" ||
+        code === "auth/operation-not-supported-in-this-environment" ||
+        code === "auth/web-storage-unsupported"
+      ) {
+        await signInWithRedirect(auth, provider);
+        return;
+      }
       alert(prettyAuthError(e));
     }
   };
@@ -65,18 +83,20 @@ export function initAuth() {
 }
 
 function renderTopbar(user) {
+  const label = user ? (user.email || "حساب") : "";
   UI.renderAuthBar(`
     <button id="btnOpenAdd" class="secondary">+ إعلان جديد</button>
     ${
       user
-        ? `<button id="btnLogout" class="ghost">خروج</button>`
+        ? `<span class="muted small" style="color:#fff;opacity:.85">${label}</span>
+           <button id="btnLogout" class="ghost">خروج</button>`
         : `<button id="btnOpenAuth" class="ghost">دخول</button>`
     }
   `);
 
   document.getElementById("btnOpenAdd").onclick = () => {
     if (!auth.currentUser) return UI.actions.openAuth();
-    UI.actions.openAdd();
+    UI.actions.openAdd(); // ✅ صار دايمًا موجود من addListing.js
   };
 
   if (!user) {
@@ -84,7 +104,10 @@ function renderTopbar(user) {
     return;
   }
 
-  document.getElementById("btnLogout").onclick = () => signOut(auth);
+  document.getElementById("btnLogout").onclick = async () => {
+    await signOut(auth);
+    toast("تم تسجيل الخروج");
+  };
 }
 
 export function requireAuth() {
@@ -92,6 +115,18 @@ export function requireAuth() {
     UI.actions.openAuth();
     throw new Error("AUTH_REQUIRED");
   }
+}
+
+function normalizeEmail(v){
+  return String(v || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, ""); // ✅ يشيل المسافات اللي بتجيب invalid-email
+}
+
+function toast(msg){
+  // Toast بسيط بدون CSS إضافي
+  try { console.log(msg); } catch {}
 }
 
 function prettyAuthError(e) {
@@ -103,7 +138,7 @@ function prettyAuthError(e) {
   if (code === "auth/user-not-found") return "ما في حساب بهالإيميل.";
   if (code === "auth/email-already-in-use") return "هذا الإيميل مسجل مسبقاً.";
   if (code === "auth/weak-password") return "الباسورد ضعيف (لازم 6 أحرف على الأقل).";
-  if (code === "auth/popup-blocked") return "المتصفح حجب نافذة تسجيل Google. جرّب مرة ثانية أو افتح من Safari.";
+  if (code === "auth/popup-blocked") return "المتصفح حجب نافذة Google. رح نستخدم Redirect تلقائياً.";
   if (code === "auth/cancelled-popup-request") return "انلغت العملية. جرّب مرة ثانية.";
   if (code === "auth/popup-closed-by-user") return "سكرّت نافذة Google قبل ما تكمّل.";
   return e?.message || "فشل تسجيل الدخول.";
