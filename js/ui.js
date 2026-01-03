@@ -13,25 +13,26 @@ export const UI = {
     openAuth: () => {},
     closeAuth: () => {},
     openAdd: () => {},
-    openDetails: () => {},
-    closeDetails: () => {},
     openChat: () => {},
     closeChat: () => {},
     loadListings: async () => {},
     loadCategories: async () => {},
+    openListingPage: async () => {}
   },
 
   init(){
     const ids = [
       "authBar","qSearch","cityFilter","catFilter","btnApply","btnReset","btnMore","listings","emptyState",
-      "details","btnBack","dTitle","dMeta","dPrice","dDesc","btnChat","btnDelete","gImg","gDots","gPrev","gNext",
+      "detailsPage","btnBack","btnShare","dTitle","dMeta","dPrice","dDesc","btnChat","gImg","gDots","gPrev","gNext",
       "addBox","btnAddBack","aTitle","aDesc","aPrice","aCurrency","aCity","aCat","aImages","imgPreview",
       "btnPublish","btnClear","uploadStatus",
       "chatBox","btnChatBack","chatTitle","chatMsgs","chatInput","btnSend",
-      "authModal","btnCloseAuth","email","password","btnLogin","btnRegister","btnGoogle"
+      "authModal","btnCloseAuth","email","password","btnLogin","btnRegister","btnGoogle",
+      "imgModal","imgClose","imgPrev","imgNext","imgFull","imgCounter"
     ];
     for (const id of ids) this.el[id] = document.getElementById(id);
 
+    // selects
     this.el.cityFilter.innerHTML =
       `<option value="">كل المدن</option>` +
       SY_CITIES.map(c=>`<option value="${c}">${c}</option>`).join("");
@@ -40,10 +41,12 @@ export const UI = {
       `<option value="">اختر مدينة</option>` +
       SY_CITIES.map(c=>`<option value="${c}">${c}</option>`).join("");
 
-    this.el.btnBack.onclick = () => this.hide(this.el.details);
+    // back buttons
+    this.el.btnBack.onclick = () => history.back();
     this.el.btnAddBack.onclick = () => this.hide(this.el.addBox);
     this.el.btnChatBack.onclick = () => this.actions.closeChat();
 
+    // filters
     this.el.btnApply.onclick = () => this.actions.loadListings(true);
     this.el.btnReset.onclick = () => {
       this.el.cityFilter.value="";
@@ -57,9 +60,11 @@ export const UI = {
       this.actions.loadListings(true);
     }, 250));
 
+    // gallery controls
     this.el.gPrev.onclick = () => this.setGalleryIdx(this.state.gallery.idx - 1);
     this.el.gNext.onclick = () => this.setGalleryIdx(this.state.gallery.idx + 1);
 
+    // auth modal
     this.el.btnCloseAuth.onclick = () => this.actions.closeAuth();
     this.el.authModal.addEventListener("click", (e)=>{
       if (e.target === this.el.authModal) this.actions.closeAuth();
@@ -70,9 +75,10 @@ export const UI = {
   hide(el){ el.classList.add("hidden"); },
 
   resetOverlays(){
-    this.hide(this.el.details);
+    this.hide(this.el.detailsPage);
     this.hide(this.el.addBox);
     this.hide(this.el.chatBox);
+    this.hide(this.el.imgModal);
   },
 
   renderAuthBar(html){
