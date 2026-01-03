@@ -10,7 +10,6 @@ export const UI = {
     chatUnsub: null
   },
   actions: {
-    // تُربط لاحقاً من modules
     openAuth: () => {},
     closeAuth: () => {},
     openAdd: () => {},
@@ -23,7 +22,6 @@ export const UI = {
   },
 
   init(){
-    // refs
     const ids = [
       "authBar","qSearch","cityFilter","catFilter","btnApply","btnReset","btnMore","listings","emptyState",
       "details","btnBack","dTitle","dMeta","dPrice","dDesc","btnChat","gImg","gDots","gPrev","gNext",
@@ -35,15 +33,20 @@ export const UI = {
     for (const id of ids) this.el[id] = document.getElementById(id);
 
     // init selects
-    this.el.cityFilter.innerHTML = `<option value="">كل المدن</option>` + SY_CITIES.map(c=>`<option value="${c}">${c}</option>`).join("");
-    this.el.aCity.innerHTML = `<option value="">اختر مدينة</option>` + SY_CITIES.map(c=>`<option value="${c}">${c}</option>`).join("");
+    this.el.cityFilter.innerHTML =
+      `<option value="">كل المدن</option>` +
+      SY_CITIES.map(c=>`<option value="${c}">${c}</option>`).join("");
+
+    this.el.aCity.innerHTML =
+      `<option value="">اختر مدينة</option>` +
+      SY_CITIES.map(c=>`<option value="${c}">${c}</option>`).join("");
 
     // base navigation
     this.el.btnBack.onclick = () => this.hide(this.el.details);
     this.el.btnAddBack.onclick = () => this.hide(this.el.addBox);
     this.el.btnChatBack.onclick = () => this.actions.closeChat();
 
-    // search + filters hooks (actual loadListings is set later)
+    // filters + pagination
     this.el.btnApply.onclick = () => this.actions.loadListings(true);
     this.el.btnReset.onclick = () => {
       this.el.cityFilter.value="";
