@@ -4,67 +4,124 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Souq Syria</title>
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="./style.css" />
 </head>
 <body>
-  <header class="top">
+  <header class="topbar">
     <div class="brand">Souq Syria</div>
     <div id="authBar" class="authbar"></div>
   </header>
 
   <main class="container">
-    <section id="loginBox" class="card hidden">
-      <h3>تسجيل الدخول</h3>
-      <input id="email" type="email" placeholder="Email" />
-      <input id="pass" type="password" placeholder="Password" />
+
+    <!-- LOGIN -->
+    <section id="loginBox" class="card">
+      <h2>تسجيل الدخول</h2>
       <div class="row">
+        <input id="email" placeholder="Email" autocomplete="email" />
+      </div>
+      <div class="row">
+        <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
+      </div>
+      <div class="row actions">
         <button id="btnLogin">دخول</button>
         <button id="btnRegister" class="secondary">تسجيل</button>
       </div>
-      <p class="hint">نسخة أولى: دخول بالإيميل. (دخول بالرقم نضيفه بعدين)</p>
+      <button id="btnGoogle" class="secondary full">دخول عبر Google</button>
+      <p class="muted small">نسخة أولى: دخول بالإيميل + Google. (الرقم لاحقًا)</p>
     </section>
 
+    <!-- FILTERS -->
     <section id="filters" class="card">
       <h3>فلترة</h3>
       <div class="grid">
         <select id="cityFilter"></select>
         <select id="catFilter"></select>
       </div>
-      <div class="row">
-        <button id="btnApply">تطبيق</button>
-        <button id="btnReset" class="secondary">مسح</button>
+      <div class="row actions">
+        <button id="btnApply" class="secondary">تطبيق</button>
+        <button id="btnReset" class="ghost">مسح</button>
       </div>
     </section>
 
-    <section id="listings" class="card">
-      <h3>الإعلانات</h3>
-      <div id="listingsGrid" class="grid2"></div>
-      <div class="row">
+    <!-- LISTINGS -->
+    <section class="card">
+      <div class="sectionHead">
+        <h3>الإعلانات</h3>
         <button id="btnMore" class="secondary">تحميل المزيد</button>
       </div>
+      <div id="listings" class="list"></div>
     </section>
 
+    <!-- DETAILS -->
     <section id="details" class="card hidden">
-      <button id="btnBack" class="secondary">رجوع</button>
-      <h3 id="dTitle"></h3>
-      <div id="dMeta" class="muted"></div>
+      <button id="btnBack" class="ghost">رجوع</button>
+
+      <div class="gallery">
+        <button id="gPrev" class="gbtn">‹</button>
+        <img id="gImg" class="gimg" alt="image" />
+        <button id="gNext" class="gbtn">›</button>
+      </div>
+      <div id="gDots" class="dots"></div>
+
+      <h2 id="dTitle"></h2>
+      <div class="muted" id="dMeta"></div>
+      <div class="price" id="dPrice"></div>
       <p id="dDesc"></p>
-      <button id="btnChat">مراسلة</button>
+
+      <div class="row actions">
+        <button id="btnChat">مراسلة</button>
+      </div>
     </section>
 
-    <section id="chat" class="card hidden">
-      <button id="btnChatBack" class="secondary">رجوع</button>
-      <h3>المحادثة</h3>
-      <div id="chatInfo" class="muted"></div>
-      <div id="msgs" class="msgs"></div>
+    <!-- ADD LISTING (Marketplace style: separate panel) -->
+    <section id="addBox" class="card hidden">
+      <button id="btnAddBack" class="ghost">رجوع</button>
+      <h2>إعلان جديد</h2>
+
+      <input id="aTitle" placeholder="العنوان" />
+      <textarea id="aDesc" placeholder="الوصف" rows="4"></textarea>
+
+      <div class="grid">
+        <input id="aPrice" type="number" placeholder="السعر" />
+        <select id="aCurrency">
+          <option value="SYP">SYP</option>
+          <option value="USD">USD</option>
+          <option value="EUR">EUR</option>
+        </select>
+      </div>
+
+      <div class="grid">
+        <select id="aCity"></select>
+        <select id="aCat"></select>
+      </div>
+
+      <div class="muted small">اختر 3 صور (بالضبط)</div>
+      <input id="aImages" type="file" accept="image/*" multiple />
+
+      <div id="imgPreview" class="preview"></div>
+
+      <div class="row actions">
+        <button id="btnPublish">نشر</button>
+        <button id="btnClear" class="secondary">مسح</button>
+      </div>
+      <div id="uploadStatus" class="muted small"></div>
+    </section>
+
+    <!-- CHAT -->
+    <section id="chatBox" class="card hidden">
+      <button id="btnChatBack" class="ghost">رجوع</button>
+      <h3 id="chatTitle">محادثة</h3>
+      <div id="chatMsgs" class="chatmsgs"></div>
       <div class="row">
-        <input id="msgText" placeholder="اكتب رسالة..." />
+        <input id="chatInput" placeholder="اكتب رسالة..." />
         <button id="btnSend">إرسال</button>
       </div>
-      <p class="hint">المحادثات تُزال من قائمتك بعد 7 أيام (MVP). تنظيف كامل للرسائل نضيفه لاحقًا.</p>
+      <p class="muted small">المحادثات تُحذف تلقائيًا بعد أسبوع.</p>
     </section>
+
   </main>
 
-  <script type="module" src="app.js"></script>
+  <script type="module" src="./app.js"></script>
 </body>
 </html>
