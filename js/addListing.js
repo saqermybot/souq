@@ -12,6 +12,9 @@ import {
 
 let publishing = false;
 
+// ✅ لنظافة الذاكرة (object URLs)
+let previewUrls = [];
+
 export function initAddListing() {
   // ✅ أهم شي: ربط زر "+ إعلان جديد" بفتح صفحة الإضافة
   UI.actions.openAdd = openAdd;
@@ -29,6 +32,7 @@ function openAdd() {
   UI.show(UI.el.addBox);
   setStatus("");
   UI.el.imgPreview.innerHTML = "";
+  cleanupPreviewUrls();
 }
 
 function clearForm() {
@@ -41,13 +45,24 @@ function clearForm() {
   UI.el.aImages.value = "";
   UI.el.imgPreview.innerHTML = "";
   setStatus("");
+  cleanupPreviewUrls();
 }
 
 function setStatus(msg = "") {
-  UI.el.uploadStatus.textContent = msg;
+  if (UI.el.uploadStatus) UI.el.uploadStatus.textContent = msg;
+}
+
+function cleanupPreviewUrls(){
+  // revoke old object urls to avoid memory leak
+  try{
+    previewUrls.forEach(u => URL.revokeObjectURL(u));
+  }catch{}
+  previewUrls = [];
 }
 
 function previewImages() {
+  cleanupPreviewUrls();
+
   const filesAll = Array.from(UI.el.aImages.files || []);
   const files = filesAll.slice(0, MAX_IMAGES);
 
@@ -56,7 +71,9 @@ function previewImages() {
   files.forEach((f) => {
     const img = document.createElement("img");
     img.className = "pimg";
-    img.src = URL.createObjectURL(f);
+    const u = URL.createObjectURL(f);
+    previewUrls.push(u);
+    img.src = u;
     UI.el.imgPreview.appendChild(img);
   });
 
@@ -119,7 +136,7 @@ async function publish() {
 
     setStatus("جاري نشر الإعلان...");
 
-    // ✅ انتهاء الصلاحية: 15 يوم من الآن
+    // ✅ انتهاء الصلاحية: 15 يوم من الآن (مبدئياً)
     const expiresAt = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000);
 
     await addDoc(collection(db, "listings"), {
