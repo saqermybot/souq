@@ -4,6 +4,8 @@ import { escapeHtml, formatPrice } from "./utils.js";
 
 import {
   collection,
+  doc,
+  getDoc,
   getDocs,
   limit,
   orderBy,
@@ -23,26 +25,35 @@ export function initListings(){
   };
 }
 
-function openDetails(id, data){
-  UI.resetOverlays();
+async function openDetails(id, data=null, fromHash=false){
+  // إذا جاي من قائمة وفيه data جاهز
+  let listing = data;
 
-  // ✅ مهم: اسم الصفحة عندك detailsPage
-  UI.show(UI.el.detailsPage);
+  // إذا جاي من رابط أو data = null -> جيبها من Firestore
+  if (!listing){
+    const ref = doc(db, "listings", id);
+    const snap = await getDoc(ref);
+    if (!snap.exists()){
+      alert("الإعلان غير موجود أو تم حذفه.");
+      return;
+    }
+    listing = snap.data();
+  }
 
-  UI.state.currentListing = { id, ...data };
+  UI.state.currentListing = { id, ...listing };
 
-  const imgs = Array.isArray(data.images) ? data.images : [];
-  UI.renderGallery(imgs);
+  // افتح صفحة التفاصيل كاملة
+  UI.showDetailsPage();
 
-  UI.el.dTitle.textContent = data.title || "";
-  UI.el.dMeta.textContent = `${data.city || ""} • ${data.category || ""}`;
-  UI.el.dPrice.textContent = formatPrice(data.price, data.currency);
-  UI.el.dDesc.textContent = data.description || "";
+  UI.renderGallery(listing.images || []);
+  UI.el.dTitle.textContent = listing.title || "";
+  UI.el.dMeta.textContent = `${listing.city || ""} • ${listing.category || ""}`;
+  UI.el.dPrice.textContent = formatPrice(listing.price, listing.currency);
+  UI.el.dDesc.textContent = listing.description || "";
 
-  // ✅ إذا ما في صور، نظهر placeholder بسيط
-  if (!imgs.length) {
-    UI.el.gImg.src = "https://via.placeholder.com/1200x800?text=No+Image";
-    UI.el.gDots.innerHTML = "";
+  // لو مش من hash، حط hash ليسهل مشاركة/رجعة
+  if (!fromHash){
+    history.replaceState(null, "", `#listing=${encodeURIComponent(id)}`);
   }
 }
 
@@ -53,13 +64,13 @@ async function loadListings(reset=true){
     UI.el.btnMore.disabled = false;
   }
 
-  // ✅ دائماً: فقط الإعلانات الفعالة
+  // ✅ دائماً نظهر فقط الفعّالة
   const wh = [ where("isActive","==",true) ];
 
-  // ✅ keyword search محلي (لا يحتاج Apply)
+  // ✅ keyword search محلي
   const keyword = (UI.el.qSearch.value || "").trim().toLowerCase();
 
-  // ✅ city/category فقط إذا filtersActive=true (يعني ضغط "تطبيق")
+  // ✅ city/category filters فقط بعد Apply
   if (UI.state.filtersActive){
     if (UI.el.cityFilter.value) wh.push(where("city","==", UI.el.cityFilter.value));
     if (UI.el.catFilter.value) wh.push(where("category","==", UI.el.catFilter.value));
@@ -86,24 +97,21 @@ async function loadListings(reset=true){
 
   if (snap.docs.length){
     UI.state.lastDoc = snap.docs[snap.docs.length-1];
-  } else {
+  }else{
     if (!reset) UI.el.btnMore.disabled = true;
   }
-
-  let addedNow = 0;
 
   snap.forEach(ds=>{
     const data = ds.data();
 
-    // ✅ فلترة محلية بالكلمة فقط إذا في كلمة
+    // فلترة محلية بالكلمة
     if (keyword){
       const t = String(data.title || "").toLowerCase();
       const d = String(data.description || "").toLowerCase();
       if (!t.includes(keyword) && !d.includes(keyword)) return;
     }
 
-    const imgs = Array.isArray(data.images) ? data.images : [];
-    const img = imgs[0] || "https://via.placeholder.com/800x600?text=No+Image";
+    const img = (data.images && data.images[0]) ? data.images[0] : "";
 
     const card = document.createElement("div");
     card.className = "cardItem";
@@ -117,17 +125,12 @@ async function loadListings(reset=true){
       </div>
     `;
 
-    // فتح التفاصيل عند الضغط على الصورة أو الزر
+    // ✅ فتح التفاصيل عند الضغط على الصورة أو الزر
     card.querySelector("img").onclick = () => openDetails(ds.id, data);
     card.querySelector("button").onclick = () => openDetails(ds.id, data);
 
     UI.el.listings.appendChild(card);
-    addedNow++;
   });
 
-  // Empty state
   UI.setEmptyState(UI.el.listings.children.length === 0);
-
-  // ملاحظة: إذا keyword فلترة محلية ممكن يطلع addedNow=0 رغم وجود بيانات بالصفحة
-  // لذلك ما منسكر "تحميل المزيد" هون.
 }
