@@ -8,8 +8,6 @@ import {
   addDoc, collection, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-const MAX_IMAGES = 3;
-
 export function initAddListing(){
   UI.el.btnClear.onclick = clearForm;
   UI.el.aImages.onchange = previewImages;
@@ -28,26 +26,23 @@ function clearForm(){
 }
 
 function previewImages(){
-  let files = Array.from(UI.el.aImages.files || []);
+  const files = Array.from(UI.el.aImages.files || []);
 
-  // ✅ قصّهم لحد أقصى 3
-  if (files.length > MAX_IMAGES){
-    files = files.slice(0, MAX_IMAGES);
-    UI.el.uploadStatus.textContent = `تم اختيار أول ${MAX_IMAGES} صور فقط.`;
-  } else {
-    UI.el.uploadStatus.textContent = "";
-  }
+  // ✅ حد أقصى 3 صور
+  const limited = files.slice(0, 3);
 
   UI.el.imgPreview.innerHTML = "";
-  files.forEach(f=>{
+  limited.forEach(f=>{
     const img = document.createElement("img");
     img.className="pimg";
     img.src = URL.createObjectURL(f);
     UI.el.imgPreview.appendChild(img);
   });
 
-  // ملاحظة: ما في طريقة نغيّر FileList نفسها بسهولة بالمتصفح،
-  // لذلك وقت النشر رح نستخدم slice(0,3) أيضاً.
+  // (اختياري) إذا اختار أكتر من 3، خبرّه
+  if (files.length > 3) {
+    UI.el.uploadStatus.textContent = "تم اختيار أول 3 صور فقط.";
+  }
 }
 
 async function publish(){
@@ -60,28 +55,31 @@ async function publish(){
   const city = UI.el.aCity.value;
   const category = UI.el.aCat.value;
 
-  let files = Array.from(UI.el.aImages.files || []).slice(0, MAX_IMAGES);
+  let files = Array.from(UI.el.aImages.files || []);
+  files = files.slice(0, 3); // ✅ حد أقصى 3
 
   if (!title || !description || !price || !city || !category){
     return alert("كمّل كل الحقول");
   }
 
-  // ✅ صار شرطنا: لازم صورة واحدة على الأقل (مو 3)
   if (files.length < 1){
-    return alert("اختر صورة واحدة على الأقل (حد أقصى 3)");
+    return alert("اختر صورة واحدة على الأقل");
   }
 
   UI.el.btnPublish.disabled = true;
   UI.el.uploadStatus.textContent = "جاري رفع الصور...";
 
   try{
-    const urls = [];
+    const images = [];
 
     for (let i=0;i<files.length;i++){
       UI.el.uploadStatus.textContent = `رفع صورة ${i+1}/${files.length} ...`;
       const resized = await fileToResizedJpeg(files[i], 1280, 0.82);
-      const url = await uploadToCloudinary(resized);
-      urls.push(url);
+      const uploaded = await uploadToCloudinary(resized);
+      images.push({
+        url: uploaded.secure_url,
+        publicId: uploaded.public_id
+      });
     }
 
     UI.el.uploadStatus.textContent = "جاري نشر الإعلان...";
@@ -93,7 +91,7 @@ async function publish(){
       currency,
       city,
       category,
-      images: urls,
+      images,               // ✅ صار Array of objects
       ownerId: auth.currentUser.uid,
       isActive: true,
       createdAt: serverTimestamp()
@@ -102,10 +100,7 @@ async function publish(){
     UI.el.uploadStatus.textContent = "تم نشر الإعلان ✅";
     clearForm();
     UI.hide(UI.el.addBox);
-
-    // ✅ ملاحظة مهمة: بعد النشر مباشرة ممكن createdAt يكون null لحظياً
-    // لذلك نخلي reload بعد ثانية بسيطة لتظهر بشكل مضمون
-    setTimeout(() => UI.actions.loadListings(true), 800);
+    await UI.actions.loadListings(true);
 
   }catch(e){
     alert(e?.message || "فشل النشر");
@@ -115,7 +110,10 @@ async function publish(){
 }
 
 async function uploadToCloudinary(file){
-  const { cloudName, uploadPreset, folder } = CLOUDINARY;
+  const cloudName = CLOUDINARY.cloudName;
+  const uploadPreset = CLOUDINARY.uploadPreset;
+  const folder = CLOUDINARY.folder;
+
   const url = `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`;
 
   const fd = new FormData();
@@ -126,5 +124,7 @@ async function uploadToCloudinary(file){
   const res = await fetch(url, { method:"POST", body: fd });
   const data = await res.json();
   if (!res.ok) throw new Error(data?.error?.message || "Cloudinary upload failed");
-  return data.secure_url;
+
+  // ✅ يرجع {secure_url, public_id, ...}
+  return data;
 }
