@@ -41,6 +41,14 @@ export const UI = {
       `<option value="">اختر مدينة</option>` +
       SY_CITIES.map(c=>`<option value="${c}">${c}</option>`).join("");
 
+    // ✅ الوضع الافتراضي: عرض الكل دائماً
+    this.state.filtersActive = false;
+
+    // ✅ احتياط: إذا المتصفح حافظ قيم قديمة
+    this.el.cityFilter.value = "";
+    this.el.catFilter.value = "";
+    this.el.qSearch.value = "";
+
     // back buttons
     this.el.btnBack.onclick = () => this.hideDetailsPage();
     this.el.btnAddBack.onclick = () => this.hide(this.el.addBox);
@@ -75,10 +83,21 @@ export const UI = {
       this.actions.loadListings(true);
     };
 
+    // ✅ مهم: تغيير المدينة/الصنف لا يفعّل الفلاتر لحاله
+    // (يعني الفلاتر ما تشتغل إلا بعد "تطبيق")
+    this.el.cityFilter.addEventListener("change", () => {
+      // فقط UI hint ممكن لاحقاً، حالياً لا شيء
+    });
+    this.el.catFilter.addEventListener("change", () => {
+      // فقط UI hint ممكن لاحقاً، حالياً لا شيء
+    });
+
     this.el.btnMore.onclick = () => this.actions.loadListings(false);
 
     // keyword typing (محلي) — يفلتر بالنتائج المعروضة/الصفحات القادمة
     this.el.qSearch.addEventListener("input", debounce(() => {
+      // ✅ البحث لا يفعّل city/category فلاتر
+      // لكن ممكن تخلي apply سابقاً شغال — خلّيه كما هو
       this.actions.loadListings(true);
     }, 250));
 
@@ -101,7 +120,6 @@ export const UI = {
     const h = location.hash || "";
     if (!h.startsWith("#listing=")) return;
     const id = decodeURIComponent(h.replace("#listing=",""));
-    // إذا ما في openDetails مربوطة بعد، تجاهل
     if (typeof this.actions.openDetails === "function") {
       this.actions.openDetails(id, null, true); // "true" يعني من رابط
     }
@@ -116,7 +134,6 @@ export const UI = {
     this.hide(this.el.chatBox);
   },
 
-  // ✅ صفحة تفاصيل كاملة
   showDetailsPage(){
     this.resetOverlays();
     this.show(this.el.detailsPage);
@@ -125,7 +142,6 @@ export const UI = {
 
   hideDetailsPage(){
     this.hide(this.el.detailsPage);
-    // نظّف الهاش لو كان مفتوح عبر رابط
     if ((location.hash || "").startsWith("#listing=")) {
       history.replaceState(null, "", location.pathname + location.search);
     }
