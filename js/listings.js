@@ -1,37 +1,45 @@
-import { db, auth } from "./firebase.js";
+import { db } from "./firebase.js";
 import { UI } from "./ui.js";
 import { escapeHtml, formatPrice } from "./utils.js";
-
 import {
-  collection, getDocs, limit, orderBy, query, startAfter, where, doc, deleteDoc
+  collection, getDocs, limit, orderBy, query, startAfter, where, doc, getDoc
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 export function initListings(){
   UI.actions.loadListings = loadListings;
   UI.actions.openAdd = openAdd;
-  UI.actions.openDetails = openDetails;
+  UI.actions.openListingPage = openListingPage;
 
+  // chat
   UI.el.btnChat.onclick = () => {
     if (!UI.state.currentListing) return;
     UI.actions.openChat(UI.state.currentListing.id, UI.state.currentListing.title);
   };
 
-  UI.el.btnDelete.onclick = async () => {
-    const listing = UI.state.currentListing;
-    if (!listing) return;
+  // share
+  UI.el.btnShare.onclick = shareListing;
 
-    const ok = confirm("⚠️ هل أنت متأكد من حذف الإعلان؟");
-    if (!ok) return;
+  // open fullscreen
+  UI.el.gImg.onclick = () => openImageModal(UI.state.gallery.idx);
 
-    try{
-      await deleteDoc(doc(db, "listings", listing.id));
-      alert("تم حذف الإعلان ✅ (وسيتم حذف الصور تلقائياً)");
-      UI.hide(UI.el.details);
-      await UI.actions.loadListings(true);
-    }catch(e){
-      alert(e?.message || "فشل حذف الإعلان");
-    }
-  };
+  // fullscreen modal
+  UI.el.imgClose.onclick = () => UI.hide(UI.el.imgModal);
+  UI.el.imgPrev.onclick = () => setFullIdx(fullIdx - 1);
+  UI.el.imgNext.onclick = () => setFullIdx(fullIdx + 1);
+
+  // Swipe support
+  UI.el.imgFull.addEventListener("touchstart", (e)=>{
+    touchStartX = e.changedTouches[0].screenX;
+  }, { passive:true });
+
+  UI.el.imgFull.addEventListener("touchend", (e)=>{
+    touchEndX = e.changedTouches[0].screenX;
+    handleSwipe();
+  });
+
+  // Router
+  window.addEventListener("hashchange", handleRoute);
+  handleRoute();
 }
 
 function openAdd(){
@@ -41,38 +49,50 @@ function openAdd(){
   UI.el.imgPreview.innerHTML = "";
 }
 
-// ✅ استخراج رابط الصورة من الشكل الجديد/القديم
-function firstImageUrl(data){
-  if (!data.images || !Array.isArray(data.images) || !data.images.length) return "";
-  const x = data.images[0];
-  if (typeof x === "string") return x;        // قديم
-  return x?.url || "";                        // جديد
+function goToListing(id){
+  location.hash = `#/listing/${id}`;
 }
 
-function allImageUrls(data){
-  if (!data.images || !Array.isArray(data.images)) return [];
-  return data.images.map(x => typeof x === "string" ? x : (x?.url || "")).filter(Boolean);
-}
-
-function openDetails(id, data){
+async function openListingPage(id){
   UI.resetOverlays();
-  UI.show(UI.el.details);
+  UI.show(UI.el.detailsPage);
 
-  UI.state.currentListing = { id, ...data };
+  const ref = doc(db, "listings", id);
+  const snap = await getDoc(ref);
 
-  UI.renderGallery(allImageUrls(data));
+  if (!snap.exists()){
+    UI.state.currentListing = null;
+    UI.renderGallery([]);
+    UI.el.dTitle.textContent = "الإعلان غير موجود";
+    UI.el.dMeta.textContent = "";
+    UI.el.dPrice.textContent = "";
+    UI.el.dDesc.textContent = "";
+    return;
+  }
+
+  const data = snap.data();
+  UI.state.currentListing = { id: snap.id, ...data };
+
+  const imgs = normalizeImages(data.images);
+  UI.renderGallery(imgs);
+
   UI.el.dTitle.textContent = data.title || "";
   UI.el.dMeta.textContent = `${data.city || ""} • ${data.category || ""}`;
   UI.el.dPrice.textContent = formatPrice(data.price, data.currency);
   UI.el.dDesc.textContent = data.description || "";
-
-  if (auth.currentUser && auth.currentUser.uid === data.ownerId){
-    UI.show(UI.el.btnDelete);
-  } else {
-    UI.hide(UI.el.btnDelete);
-  }
 }
 
+function handleRoute(){
+  const h = location.hash || "";
+  const m = h.match(/^#\/listing\/(.+)$/);
+  if (m){
+    openListingPage(m[1]);
+    return;
+  }
+  UI.resetOverlays();
+}
+
+/* ===== Listings list ===== */
 async function loadListings(reset=true){
   if (reset){
     UI.el.listings.innerHTML = "";
@@ -103,7 +123,8 @@ async function loadListings(reset=true){
       if (!t.includes(keyword) && !d.includes(keyword)) return;
     }
 
-    const img = firstImageUrl(data);
+    const imgs = normalizeImages(data.images);
+    const img = imgs[0] || "";
 
     const card = document.createElement("div");
     card.className = "cardItem";
@@ -117,15 +138,68 @@ async function loadListings(reset=true){
       </div>
     `;
 
-    // ✅ فتح التفاصيل عند الضغط على الكرت أو زر عرض
-    card.onclick = (e) => {
-      // إذا ضغط زر "عرض" أو أي مكان من الكرت نفس النتيجة
-      openDetails(ds.id, data);
-    };
+    card.querySelector("img").onclick = () => goToListing(ds.id);
+    card.querySelector(".t").onclick = () => goToListing(ds.id);
+    card.querySelector("button").onclick = () => goToListing(ds.id);
 
     UI.el.listings.appendChild(card);
   });
 
   UI.setEmptyState(UI.el.listings.children.length === 0);
+
   if (!snap.docs.length && !reset) UI.el.btnMore.disabled = true;
+}
+
+/* ===== Images normalize (support string or {url}) ===== */
+function normalizeImages(images){
+  if (!Array.isArray(images)) return [];
+  return images.map(x => typeof x === "string" ? x : (x?.url || "")).filter(Boolean);
+}
+
+/* ===== Share ===== */
+function shareListing(){
+  const l = UI.state.currentListing;
+  if (!l) return;
+
+  const url = location.origin + location.pathname + `#/listing/${l.id}`;
+  const text = `${l.title}\n${formatPrice(l.price, l.currency)}\n${url}`;
+
+  if (navigator.share){
+    navigator.share({ title: l.title, text, url }).catch(()=>{});
+  }else{
+    navigator.clipboard.writeText(url);
+    alert("تم نسخ رابط الإعلان 📋");
+  }
+}
+
+/* ===== Fullscreen images + swipe ===== */
+let fullIdx = 0;
+let touchStartX = 0;
+let touchEndX = 0;
+
+function openImageModal(idx=0){
+  if (!UI.state.gallery.imgs.length) return;
+  fullIdx = idx;
+  UI.show(UI.el.imgModal);
+  renderFull();
+}
+
+function setFullIdx(i){
+  const n = UI.state.gallery.imgs.length;
+  if (!n) return;
+  fullIdx = (i + n) % n;
+  renderFull();
+}
+
+function renderFull(){
+  const n = UI.state.gallery.imgs.length;
+  UI.el.imgFull.src = UI.state.gallery.imgs[fullIdx];
+  UI.el.imgCounter.textContent = `${fullIdx+1} / ${n}`;
+}
+
+function handleSwipe(){
+  const diff = touchEndX - touchStartX;
+  if (Math.abs(diff) < 40) return;
+  if (diff > 0) setFullIdx(fullIdx - 1);
+  else setFullIdx(fullIdx + 1);
 }
