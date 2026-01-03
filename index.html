@@ -4,7 +4,9 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Souq Syria</title>
-  <link rel="stylesheet" href="./style.css" />
+
+  <!-- ✅ Cache busting -->
+  <link rel="stylesheet" href="./style.css?v=20260103_01" />
 </head>
 <body>
 
@@ -45,7 +47,9 @@
         <h3>الإعلانات</h3>
         <button id="btnMore" class="secondary">تحميل المزيد</button>
       </div>
+
       <div id="listings" class="cardsGrid"></div>
+
       <div id="emptyState" class="muted small" style="display:none;margin-top:10px">
         لا يوجد نتائج حالياً
       </div>
@@ -64,6 +68,7 @@
           <img id="gImg" class="gimg" alt="image" />
           <button id="gNext" class="gbtn">›</button>
         </div>
+
         <div id="gDots" class="dots"></div>
 
         <h2 id="dTitle"></h2>
@@ -124,10 +129,12 @@
         </div>
 
         <div id="chatMsgs" class="chatmsgs"></div>
+
         <div class="row">
           <input id="chatInput" placeholder="اكتب رسالة..." />
           <button id="btnSend">إرسال</button>
         </div>
+
         <p class="muted small">المحادثات تُحذف تلقائيًا لاحقاً (ميزة قادمة).</p>
       </div>
     </section>
@@ -166,11 +173,13 @@
       <div id="imgCounter" class="imgCounter"></div>
       <button id="imgClose" class="ghost">إغلاق</button>
     </div>
+
     <button id="imgPrev" class="imgNav">‹</button>
     <img id="imgFull" class="imgFull" alt="full" />
     <button id="imgNext" class="imgNav">›</button>
   </div>
 
-  <script type="module" src="./app.js"></script>
+  <!-- ✅ Cache busting -->
+  <script type="module" src="./app.js?v=20260103_01"></script>
 </body>
 </html>
