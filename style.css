@@ -28,13 +28,13 @@ body{
   align-items:center;
   justify-content:space-between;
 }
-.brand{font-weight:800; letter-spacing:.2px}
+.brand{font-weight:900; letter-spacing:.2px}
 .authbar{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
 
 .container{
-  max-width:720px;
+  max-width:860px;
   margin:14px auto;
-  padding:0 10px 40px;
+  padding:0 10px 60px;
 }
 
 .card{
@@ -85,47 +85,46 @@ button.ghost{
   border:1px solid var(--border);
 }
 button.full{width:100%}
+button:disabled{opacity:.6; cursor:not-allowed}
 
 .actions{justify-content:flex-start; gap:10px; flex-wrap:wrap}
-
 .muted{color:var(--muted)}
 .small{font-size:13px}
 .hidden{display:none !important}
 
 .sectionHead{display:flex; justify-content:space-between; align-items:center; gap:10px}
-.list{display:flex; flex-direction:column; gap:10px}
 
-.item{
-  display:flex;
-  gap:12px;
-  align-items:flex-start;
+/* Marketplace grid */
+.cardsGrid{
+  display:grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap:10px;
+}
+@media(max-width:520px){ .cardsGrid{grid-template-columns:1fr} }
+
+.cardItem{
   border:1px solid var(--border);
   border-radius:14px;
-  padding:10px;
+  overflow:hidden;
+  background:#fff;
+  display:flex;
+  flex-direction:column;
 }
-.thumb{
-  width:110px;
-  height:110px;
-  border-radius:14px;
+.cardItem img{
+  width:100%;
+  height:160px;
   object-fit:cover;
   background:#eee;
-  flex:0 0 auto;
 }
-.itemBody{flex:1}
-.itemTitle{font-weight:800; margin-bottom:6px}
-.itemMeta{font-size:13px; color:var(--muted)}
-.itemPrice{margin-top:8px; font-weight:800}
-.badge{
-  display:inline-block;
-  padding:3px 10px;
-  border-radius:999px;
-  background:#f0f2f5;
-  font-size:12px;
-  margin-right:6px;
-}
+.cardItem .p{padding:10px}
+.cardItem .t{font-weight:900; margin-bottom:6px}
+.cardItem .m{font-size:13px; color:var(--muted)}
+.cardItem .pr{font-weight:900; margin-top:8px}
+.cardItem button{margin-top:10px; width:100%}
 
 .price{font-size:22px; font-weight:900; margin:10px 0}
 
+/* Details gallery */
 .gallery{
   position:relative;
   border-radius:16px;
@@ -135,7 +134,7 @@ button.full{width:100%}
 }
 .gimg{
   width:100%;
-  height:280px;
+  height:320px;
   object-fit:cover;
   display:block;
 }
@@ -163,6 +162,7 @@ button.full{width:100%}
 }
 .dot.active{background:#111}
 
+/* Preview images */
 .preview{
   display:flex;
   gap:8px;
@@ -176,6 +176,7 @@ button.full{width:100%}
   border:1px solid var(--border);
 }
 
+/* Chat */
 .chatmsgs{
   height:320px;
   overflow:auto;
@@ -197,3 +198,28 @@ button.full{width:100%}
   margin-right:auto;
 }
 .msg .t{font-size:12px; opacity:.8; margin-top:4px}
+
+/* Auth Modal */
+.modal{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.45);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  padding:14px;
+  z-index:50;
+}
+.modalCard{
+  width:min(520px, 100%);
+  background:#fff;
+  border-radius:16px;
+  padding:14px;
+  border:1px solid var(--border);
+}
+.modalHead{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  margin-bottom:10px;
+}
