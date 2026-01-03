@@ -7,9 +7,7 @@ import { initChat } from "./js/chat.js";
 
 UI.init();
 
-// ✅ جهّز أزرار/أكشن الإضافة قبل شريط الدخول
 initAddListing();
-
 initAuth();
 await initCategories();
 initListings();
