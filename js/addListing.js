@@ -13,12 +13,22 @@ import {
 let publishing = false;
 
 export function initAddListing() {
-  // زر رجوع (احتياط لو ما كان مربوط)
+  // ✅ أهم شي: ربط زر "+ إعلان جديد" بفتح صفحة الإضافة
+  UI.actions.openAdd = openAdd;
+
+  // زر رجوع
   if (UI.el.btnAddBack) UI.el.btnAddBack.onclick = () => UI.hide(UI.el.addBox);
 
   UI.el.btnClear.onclick = clearForm;
   UI.el.aImages.onchange = previewImages;
   UI.el.btnPublish.onclick = publish;
+}
+
+function openAdd() {
+  UI.resetOverlays();
+  UI.show(UI.el.addBox);
+  setStatus("");
+  UI.el.imgPreview.innerHTML = "";
 }
 
 function clearForm() {
@@ -30,7 +40,7 @@ function clearForm() {
   UI.el.aCat.value = "";
   UI.el.aImages.value = "";
   UI.el.imgPreview.innerHTML = "";
-  UI.el.uploadStatus.textContent = "";
+  setStatus("");
 }
 
 function setStatus(msg = "") {
@@ -119,11 +129,11 @@ async function publish() {
       currency,
       city,
       category,
-      images: urls,            // array of strings (secure urls)
+      images: urls, // array of strings
       ownerId: auth.currentUser.uid,
       isActive: true,
       createdAt: serverTimestamp(),
-      expiresAt                // مبدئياً تاريخ JS عادي (لاحقاً بنخليه Timestamp لو بدنا)
+      expiresAt
     });
 
     setStatus("تم نشر الإعلان ✅");
@@ -141,13 +151,11 @@ async function publish() {
     publishing = false;
     UI.el.btnPublish.disabled = false;
     UI.el.btnClear.disabled = false;
-    // ما نمسح الستاتس فوراً، خليها تظهر شوي
     setTimeout(() => setStatus(""), 1500);
   }
 }
 
 async function reloadListingsWithRetry() {
-  // مرات serverTimestamp بيتأخر، فنعمل 3 محاولات خفيفة
   const delays = [150, 600, 1200];
   for (let i = 0; i < delays.length; i++) {
     try {
@@ -157,7 +165,6 @@ async function reloadListingsWithRetry() {
       await wait(delays[i]);
     }
   }
-  // آخر محاولة بدون كسر
   try { await UI.actions.loadListings(true); } catch {}
 }
 
@@ -179,6 +186,5 @@ async function uploadToCloudinary(file) {
 
   if (!res.ok) throw new Error(data?.error?.message || "Cloudinary upload failed");
 
-  // ✅ نرجع رابط واحد فقط
   return data.secure_url;
 }
