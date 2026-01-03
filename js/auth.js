@@ -10,6 +10,8 @@ import {
 
 import { UI } from "./ui.js";
 
+let globalMenuCloserInstalled = false;
+
 export function initAuth() {
   // ===== Theme load/save =====
   const savedTheme = localStorage.getItem("theme") || "light";
@@ -35,6 +37,7 @@ export function initAuth() {
 
   // ===== Helpers =====
   const setBusy = (isBusy) => {
+    if (!UI.el.btnLogin) return;
     UI.el.btnLogin.disabled = isBusy;
     UI.el.btnRegister.disabled = isBusy;
     UI.el.btnGoogle.disabled = isBusy;
@@ -95,13 +98,20 @@ export function initAuth() {
     renderTopbar(user);
   });
 
+  // ✅ install ONE global click closer for menu (مرة واحدة فقط)
+  if (!globalMenuCloserInstalled) {
+    globalMenuCloserInstalled = true;
+    document.addEventListener("click", () => {
+      const menu = document.getElementById("accountMenu");
+      if (menu) menu.classList.add("hidden");
+    }, { capture: true });
+  }
+
   // ===== Topbar render =====
   function renderTopbar(user) {
     const photo = user?.photoURL || "";
     const email = user?.email || "";
 
-    // ملاحظة: الصندوق الأسود اللي كان عندك سببه عنصر بلا محتوى
-    // هون منستبدله بأفاتار/حساب واضح.
     UI.renderAuthBar(`
       <button id="btnTheme" class="themeBtn" title="Theme">🌓</button>
 
@@ -128,13 +138,14 @@ export function initAuth() {
     `);
 
     // Theme
-    document.getElementById("btnTheme").onclick = toggleTheme;
+    document.getElementById("btnTheme").onclick = (e) => {
+      e.stopPropagation();
+      toggleTheme();
+    };
 
     // زر إضافة إعلان
     document.getElementById("btnOpenAdd").onclick = () => {
       if (!auth.currentUser) return UI.actions.openAuth();
-
-      // ✅ fallback لو openAdd مش مربوط لأي سبب
       if (typeof UI.actions.openAdd === "function") UI.actions.openAdd();
       else UI.show(UI.el.addBox);
     };
@@ -157,25 +168,18 @@ export function initAuth() {
       toggleMenu();
     };
 
-    document.addEventListener("click", closeMenu, { capture: true });
-
-    // إعلاناتي (نستعمل فلتر بسيط)
-    document.getElementById("btnMyAds").onclick = () => {
+    // إعلاناتي (اختياري - إذا ما بدك الميزة شيلها)
+    document.getElementById("btnMyAds").onclick = (e) => {
+      e.stopPropagation();
       closeMenu();
-
-      // نحط الفلتر: "ownerId = current user"
-      // إذا بتحب لاحقاً نعمل صفحة/تبويب خاص
-      if (typeof UI.actions.loadListings === "function") {
-        // نخزن فلتر داخلي بسيط
-        UI.state.onlyMine = true;
-        UI.actions.loadListings(true);
-      } else {
-        alert("ميزة إعلاناتي غير جاهزة بعد.");
-      }
+      UI.state.onlyMine = true;     // ✅ بتنعمل إذا بدك لاحقاً
+      UI.state.filtersActive = false;
+      UI.actions.loadListings(true);
     };
 
     // خروج
-    document.getElementById("btnLogout").onclick = async () => {
+    document.getElementById("btnLogout").onclick = async (e) => {
+      e.stopPropagation();
       closeMenu();
       UI.state.onlyMine = false;
       await signOut(auth);
