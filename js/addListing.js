@@ -5,8 +5,10 @@ import { requireAuth } from "./auth.js";
 import { fileToResizedJpeg } from "./utils.js";
 
 import {
-  addDoc, collection, serverTimestamp
+  doc, setDoc, collection, serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+const MAX_IMAGES = 3;
 
 export function initAddListing(){
   UI.el.btnClear.onclick = clearForm;
@@ -26,22 +28,18 @@ function clearForm(){
 }
 
 function previewImages(){
-  const files = Array.from(UI.el.aImages.files || []);
-
-  // ✅ حد أقصى 3 صور
-  const limited = files.slice(0, 3);
-
+  const files = Array.from(UI.el.aImages.files || []).slice(0, MAX_IMAGES);
   UI.el.imgPreview.innerHTML = "";
-  limited.forEach(f=>{
+  files.forEach(f=>{
     const img = document.createElement("img");
     img.className="pimg";
     img.src = URL.createObjectURL(f);
     UI.el.imgPreview.appendChild(img);
   });
-
-  // (اختياري) إذا اختار أكتر من 3، خبرّه
-  if (files.length > 3) {
-    UI.el.uploadStatus.textContent = "تم اختيار أول 3 صور فقط.";
+  if ((UI.el.aImages.files || []).length > MAX_IMAGES){
+    UI.el.uploadStatus.textContent = `تم اختيار أول ${MAX_IMAGES} صور فقط.`;
+  } else {
+    UI.el.uploadStatus.textContent = "";
   }
 }
 
@@ -55,27 +53,33 @@ async function publish(){
   const city = UI.el.aCity.value;
   const category = UI.el.aCat.value;
 
-  let files = Array.from(UI.el.aImages.files || []);
-  files = files.slice(0, 3); // ✅ حد أقصى 3
+  let files = Array.from(UI.el.aImages.files || []).slice(0, MAX_IMAGES);
 
   if (!title || !description || !price || !city || !category){
     return alert("كمّل كل الحقول");
   }
-
   if (files.length < 1){
-    return alert("اختر صورة واحدة على الأقل");
+    return alert("اختر صورة واحدة على الأقل (حد أقصى 3)");
   }
 
   UI.el.btnPublish.disabled = true;
-  UI.el.uploadStatus.textContent = "جاري رفع الصور...";
 
   try{
-    const images = [];
+    // ✅ جهّز listingId قبل رفع الصور
+    const listingRef = doc(collection(db, "listings"));
+    const listingId = listingRef.id;
 
+    UI.el.uploadStatus.textContent = "جاري رفع الصور...";
+
+    const images = [];
     for (let i=0;i<files.length;i++){
       UI.el.uploadStatus.textContent = `رفع صورة ${i+1}/${files.length} ...`;
       const resized = await fileToResizedJpeg(files[i], 1280, 0.82);
-      const uploaded = await uploadToCloudinary(resized);
+
+      // ✅ فولدر منظم: souq/listings/<uid>/<listingId>
+      const folder = `${CLOUDINARY.folder}/${auth.currentUser.uid}/${listingId}`;
+
+      const uploaded = await uploadToCloudinary(resized, folder);
       images.push({
         url: uploaded.secure_url,
         publicId: uploaded.public_id
@@ -84,14 +88,15 @@ async function publish(){
 
     UI.el.uploadStatus.textContent = "جاري نشر الإعلان...";
 
-    await addDoc(collection(db,"listings"), {
+    // ✅ اكتب الإعلان بنفس الـ id
+    await setDoc(listingRef, {
       title,
       description,
       price,
       currency,
       city,
       category,
-      images,               // ✅ صار Array of objects
+      images, // [{url, publicId}]
       ownerId: auth.currentUser.uid,
       isActive: true,
       createdAt: serverTimestamp()
@@ -100,7 +105,9 @@ async function publish(){
     UI.el.uploadStatus.textContent = "تم نشر الإعلان ✅";
     clearForm();
     UI.hide(UI.el.addBox);
-    await UI.actions.loadListings(true);
+
+    // تأخير بسيط لظهور createdAt
+    setTimeout(() => UI.actions.loadListings(true), 800);
 
   }catch(e){
     alert(e?.message || "فشل النشر");
@@ -109,11 +116,8 @@ async function publish(){
   }
 }
 
-async function uploadToCloudinary(file){
-  const cloudName = CLOUDINARY.cloudName;
-  const uploadPreset = CLOUDINARY.uploadPreset;
-  const folder = CLOUDINARY.folder;
-
+async function uploadToCloudinary(file, folder){
+  const { cloudName, uploadPreset } = CLOUDINARY;
   const url = `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`;
 
   const fd = new FormData();
@@ -124,7 +128,5 @@ async function uploadToCloudinary(file){
   const res = await fetch(url, { method:"POST", body: fd });
   const data = await res.json();
   if (!res.ok) throw new Error(data?.error?.message || "Cloudinary upload failed");
-
-  // ✅ يرجع {secure_url, public_id, ...}
-  return data;
+  return data; // فيه secure_url و public_id
 }
