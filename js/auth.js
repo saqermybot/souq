@@ -101,10 +101,14 @@ export function initAuth() {
   // ✅ install ONE global click closer for menu (مرة واحدة فقط)
   if (!globalMenuCloserInstalled) {
     globalMenuCloserInstalled = true;
-    document.addEventListener("click", () => {
-      const menu = document.getElementById("accountMenu");
-      if (menu) menu.classList.add("hidden");
-    }, { capture: true });
+    document.addEventListener(
+      "click",
+      () => {
+        const menu = document.getElementById("accountMenu");
+        if (menu) menu.classList.add("hidden");
+      },
+      { capture: true }
+    );
   }
 
   // ===== Topbar render =====
@@ -120,13 +124,14 @@ export function initAuth() {
       ${
         user
           ? `
-            <div class="userChip" id="btnAccount" title="${escapeAttr(email)}">
-              ${photo ? `<img class="avatar" src="${escapeAttr(photo)}" alt="me"/>`
-                      : `<div class="avatarPh">${(email[0] || "U").toUpperCase()}</div>`}
-              <div class="userText">
-                <div class="userEmail">${escapeHtml(email)}</div>
-              </div>
-            </div>
+            <!-- ✅ Avatar صغير فقط (بدون ايميل/اسم) -->
+            <button id="btnAccount" class="avatarBtn" title="${escapeAttr(email)}" aria-label="account">
+              ${
+                photo
+                  ? `<img src="${escapeAttr(photo)}" alt="me" />`
+                  : `<span class="avatarLetter">${escapeHtml((email[0] || "U").toUpperCase())}</span>`
+              }
+            </button>
 
             <div id="accountMenu" class="menu hidden">
               <button id="btnMyAds" class="menuItem">إعلاناتي</button>
@@ -172,7 +177,7 @@ export function initAuth() {
     document.getElementById("btnMyAds").onclick = (e) => {
       e.stopPropagation();
       closeMenu();
-      UI.state.onlyMine = true;     // ✅ بتنعمل إذا بدك لاحقاً
+      UI.state.onlyMine = true;
       UI.state.filtersActive = false;
       UI.actions.loadListings(true);
     };
