@@ -24,7 +24,7 @@ export const UI = {
   init(){
     const ids = [
       "authBar","qSearch","cityFilter","catFilter","btnApply","btnReset","btnMore","listings","emptyState",
-      "details","btnBack","dTitle","dMeta","dPrice","dDesc","btnChat","gImg","gDots","gPrev","gNext",
+      "details","btnBack","dTitle","dMeta","dPrice","dDesc","btnChat","btnDelete","gImg","gDots","gPrev","gNext",
       "addBox","btnAddBack","aTitle","aDesc","aPrice","aCurrency","aCity","aCat","aImages","imgPreview",
       "btnPublish","btnClear","uploadStatus",
       "chatBox","btnChatBack","chatTitle","chatMsgs","chatInput","btnSend",
@@ -32,7 +32,6 @@ export const UI = {
     ];
     for (const id of ids) this.el[id] = document.getElementById(id);
 
-    // init selects
     this.el.cityFilter.innerHTML =
       `<option value="">كل المدن</option>` +
       SY_CITIES.map(c=>`<option value="${c}">${c}</option>`).join("");
@@ -41,12 +40,10 @@ export const UI = {
       `<option value="">اختر مدينة</option>` +
       SY_CITIES.map(c=>`<option value="${c}">${c}</option>`).join("");
 
-    // base navigation
     this.el.btnBack.onclick = () => this.hide(this.el.details);
     this.el.btnAddBack.onclick = () => this.hide(this.el.addBox);
     this.el.btnChatBack.onclick = () => this.actions.closeChat();
 
-    // filters + pagination
     this.el.btnApply.onclick = () => this.actions.loadListings(true);
     this.el.btnReset.onclick = () => {
       this.el.cityFilter.value="";
@@ -56,16 +53,13 @@ export const UI = {
     };
     this.el.btnMore.onclick = () => this.actions.loadListings(false);
 
-    // search typing
     this.el.qSearch.addEventListener("input", debounce(() => {
       this.actions.loadListings(true);
     }, 250));
 
-    // gallery
     this.el.gPrev.onclick = () => this.setGalleryIdx(this.state.gallery.idx - 1);
     this.el.gNext.onclick = () => this.setGalleryIdx(this.state.gallery.idx + 1);
 
-    // auth modal close
     this.el.btnCloseAuth.onclick = () => this.actions.closeAuth();
     this.el.authModal.addEventListener("click", (e)=>{
       if (e.target === this.el.authModal) this.actions.closeAuth();
