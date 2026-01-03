@@ -2,7 +2,7 @@ import { db } from "./firebase.js";
 import { UI } from "./ui.js";
 import { escapeHtml } from "./utils.js";
 import {
-  collection, getDocs, orderBy, query, where
+  collection, getDocs, orderBy, query
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 export async function initCategories(){
@@ -14,17 +14,22 @@ export async function initCategories(){
 }
 
 async function loadCategories(){
+  // ✅ بدون where لتفادي الـ composite index
   const qy = query(
     collection(db, "categories"),
-    where("isActive","==", true),
     orderBy("order","asc")
   );
 
   const snap = await getDocs(qy);
-  const opts = snap.docs.map(d=>{
-    const id = d.id;
-    const n = d.data().name_ar || id;
-    return `<option value="${id}">${escapeHtml(n)}</option>`;
+
+  // فلترة محلية لـ isActive
+  const active = snap.docs
+    .map(d => ({ id: d.id, ...d.data() }))
+    .filter(x => x.isActive === true);
+
+  const opts = active.map(x=>{
+    const n = x.name_ar || x.id;
+    return `<option value="${escapeHtml(x.id)}">${escapeHtml(n)}</option>`;
   });
 
   UI.el.catFilter.innerHTML = `<option value="">كل الأصناف</option>` + opts.join("");
