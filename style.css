@@ -148,7 +148,39 @@ button:disabled{opacity:.6; cursor:not-allowed}
   grid-template-columns: repeat(2, 1fr);
   gap:10px;
 }
-@media(max-width:520px){ .cardsGrid{grid-template-columns:1fr} }
+
+/* ✅ مهم: نخليها "سطرين" حتى على الموبايل */
+@media(max-width:520px){
+  .cardsGrid{
+    grid-template-columns: repeat(2, 1fr); /* بدل 1fr */
+    gap:8px;
+  }
+
+  /* ✅ كروت أصغر */
+  .cardItem img{
+    height:120px;
+  }
+  .cardItem .p{
+    padding:8px;
+  }
+  .cardItem .t{
+    font-size:14px;
+    margin-bottom:4px;
+  }
+  .cardItem .m{
+    font-size:12px;
+  }
+  .cardItem .pr{
+    font-size:14px;
+    padding:5px 8px;
+    margin-top:6px;
+  }
+  .cardItem button{
+    padding:9px 12px;
+    font-size:14px;
+    margin-top:8px;
+  }
+}
 
 .cardItem{
   border:1px solid var(--border);
