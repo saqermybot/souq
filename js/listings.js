@@ -1,26 +1,36 @@
-import { db } from "./firebase.js";
+import { db, auth } from "./firebase.js";
 import { UI } from "./ui.js";
 import { escapeHtml, formatPrice } from "./utils.js";
-
 import {
-  collection,
-  getDocs,
-  limit,
-  orderBy,
-  query,
-  startAfter,
-  where
+  collection, getDocs, limit, orderBy, query, startAfter, where
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 export function initListings(){
   UI.actions.loadListings = loadListings;
+  UI.actions.openAdd = openAdd;
   UI.actions.openDetails = openDetails;
 
-  // زر مراسلة داخل التفاصيل
   UI.el.btnChat.onclick = () => {
     if (!UI.state.currentListing) return;
-    UI.actions.openChat(UI.state.currentListing.id, UI.state.currentListing.title);
+    UI.actions.openChat(UI.state.currentListing.id, UI.state.currentListing.title || "إعلان");
   };
+}
+
+function openAdd(){
+  UI.resetOverlays();
+  UI.show(UI.el.addBox);
+
+  // لمسة ذكية: إذا الأصناف فاضية، نعرض تلميح
+  try{
+    const count = UI.el.aCat?.options?.length || 0;
+    if (UI.el.catsHint){
+      UI.el.catsHint.textContent =
+        (count <= 1) ? "الأصناف فاضية… اضغط (تحديث الأصناف) أو أضف categories في Firestore." : "";
+    }
+  }catch{}
+
+  UI.el.uploadStatus.textContent = "";
+  UI.el.imgPreview.innerHTML = "";
 }
 
 function openDetails(id, data){
@@ -43,10 +53,12 @@ async function loadListings(reset=true){
     UI.el.btnMore.disabled = false;
   }
 
-  // شروط الاستعلام
-  const wh = [ where("isActive","==",true) ];
-  if (UI.el.cityFilter.value) wh.push(where("city","==", UI.el.cityFilter.value));
-  if (UI.el.catFilter.value) wh.push(where("category","==", UI.el.catFilter.value));
+  const wh = [ where("isActive","==", true) ];
+
+  const city = UI.el.cityFilter.value || "";
+  const cat  = UI.el.catFilter.value || "";
+  if (city) wh.push(where("city","==", city));
+  if (cat)  wh.push(where("category","==", cat));
 
   let qy = query(
     collection(db,"listings"),
@@ -67,20 +79,20 @@ async function loadListings(reset=true){
 
   const snap = await getDocs(qy);
 
-  // تحديث lastDoc للـ pagination
   if (snap.docs.length){
     UI.state.lastDoc = snap.docs[snap.docs.length-1];
+  } else {
+    // ما في المزيد
+    if (!reset) UI.el.btnMore.disabled = true;
   }
 
-  // بحث محلي (MVP) بعد الجلب
   const keyword = (UI.el.qSearch.value || "").trim().toLowerCase();
-
-  let addedThisBatch = 0;
+  let addedNow = 0;
 
   snap.forEach(ds=>{
     const data = ds.data();
 
-    // فلترة محلية سريعة بالكلمة
+    // فلترة محلية للبحث (MVP)
     if (keyword){
       const t = String(data.title || "").toLowerCase();
       const d = String(data.description || "").toLowerCase();
@@ -88,34 +100,31 @@ async function loadListings(reset=true){
     }
 
     const img = (data.images && data.images[0]) ? data.images[0] : "";
+    const title = escapeHtml(data.title || "بدون عنوان");
+    const meta  = `${escapeHtml(data.city||"")} • ${escapeHtml(data.category||"")}`;
+    const price = escapeHtml(formatPrice(data.price, data.currency));
+
     const card = document.createElement("div");
     card.className = "cardItem";
     card.innerHTML = `
       <img src="${img}" alt="" />
       <div class="p">
-        <div class="t">${escapeHtml(data.title || "بدون عنوان")}</div>
-        <div class="m">${escapeHtml(data.city||"")} • ${escapeHtml(data.category||"")}</div>
-        <div class="pr">${escapeHtml(formatPrice(data.price, data.currency))}</div>
-        <button class="secondary">عرض</button>
+        <div class="t">${title}</div>
+        <div class="m">${meta}</div>
+        <div class="pr">${price}</div>
+        <button class="secondary" type="button">عرض</button>
       </div>
     `;
 
     card.querySelector("button").onclick = () => openDetails(ds.id, data);
-
     UI.el.listings.appendChild(card);
-    addedThisBatch++;
+    addedNow++;
   });
 
   // Empty state
   const isEmpty = UI.el.listings.children.length === 0;
   UI.setEmptyState(isEmpty);
 
-  // لو ما رجع ولا نتيجة من فايرستور بهالدفعة: وقف زر المزيد
-  if (!snap.docs.length && !reset){
-    UI.el.btnMore.disabled = true;
-  }
-
-  // إذا رجع docs بس الفلترة المحلية شالتهم كلهم،
-  // ما نوقف زر المزيد مباشرة، لأن ممكن الدفعة الجاية فيها نتائج
-  // (بس إذا بدك، بعملها “أذكى” لاحقاً ببحث على السيرفر)
+  // لو ما أضفنا ولا بطاقة بسبب البحث المحلي، وما في صفحات تانية، عطّل المزيد
+  if (!addedNow && snap.docs.length === 0) UI.el.btnMore.disabled = true;
 }
