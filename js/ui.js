@@ -18,16 +18,28 @@ export const UI = {
     closeChat: () => {},
     loadListings: async () => {},
     loadCategories: async () => {},
-    openDetails: () => {}
+    openDetails: () => {},
+    openInbox: () => {},
+    closeInbox: () => {},
+    loadInbox: async () => {}
   },
 
   init(){
+    // ✅ تثبيت الداكن دائماً
+    document.documentElement.setAttribute("data-theme", "dark");
+
     const ids = [
       "authBar","qSearch","cityFilter","catFilter","btnApply","btnReset","btnMore","listings","emptyState",
+
       "detailsPage","btnBack","btnShare","dTitle","dMeta","dPrice","dDesc","btnChat","gImg","gDots","gPrev","gNext",
+
+      "inboxPage","btnInboxBack","btnInboxRefresh","inboxList","inboxEmpty",
+
       "addBox","btnAddBack","aTitle","aDesc","aPrice","aCurrency","aCity","aCat","aImages","imgPreview",
       "btnPublish","btnClear","uploadStatus",
+
       "chatBox","btnChatBack","chatTitle","chatMsgs","chatInput","btnSend",
+
       "authModal","btnCloseAuth","email","password","btnLogin","btnRegister","btnGoogle"
     ];
     for (const id of ids) this.el[id] = document.getElementById(id);
@@ -41,18 +53,14 @@ export const UI = {
       `<option value="">اختر مدينة</option>` +
       SY_CITIES.map(c=>`<option value="${c}">${c}</option>`).join("");
 
-    // ✅ الوضع الافتراضي: عرض الكل دائماً
-    this.state.filtersActive = false;
-
-    // ✅ احتياط: إذا المتصفح حافظ قيم قديمة
-    this.el.cityFilter.value = "";
-    this.el.catFilter.value = "";
-    this.el.qSearch.value = "";
-
     // back buttons
     this.el.btnBack.onclick = () => this.hideDetailsPage();
     this.el.btnAddBack.onclick = () => this.hide(this.el.addBox);
     this.el.btnChatBack.onclick = () => this.actions.closeChat();
+
+    // inbox buttons
+    this.el.btnInboxBack.onclick = () => this.actions.closeInbox();
+    this.el.btnInboxRefresh.onclick = () => this.actions.loadInbox();
 
     // share
     this.el.btnShare.onclick = async () => {
@@ -79,25 +87,14 @@ export const UI = {
       this.el.cityFilter.value="";
       this.el.catFilter.value="";
       this.el.qSearch.value="";
-      this.state.filtersActive = false; // رجّع عرض الكل
+      this.state.filtersActive = false;
       this.actions.loadListings(true);
     };
 
-    // ✅ مهم: تغيير المدينة/الصنف لا يفعّل الفلاتر لحاله
-    // (يعني الفلاتر ما تشتغل إلا بعد "تطبيق")
-    this.el.cityFilter.addEventListener("change", () => {
-      // فقط UI hint ممكن لاحقاً، حالياً لا شيء
-    });
-    this.el.catFilter.addEventListener("change", () => {
-      // فقط UI hint ممكن لاحقاً، حالياً لا شيء
-    });
-
     this.el.btnMore.onclick = () => this.actions.loadListings(false);
 
-    // keyword typing (محلي) — يفلتر بالنتائج المعروضة/الصفحات القادمة
+    // keyword typing
     this.el.qSearch.addEventListener("input", debounce(() => {
-      // ✅ البحث لا يفعّل city/category فلاتر
-      // لكن ممكن تخلي apply سابقاً شغال — خلّيه كما هو
       this.actions.loadListings(true);
     }, 250));
 
@@ -111,7 +108,7 @@ export const UI = {
       if (e.target === this.el.authModal) this.actions.closeAuth();
     });
 
-    // ✅ لو فتح رابط فيه #listing=...
+    // hash open listing
     window.addEventListener("hashchange", () => this.handleHash());
     this.handleHash();
   },
@@ -121,7 +118,7 @@ export const UI = {
     if (!h.startsWith("#listing=")) return;
     const id = decodeURIComponent(h.replace("#listing=",""));
     if (typeof this.actions.openDetails === "function") {
-      this.actions.openDetails(id, null, true); // "true" يعني من رابط
+      this.actions.openDetails(id, null, true);
     }
   },
 
@@ -132,6 +129,7 @@ export const UI = {
     this.hide(this.el.detailsPage);
     this.hide(this.el.addBox);
     this.hide(this.el.chatBox);
+    this.hide(this.el.inboxPage);
   },
 
   showDetailsPage(){
@@ -145,6 +143,12 @@ export const UI = {
     if ((location.hash || "").startsWith("#listing=")) {
       history.replaceState(null, "", location.pathname + location.search);
     }
+  },
+
+  showInboxPage(){
+    this.resetOverlays();
+    this.show(this.el.inboxPage);
+    window.scrollTo(0,0);
   },
 
   renderAuthBar(html){
@@ -173,5 +177,9 @@ export const UI = {
 
   setEmptyState(isEmpty){
     this.el.emptyState.style.display = isEmpty ? "block" : "none";
+  },
+
+  setInboxEmpty(isEmpty){
+    this.el.inboxEmpty.style.display = isEmpty ? "block" : "none";
   }
 };
