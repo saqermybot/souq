@@ -9,9 +9,19 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 export function initAddListing(){
+  // ✅ خلي فتح صفحة الإعلان مربوط من هون (من أول تحميل)
+  UI.actions.openAdd = openAdd;
+
   UI.el.btnClear.onclick = clearForm;
   UI.el.aImages.onchange = previewImages;
   UI.el.btnPublish.onclick = publish;
+}
+
+export function openAdd(){
+  UI.resetOverlays();
+  UI.show(UI.el.addBox);
+  UI.el.uploadStatus.textContent = "";
+  UI.el.imgPreview.innerHTML = "";
 }
 
 function clearForm(){
@@ -37,11 +47,7 @@ function previewImages(){
 }
 
 async function publish(){
-  try{
-    requireAuth();
-  }catch{
-    return;
-  }
+  try { requireAuth(); } catch { return; }
 
   const title = UI.el.aTitle.value.trim();
   const description = UI.el.aDesc.value.trim();
@@ -49,7 +55,6 @@ async function publish(){
   const currency = UI.el.aCurrency.value;
   const city = UI.el.aCity.value;
   const category = UI.el.aCat.value;
-
   const files = Array.from(UI.el.aImages.files || []);
 
   if (!title || !description || !price || !city || !category){
@@ -92,7 +97,9 @@ async function publish(){
     await UI.actions.loadListings(true);
 
   }catch(e){
+    // ✅ خلي رسالة Cloudinary واضحة
     alert(e?.message || "فشل النشر");
+    UI.el.uploadStatus.textContent = "";
   }finally{
     UI.el.btnPublish.disabled = false;
   }
