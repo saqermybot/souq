@@ -1,8 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-import {
-  getFirestore
-} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
-
+import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 import {
   getAuth,
   setPersistence,
@@ -10,7 +7,6 @@ import {
   browserSessionPersistence
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
-// ====== Firebase config ======
 const firebaseConfig = {
   apiKey: "AIzaSyAdZJuYm9tZ9H8Bw60zlzGy-Igt-qub0D8",
   authDomain: "souq-a0e16.firebaseapp.com",
@@ -23,11 +19,9 @@ const firebaseConfig = {
 
 export const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
-
 export const auth = getAuth(app);
 
-// ✅ هذا هو الحل اللي يمنع "بينسى" على iOS/Chrome
+// ثبات تسجيل الدخول (حل نسيان iOS/Chrome)
 setPersistence(auth, browserLocalPersistence).catch(async () => {
-  // إذا المحلي ما زبط (أحياناً على iOS)، نستخدم session
   await setPersistence(auth, browserSessionPersistence);
 });
