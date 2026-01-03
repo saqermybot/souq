@@ -475,3 +475,56 @@ button:disabled{opacity:.6; cursor:not-allowed}
   padding:14px;
   box-shadow:0 1px 0 rgba(0,0,0,.03);
 }
+/* Avatar صغير بدل userChip */
+.avatarBtn{
+  width:38px;
+  height:38px;
+  border-radius:12px;
+  border:1px solid rgba(255,255,255,.18);
+  background:rgba(255,255,255,.06);
+  padding:0;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  overflow:hidden;
+  color:#fff;
+}
+.avatarBtn img{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+  display:block;
+}
+.avatarBtn .avatarLetter{
+  font-weight:900;
+  font-size:15px;
+  opacity:.95;
+}
+
+/* مهم: menu absolute يحتاج parent relative */
+.authbar{ position:relative; }
+
+/* menu */
+.menu{
+  position:absolute;
+  top:48px;
+  left:0;            /* ✅ بالزاوية اليسار */
+  min-width:140px;
+  background: var(--card);
+  border:1px solid var(--border);
+  border-radius:12px;
+  box-shadow: var(--shadow);
+  padding:6px;
+  z-index: 999;
+}
+.menuItem{
+  width:100%;
+  text-align:right;
+  background:transparent;
+  color:var(--text);
+  border:0;
+  padding:10px 12px;
+  border-radius:10px;
+}
+.menuItem:hover{ background: rgba(148,163,184,.12); }
+.menuItem.danger{ color: var(--danger); }
