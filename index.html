@@ -38,31 +38,11 @@
         <h3>الإعلانات</h3>
         <button id="btnMore" class="secondary">تحميل المزيد</button>
       </div>
+
       <div id="listings" class="cardsGrid"></div>
+
       <div id="emptyState" class="muted small" style="display:none;margin-top:10px">
         لا يوجد نتائج حالياً
-      </div>
-    </section>
-
-    <!-- DETAILS -->
-    <section id="details" class="card hidden">
-      <button id="btnBack" class="ghost">رجوع</button>
-
-      <div class="gallery">
-        <button id="gPrev" class="gbtn">‹</button>
-        <img id="gImg" class="gimg" alt="image" />
-        <button id="gNext" class="gbtn">›</button>
-      </div>
-      <div id="gDots" class="dots"></div>
-
-      <h2 id="dTitle"></h2>
-      <div class="muted" id="dMeta"></div>
-      <div class="price" id="dPrice"></div>
-      <p id="dDesc"></p>
-
-      <div class="row actions">
-        <button id="btnChat">مراسلة</button>
-        <button id="btnDelete" class="ghost hidden">حذف الإعلان</button>
       </div>
     </section>
 
@@ -112,6 +92,44 @@
     </section>
 
   </main>
+
+  <!-- DETAILS PAGE (Route) -->
+  <section id="detailsPage" class="detailsPage hidden">
+    <header class="detailsTop">
+      <button id="btnBack" class="ghost">رجوع</button>
+      <div class="detailsTitleMini">تفاصيل الإعلان</div>
+      <div class="detailsTopRight">
+        <button id="btnShare" class="ghost">🔗 مشاركة</button>
+      </div>
+    </header>
+
+    <div class="detailsBody">
+      <div class="gallery">
+        <button id="gPrev" class="gbtn">‹</button>
+        <img id="gImg" class="gimg" alt="image" />
+        <button id="gNext" class="gbtn">›</button>
+      </div>
+      <div id="gDots" class="dots"></div>
+
+      <h2 id="dTitle"></h2>
+      <div class="muted" id="dMeta"></div>
+      <div class="price" id="dPrice"></div>
+      <p id="dDesc"></p>
+
+      <div class="row actions">
+        <button id="btnChat">مراسلة</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- Fullscreen Image Viewer -->
+  <div id="imgModal" class="imgModal hidden">
+    <button id="imgClose" class="imgClose">✕</button>
+    <button id="imgPrev" class="imgNav imgPrev">‹</button>
+    <img id="imgFull" class="imgFull" alt="full" />
+    <button id="imgNext" class="imgNav imgNext">›</button>
+    <div id="imgCounter" class="imgCounter"></div>
+  </div>
 
   <!-- AUTH MODAL -->
   <div id="authModal" class="modal hidden">
