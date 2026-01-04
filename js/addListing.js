@@ -1,3 +1,5 @@
+// addListing.js (معدل: يتعامل مع categoryId = cars/realestate/electronics + حقول ديناميكية + حفظ منظم)
+
 import { db, auth } from "./firebase.js";
 import { CLOUDINARY, MAX_IMAGES } from "./config.js";
 import { UI } from "./ui.js";
@@ -11,28 +13,39 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 let publishing = false;
-
-// ✅ لنظافة الذاكرة (object URLs)
 let previewUrls = [];
+
+/* =========================
+   ✅ HELPERS
+========================= */
+
+// تحويل categoryId لاسم عربي (للواجهة/الكروت)
+function catToAr(catId){
+  if (catId === "cars") return "سيارات";
+  if (catId === "realestate") return "عقارات";
+  if (catId === "electronics") return "إلكترونيات";
+  return "";
+}
+
+function getCategoryId(){
+  // UI.el.aCat value صار id من categories.js
+  return (UI.el.aCat?.value || "").toString().trim();
+}
 
 /* =========================
    ✅ INIT
 ========================= */
 export function initAddListing() {
-  // ✅ ربط فتح صفحة الإضافة
   UI.actions.openAdd = openAdd;
 
-  // زر رجوع
   if (UI.el.btnAddBack) UI.el.btnAddBack.onclick = () => UI.hide(UI.el.addBox);
 
   UI.el.btnClear.onclick = clearForm;
   UI.el.aImages.onchange = previewImages;
   UI.el.btnPublish.onclick = publish;
 
-  // ✅ أنشئ الحقول الإضافية إذا غير موجودة
   ensureDynamicFields();
 
-  // ✅ تبديل تلقائي حسب الصنف
   if (UI.el.aCat) {
     UI.el.aCat.addEventListener("change", syncDynamicFieldsVisibility);
     syncDynamicFieldsVisibility();
@@ -40,23 +53,19 @@ export function initAddListing() {
 }
 
 /* =========================
-   ✅ DYNAMIC FIELDS (Cars + Realestate)
+   ✅ DYNAMIC FIELDS
 ========================= */
 function ensureDynamicFields(){
-  // مكان ممتاز: قبل قسم الصور
   const anchor =
     UI.el.aImages?.closest(".row") ||
     UI.el.aImages?.parentElement ||
     UI.el.addBox;
 
   if (!anchor) return;
-
-  // لو الحقول موجودة ما نعيد إنشاءها
   if (document.getElementById("dynamicFieldsWrap")) return;
 
   const wrap = document.createElement("div");
   wrap.id = "dynamicFieldsWrap";
-  // إذا عندك class box أو section استخدمها، وإلا ما في مشكلة
   wrap.className = "box";
 
   wrap.innerHTML = `
@@ -66,8 +75,8 @@ function ensureDynamicFields(){
         <label class="muted small">نوع الإعلان</label>
         <select id="aTypeCar" class="input">
           <option value="">اختر (بيع / إيجار)</option>
-          <option value="بيع">بيع</option>
-          <option value="إيجار">إيجار</option>
+          <option value="sale">بيع</option>
+          <option value="rent">إيجار</option>
         </select>
       </div>
 
@@ -88,8 +97,8 @@ function ensureDynamicFields(){
         <label class="muted small">نوع الإعلان</label>
         <select id="aTypeEstate" class="input">
           <option value="">اختر (بيع / إيجار)</option>
-          <option value="بيع">بيع</option>
-          <option value="إيجار">إيجار</option>
+          <option value="sale">بيع</option>
+          <option value="rent">إيجار</option>
         </select>
       </div>
 
@@ -98,9 +107,9 @@ function ensureDynamicFields(){
         <select id="aEstateKind" class="input">
           <option value="">اختر نوع العقار</option>
           <option value="شقة">شقة</option>
+          <option value="بيت">بيت</option>
           <option value="محل">محل</option>
           <option value="أرض">أرض</option>
-          <option value="بيت">بيت</option>
         </select>
       </div>
 
@@ -109,12 +118,23 @@ function ensureDynamicFields(){
         <input id="aRooms" class="input" type="number" min="0" max="20" placeholder="مثال: 3" />
       </div>
     </div>
+
+    <!-- ✅ إلكترونيات (اختياري) -->
+    <div id="electFields" class="hidden">
+      <div class="row">
+        <label class="muted small">نوع الإلكترونيات</label>
+        <select id="aElectKind" class="input">
+          <option value="">اختر النوع</option>
+          <option value="موبايل">موبايل</option>
+          <option value="تلفزيون">تلفزيون</option>
+          <option value="كمبيوتر">كمبيوتر</option>
+        </select>
+      </div>
+    </div>
   `;
 
-  // إدخال الحقول قبل الصور مباشرة
   anchor.parentElement?.insertBefore(wrap, anchor);
 
-  // خزّن refs (اختياري بس مفيد)
   UI.el.aTypeCar = document.getElementById("aTypeCar");
   UI.el.aCarModel = document.getElementById("aCarModel");
   UI.el.aCarYear = document.getElementById("aCarYear");
@@ -122,17 +142,20 @@ function ensureDynamicFields(){
   UI.el.aTypeEstate = document.getElementById("aTypeEstate");
   UI.el.aEstateKind = document.getElementById("aEstateKind");
   UI.el.aRooms = document.getElementById("aRooms");
+
+  UI.el.aElectKind = document.getElementById("aElectKind");
 }
 
 function syncDynamicFieldsVisibility(){
-  const cat = (UI.el.aCat?.value || "").trim();
+  const catId = getCategoryId();
 
   const carBox = document.getElementById("carFields");
   const estBox = document.getElementById("estateFields");
+  const eleBox = document.getElementById("electFields");
 
-  // ✅ عربي فقط
-  if (carBox) carBox.classList.toggle("hidden", cat !== "سيارات");
-  if (estBox) estBox.classList.toggle("hidden", cat !== "عقارات");
+  if (carBox) carBox.classList.toggle("hidden", catId !== "cars");
+  if (estBox) estBox.classList.toggle("hidden", catId !== "realestate");
+  if (eleBox) eleBox.classList.toggle("hidden", catId !== "electronics");
 }
 
 /* =========================
@@ -160,7 +183,6 @@ function clearForm() {
   setStatus("");
   cleanupPreviewUrls();
 
-  // ✅ تفريغ الحقول الديناميكية
   if (UI.el.aTypeCar) UI.el.aTypeCar.value = "";
   if (UI.el.aCarModel) UI.el.aCarModel.value = "";
   if (UI.el.aCarYear) UI.el.aCarYear.value = "";
@@ -168,6 +190,8 @@ function clearForm() {
   if (UI.el.aTypeEstate) UI.el.aTypeEstate.value = "";
   if (UI.el.aEstateKind) UI.el.aEstateKind.value = "";
   if (UI.el.aRooms) UI.el.aRooms.value = "";
+
+  if (UI.el.aElectKind) UI.el.aElectKind.value = "";
 
   syncDynamicFieldsVisibility();
 }
@@ -180,9 +204,7 @@ function setStatus(msg = "") {
    ✅ IMAGES PREVIEW
 ========================= */
 function cleanupPreviewUrls(){
-  try{
-    previewUrls.forEach(u => URL.revokeObjectURL(u));
-  }catch{}
+  try { previewUrls.forEach(u => URL.revokeObjectURL(u)); } catch {}
   previewUrls = [];
 }
 
@@ -213,53 +235,74 @@ function previewImages() {
 }
 
 /* =========================
-   ✅ VALIDATION + EXTRA FIELDS
+   ✅ EXTRA FIELDS + VALIDATION
 ========================= */
-function collectExtraFields(category){
-  // نرجّع object جاهز للدمج في firestore
-  if (category === "سيارات") {
-    const type = (UI.el.aTypeCar?.value || "").trim(); // بيع/إيجار
+function collectExtraFields(catId){
+  // نخليها منظمة + توافق قديم
+  if (catId === "cars") {
+    const typeId = (UI.el.aTypeCar?.value || "").trim(); // sale/rent
     const carModel = (UI.el.aCarModel?.value || "").trim();
     const y = Number(UI.el.aCarYear?.value || 0);
     const carYear = (y >= 1950 && y <= 2035) ? y : null;
 
-    return { type, carModel, carYear };
+    return {
+      typeId, // ✅ قياسي
+      carModel,
+      carYear,
+
+      // ✅ شكل منظم جديد
+      car: { typeId, model: carModel, year: carYear }
+    };
   }
 
-  if (category === "عقارات") {
-    const type = (UI.el.aTypeEstate?.value || "").trim(); // بيع/إيجار
+  if (catId === "realestate") {
+    const typeId = (UI.el.aTypeEstate?.value || "").trim(); // sale/rent
     const estateKind = (UI.el.aEstateKind?.value || "").trim();
     const r = Number(UI.el.aRooms?.value || 0);
     const rooms = (r >= 0 && r <= 20) ? r : null;
 
-    return { type, estateKind, rooms };
+    return {
+      typeId,
+      estateKind,
+      rooms,
+
+      estate: { typeId, kind: estateKind, rooms }
+    };
   }
 
-  // أصناف ثانية لاحقاً
+  if (catId === "electronics") {
+    const kind = (UI.el.aElectKind?.value || "").trim();
+    return { electronics: { kind }, electKind: kind };
+  }
+
   return {};
 }
 
-function validateForm({ title, description, price, city, category, files, extra }) {
+function validateForm({ title, description, price, city, catId, files, extra }) {
   if (!title) return "اكتب عنوان الإعلان";
   if (title.length < 3) return "العنوان قصير جداً";
   if (!description) return "اكتب وصف الإعلان";
   if (description.length < 10) return "الوصف قصير جداً";
   if (!price || Number.isNaN(price) || price <= 0) return "اكتب سعر صحيح";
   if (!city) return "اختر المدينة";
-  if (!category) return "اختر الصنف";
+  if (!catId) return "اختر الصنف";
   if (!files.length) return `اختر صورة واحدة على الأقل (حد أقصى ${MAX_IMAGES})`;
 
-  // ✅ شروط خاصة حسب الصنف
-  if (category === "سيارات") {
-    if (!extra.type) return "اختر (بيع/إيجار) للسيارة";
+  // ✅ شروط حسب الصنف
+  if (catId === "cars") {
+    if (!extra.typeId) return "اختر (بيع/إيجار) للسيارة";
     if (!extra.carModel) return "اكتب موديل السيارة";
     if (!extra.carYear) return "اكتب سنة الموديل";
   }
 
-  if (category === "عقارات") {
-    if (!extra.type) return "اختر (بيع/إيجار) للعقار";
+  if (catId === "realestate") {
+    if (!extra.typeId) return "اختر (بيع/إيجار) للعقار";
     if (!extra.estateKind) return "اختر نوع العقار";
-    // rooms اختياري
+  }
+
+  if (catId === "electronics") {
+    // اختياري: إذا بدك تلزم النوع
+    // if (!extra.electKind) return "اختر نوع الإلكترونيات";
   }
 
   return null;
@@ -277,14 +320,14 @@ async function publish() {
   const price = Number(UI.el.aPrice.value);
   const currency = UI.el.aCurrency.value;
   const city = UI.el.aCity.value;
-  const category = (UI.el.aCat.value || "").trim(); // عربي فقط
 
-  // ✅ extra حسب الصنف
-  const extra = collectExtraFields(category);
+  const categoryId = getCategoryId();          // cars/realestate/electronics
+  const categoryNameAr = catToAr(categoryId);  // للعرض فقط (اختياري)
 
+  const extra = collectExtraFields(categoryId);
   const files = Array.from(UI.el.aImages.files || []).slice(0, MAX_IMAGES);
 
-  const err = validateForm({ title, description, price, city, category, files, extra });
+  const err = validateForm({ title, description, price, city, catId: categoryId, files, extra });
   if (err) return alert(err);
 
   publishing = true;
@@ -293,7 +336,6 @@ async function publish() {
   setStatus("جاري تجهيز الصور...");
 
   try {
-    // ✅ رفع صور
     const urls = [];
     for (let i = 0; i < files.length; i++) {
       setStatus(`رفع صورة ${i + 1}/${files.length} ...`);
@@ -304,7 +346,6 @@ async function publish() {
 
     setStatus("جاري نشر الإعلان...");
 
-    // ✅ انتهاء الصلاحية: 15 يوم
     const expiresAt = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000);
 
     await addDoc(collection(db, "listings"), {
@@ -313,9 +354,12 @@ async function publish() {
       price,
       currency,
       city,
-      category,
 
-      // ✅ اضافات حسب الصنف
+      // ✅ نخزن الاثنين للتوافق + سهولة العرض
+      categoryId,            // الأساسي
+      categoryNameAr,        // للعرض (اختياري)
+      category: categoryNameAr || categoryId, // دعم قديم إن كنت تستخدمه بالكروت
+
       ...extra,
 
       images: urls,
@@ -327,15 +371,15 @@ async function publish() {
 
     setStatus("تم نشر الإعلان ✅");
 
-    // ✅ سكر صفحة الإضافة وارجع للقائمة
     clearForm();
     UI.hide(UI.el.addBox);
 
-    // ✅ إعادة تحميل
     await reloadListingsWithRetry();
 
   } catch (e) {
+    // ✅ إذا في خطأ، رجّع الزر يشتغل وما يضل "جاري النشر"
     alert(e?.message || "فشل النشر");
+    console.error("publish error:", e);
   } finally {
     publishing = false;
     UI.el.btnPublish.disabled = false;
@@ -350,12 +394,8 @@ async function publish() {
 async function reloadListingsWithRetry() {
   const delays = [150, 600, 1200];
   for (let i = 0; i < delays.length; i++) {
-    try {
-      await UI.actions.loadListings(true);
-      return;
-    } catch {
-      await wait(delays[i]);
-    }
+    try { await UI.actions.loadListings(true); return; }
+    catch { await wait(delays[i]); }
   }
   try { await UI.actions.loadListings(true); } catch {}
 }
@@ -376,20 +416,19 @@ async function uploadToCloudinary(file) {
   fd.append("upload_preset", uploadPreset);
   fd.append("folder", folder);
 
-  // ✅ Timeout 35 ثانية حتى ما يعلق
   const controller = new AbortController();
   const t = setTimeout(() => controller.abort(), 35000);
 
   let res, data;
-  try{
+  try {
     res = await fetch(url, { method: "POST", body: fd, signal: controller.signal });
     data = await res.json();
-  }catch(e){
+  } catch (e) {
     if (e?.name === "AbortError") {
       throw new Error("انقطع رفع الصورة (Timeout). جرّب صورة أصغر أو شبكة أفضل.");
     }
     throw new Error("فشل الاتصال لرفع الصور. جرّب مرة ثانية.");
-  }finally{
+  } finally {
     clearTimeout(t);
   }
 
