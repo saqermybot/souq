@@ -1,3 +1,7 @@
+/* =========================
+   TOPBAR + AUTHBAR
+========================= */
+
 /* Topbar */
 .topbar{
   position:sticky;
@@ -11,9 +15,43 @@
   justify-content:space-between;
   border-bottom: 1px solid rgba(255,255,255,.08);
 }
-/* Badge فوق زر الرسائل 💬 */
-.iconBtn{ position:relative; }
 
+.brand{font-weight:900; letter-spacing:.2px}
+.brand::after{
+  content:"";
+  display:inline-block;
+  width:10px;height:10px;
+  border-radius:999px;
+  margin-right:8px;
+  background: linear-gradient(135deg, var(--brand), var(--brand2));
+  vertical-align:middle;
+}
+
+/* مهم: menu absolute يحتاج parent relative */
+.authbar{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;
+  position:relative;
+}
+
+/* زر أيقونة بالهيدر */
+.iconBtn{
+  width:44px;
+  height:44px;
+  border-radius:12px;
+  background: rgba(255,255,255,.12);
+  color:#fff;
+  border: 1px solid rgba(255,255,255,.18);
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  font-size:18px;
+  position:relative; /* ✅ مهم للـ badge/dot */
+}
+
+/* Badge فوق زر الرسائل 💬 (أحمر - مستقل عن .badge) */
 #inboxBadge{
   position:absolute;
   top:6px;
@@ -36,49 +74,26 @@
   border:2px solid rgba(0,0,0,.35);
 }
 
-.brand{font-weight:900; letter-spacing:.2px}
-.brand::after{
-  content:"";
-  display:inline-block;
-  width:10px;height:10px;
+/* ✅ نقطة إشعار (اختياري) */
+.inboxDot{
+  position:absolute;
+  top:8px;
+  right:8px;
+  width:10px;
+  height:10px;
   border-radius:999px;
-  margin-right:8px;
-  background: linear-gradient(135deg, var(--brand), var(--brand2));
-  vertical-align:middle;
-}
-.carMeta{
-  font-size:13px;
-  color: var(--muted);
-  opacity:.95;
-  margin: -2px 0 6px;
+  background:#ef4444;
+  box-shadow: 0 0 0 2px rgba(17,17,17,.55);
 }
 
-/* مهم: menu absolute يحتاج parent relative */
-.authbar{
-  display:flex;
-  gap:8px;
-  align-items:center;
-  flex-wrap:wrap;
-  position:relative;
-}
+/* =========================
+   LISTINGS GRID + CARD
+========================= */
 
-/* Marketplace grid */
 .cardsGrid{
   display:grid;
   grid-template-columns: repeat(2, 1fr);
   gap:10px;
-}
-
-/* ✅ سطرين على الموبايل */
-@media(max-width:520px){
-  .cardsGrid{ gap:8px; }
-
-  .cardItem img{ height:120px; }
-  .cardItem .p{ padding:8px; }
-  .cardItem .t{ font-size:14px; margin-bottom:4px; }
-  .cardItem .m{ font-size:12px; }
-  .cardItem .pr{ font-size:14px; padding:5px 8px; margin-top:6px; }
-  .cardItem button{ padding:9px 12px; font-size:14px; margin-top:8px; }
 }
 
 .cardItem{
@@ -89,22 +104,44 @@
   display:flex;
   flex-direction:column;
   transition: transform .12s ease, box-shadow .2s ease;
+  cursor:pointer; /* ✅ صار كله clickable */
 }
+
 @media (hover:hover){
   .cardItem:hover{
     transform: translateY(-2px);
     box-shadow: 0 16px 36px rgba(2,6,23,.10);
   }
 }
+
 .cardItem img{
   width:100%;
   height:160px;
   object-fit:cover;
   background:#eee;
 }
-.cardItem .p{padding:10px}
-.cardItem .t{font-weight:900; margin-bottom:6px; cursor:pointer}
-.cardItem .m{font-size:13px; color:var(--muted); opacity:.95}
+
+.cardItem .p{ padding:10px; }
+
+.cardItem .t{
+  font-weight:900;
+  margin-bottom:6px;
+  cursor:pointer;
+}
+
+.cardItem .m{
+  font-size:13px;
+  color:var(--muted);
+  opacity:.95;
+}
+
+.carMeta{
+  font-size:13px;
+  color: var(--muted);
+  opacity:.95;
+  margin: -2px 0 6px;
+}
+
 .cardItem .pr{
   font-weight:900;
   margin-top:8px;
@@ -113,11 +150,23 @@
   border-radius: 999px;
   background: rgba(34,197,94,.12);
 }
-.cardItem button{margin-top:10px; width:100%}
 
-.price{font-size:22px; font-weight:900; margin:10px 0}
+/* ✅ موبايل */
+@media(max-width:520px){
+  .cardsGrid{ gap:8px; }
+  .cardItem img{ height:120px; }
+  .cardItem .p{ padding:8px; }
+  .cardItem .t{ font-size:14px; margin-bottom:4px; }
+  .cardItem .m{ font-size:12px; }
+  .cardItem .pr{ font-size:14px; padding:5px 8px; margin-top:6px; }
+}
 
-/* Details gallery */
+.price{ font-size:22px; font-weight:900; margin:10px 0; }
+
+/* =========================
+   DETAILS GALLERY
+========================= */
+
 .gallery{
   position:relative;
   border-radius:16px;
@@ -125,6 +174,7 @@
   background:#eee;
   margin-bottom:10px;
 }
+
 .gimg{
   width:100%;
   height:320px;
@@ -132,6 +182,7 @@
   display:block;
   cursor:pointer;
 }
+
 .gbtn{
   position:absolute;
   top:50%;
@@ -146,20 +197,25 @@
   align-items:center;
   justify-content:center;
 }
-#gPrev{right:10px}
-#gNext{left:10px}
 
-.dots{display:flex; gap:6px; justify-content:center; margin:8px 0 2px}
+#gPrev{ right:10px; }
+#gNext{ left:10px; }
+
+.dots{ display:flex; gap:6px; justify-content:center; margin:8px 0 2px; }
 .dot{ width:8px; height:8px; border-radius:999px; background:#d0d5dd; }
-.dot.active{background:#111}
+.dot.active{ background:#111; }
 
-/* Preview images */
+/* =========================
+   PREVIEW IMAGES
+========================= */
+
 .preview{
   display:flex;
   gap:8px;
   flex-wrap:wrap;
   margin-top:10px;
 }
+
 .pimg{
   width:88px; height:88px;
   border-radius:14px;
@@ -167,7 +223,10 @@
   border:1px solid var(--border);
 }
 
-/* Chat */
+/* =========================
+   CHAT
+========================= */
+
 .chatmsgs{
   height:320px;
   overflow:auto;
@@ -176,6 +235,7 @@
   padding:10px;
   background:var(--card);
 }
+
 .msg{
   margin:8px 0;
   max-width:85%;
@@ -183,6 +243,7 @@
   border-radius:14px;
   background: rgba(148,163,184,.18);
 }
+
 .msg.me{
   background:#111;
   color:#fff;
@@ -211,12 +272,15 @@
   opacity:.9;
 }
 
-/* ✓✓ مقروءة (أزرق مثل واتساب) */
+/* مقروءة */
 .msg .st.read{
   color:#22c55e;
 }
 
-/* Fullscreen image modal */
+/* =========================
+   FULLSCREEN IMAGE MODAL
+========================= */
+
 .imgModal{
   position: fixed;
   inset: 0;
@@ -227,12 +291,14 @@
   justify-content:center;
   padding: 14px;
 }
+
 .imgFull{
   max-width: 100%;
   max-height: 85vh;
   object-fit: contain;
   border-radius: 12px;
 }
+
 #imgClose{
   position:absolute;
   top:14px;
@@ -245,6 +311,7 @@
   color:#fff;
   font-size:16px;
 }
+
 .imgNav{
   position:absolute;
   top:50%;
@@ -260,6 +327,7 @@
   align-items:center;
   justify-content:center;
 }
+
 #imgPrev{ right:12px; }
 #imgNext{ left:12px; }
 
@@ -273,7 +341,10 @@
   opacity:.9;
 }
 
-/* Auth Modal */
+/* =========================
+   AUTH MODAL
+========================= */
+
 .modal{
   position:fixed;
   inset:0;
@@ -284,6 +355,7 @@
   padding:14px;
   z-index:50;
 }
+
 .modalCard{
   width:min(520px, 100%);
   background:var(--card);
@@ -291,6 +363,7 @@
   padding:14px;
   border:1px solid var(--border);
 }
+
 .modalHead{
   display:flex;
   align-items:center;
@@ -298,7 +371,10 @@
   margin-bottom:10px;
 }
 
-/* ====== PAGES (details/add/chat) ====== */
+/* =========================
+   PAGES
+========================= */
+
 .page{
   position:fixed;
   inset:0;
@@ -308,7 +384,10 @@
   overflow:auto;
 }
 
-/* Avatar صغير */
+/* =========================
+   AVATAR + MENU
+========================= */
+
 .avatarBtn{
   width:44px;
   height:44px;
@@ -322,47 +401,49 @@
   justify-content:center;
   color:#fff;
 }
+
 .avatarBtn img{
   width:100%;
   height:100%;
   object-fit:cover;
   display:block;
 }
+
 .avatarBtn .avatarLetter{
   font-weight:900;
   font-size:15px;
   opacity:.95;
 }
 
-/* زر أيقونة بالهيدر */
-.iconBtn{
-  width:44px;
-  height:44px;
+.menu{
+  position:absolute;
+  top:52px;
+  left:0;
+  min-width:150px;
+  background: var(--card);
+  border:1px solid var(--border);
   border-radius:12px;
-  background: rgba(255,255,255,.12);
-  color:#fff;
-  border: 1px solid rgba(255,255,255,.18);
-  display:flex;
-  align-items:center;
-  justify-content:center;
-  font-size:18px;
-  position:relative; /* ✅ مهم للنقطة */
+  box-shadow: var(--shadow);
+  padding:6px;
+  z-index: 999;
 }
 
-/* ✅ نقطة إشعار للـ Inbox فوق زر 💬 */
-.inboxDot{
-  position:absolute;
-  top:8px;
-  right:8px;
-  width:10px;
-  height:10px;
-  border-radius:999px;
-  background:#ef4444;
-  box-shadow: 0 0 0 2px rgba(17,17,17,.55);
+.menuItem{
+  width:100%;
+  text-align:right;
+  background:transparent;
+  color:var(--text);
+  border:0;
+  padding:10px 12px;
+  border-radius:10px;
+  cursor:pointer;
 }
+
+.menuItem:hover{ background: rgba(148,163,184,.12); }
+.menuItem.danger{ color: var(--danger); }
 
 /* =========================
-   INBOX (قائمة المحادثات)
+   INBOX LIST
 ========================= */
 
 .inboxList{
@@ -383,6 +464,7 @@
   cursor:pointer;
   transition: transform .08s ease, box-shadow .2s ease, background .2s ease;
 }
+
 @media (hover:hover){
   .inboxItem:hover{
     transform: translateY(-1px);
@@ -405,6 +487,7 @@
   font-weight:900;
   color:#fff;
 }
+
 .inboxAvatar img{
   width:100%;
   height:100%;
@@ -446,6 +529,7 @@
   color:var(--muted);
 }
 
+/* Badge أزرق داخل قائمة المحادثات فقط */
 .badge{
   display:inline-flex;
   align-items:center;
@@ -468,29 +552,3 @@
   .inboxTitle{ font-size:14px; }
   .inboxLast{ font-size:12px; }
 }
-
-/* menu */
-.menu{
-  position:absolute;
-  top:52px;
-  left:0;
-  min-width:150px;
-  background: var(--card);
-  border:1px solid var(--border);
-  border-radius:12px;
-  box-shadow: var(--shadow);
-  padding:6px;
-  z-index: 999;
-}
-.menuItem{
-  width:100%;
-  text-align:right;
-  background:transparent;
-  color:var(--text);
-  border:0;
-  padding:10px 12px;
-  border-radius:10px;
-  cursor:pointer;
-}
-.menuItem:hover{ background: rgba(148,163,184,.12); }
-.menuItem.danger{ color: var(--danger); }
