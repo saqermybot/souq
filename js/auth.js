@@ -86,13 +86,11 @@ export function initAuth() {
   onAuthStateChanged(auth, (user) => {
     renderTopbar(user);
 
-    // ✅ أهم سطر: شغّل Inbox listener ليشتغل المؤشر لحاله (حتى بدون فتح صفحة الرسائل)
+    // ✅ أهم سطر: شغّل inbox listener تلقائياً ليحدث الـ Badge بدون فتح صفحة الرسائل
     if (user && typeof UI.actions.loadInbox === "function") {
-      UI.actions.loadInbox();
+      UI.actions.loadInbox(); // موجودة عندك في chat.js وتعمل onSnapshot
     } else {
-      // لو ما في user، أخفي النقطة
-      const dot = document.getElementById("inboxDot");
-      if (dot) dot.classList.add("hidden");
+      // لو ما في user، أخفي الـ badge
       const badge = document.getElementById("inboxBadge");
       if (badge) badge.classList.add("hidden");
     }
@@ -118,11 +116,8 @@ export function initAuth() {
     UI.renderAuthBar(`
       <button id="btnInbox" class="iconBtn" title="الرسائل" aria-label="inbox">
         💬
-        <!-- ✅ نقطة (Dot) -->
-        <span id="inboxDot" class="inboxDot hidden"></span>
-
-        <!-- ✅ إذا بدك رقم بدل نقطة، فعّل هذا (واستعمله من chat.js تلقائياً) -->
-        <!-- <span id="inboxBadge" class="badge hidden" style="margin-inline-start:6px">0</span> -->
+        <!-- ✅ Badge رقم (يتعبّى تلقائياً من chat.js loadInbox) -->
+        <span id="inboxBadge" class="badge hidden">0</span>
       </button>
 
       <button id="btnOpenAdd" class="secondary">+ إعلان جديد</button>
@@ -194,9 +189,7 @@ export function initAuth() {
       UI.state.onlyMine = false;
       try { await signOut(auth); } catch {}
 
-      // أخفي المؤشر بعد الخروج
-      const dot = document.getElementById("inboxDot");
-      if (dot) dot.classList.add("hidden");
+      // أخفي الـ badge بعد الخروج
       const badge = document.getElementById("inboxBadge");
       if (badge) badge.classList.add("hidden");
     };
