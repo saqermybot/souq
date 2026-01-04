@@ -4,8 +4,8 @@ import { initAddListing } from "./js/addListing.js";
 import { initAuth } from "./js/auth.js";
 import { initCategories } from "./js/categories.js";
 import { initChat } from "./js/chat.js";
-// import { initInbox } from "./js/inbox.js"; // ❌ خليها مطفية
 
+// ✅ ثبّت الوضع الداكن دائماً
 document.documentElement.setAttribute("data-theme", "dark");
 localStorage.setItem("theme", "dark");
 
@@ -15,10 +15,10 @@ UI.init();
 initListings();
 initAddListing();
 
-// ✅ مهم جداً: chat قبل auth ليكون loadInbox جاهز وقت login
+// ✅ مهم جداً: اربط chat/inbox actions قبل auth
 initChat();
 
-// ✅ Auth بعد ما chat صار جاهز (حتى يشتغل dot فوراً)
+// ✅ Auth بعد ما صار loadInbox جاهز
 initAuth();
 
 // ✅ categories
