@@ -1,8 +1,9 @@
+/* ✅ لازم */
+.hidden{ display:none !important; }
+
 /* =========================
    TOPBAR + AUTHBAR
 ========================= */
-
-/* Topbar */
 .topbar{
   position:sticky;
   top:0;
@@ -51,26 +52,22 @@
   position:relative; /* ✅ مهم للـ badge/dot */
 }
 
-/* Badge فوق زر الرسائل 💬 (أحمر - مستقل عن .badge) */
+/* ✅ Badge فوق زر الرسائل 💬 (أحمر) */
 #inboxBadge{
   position:absolute;
   top:6px;
-  left:6px;           /* RTL: خليها يسار */
+  inset-inline-start:6px; /* RTL-safe */
   min-width:18px;
   height:18px;
   padding:0 6px;
   border-radius:999px;
-
   display:inline-flex;
   align-items:center;
   justify-content:center;
-
   font-size:11px;
   font-weight:900;
-
   background:#ef4444;
   color:#fff;
-
   border:2px solid rgba(0,0,0,.35);
 }
 
@@ -89,7 +86,6 @@
 /* =========================
    LISTINGS GRID + CARD
 ========================= */
-
 .cardsGrid{
   display:grid;
   grid-template-columns: repeat(2, 1fr);
@@ -104,7 +100,7 @@
   display:flex;
   flex-direction:column;
   transition: transform .12s ease, box-shadow .2s ease;
-  cursor:pointer; /* ✅ صار كله clickable */
+  cursor:pointer;
 }
 
 @media (hover:hover){
@@ -126,7 +122,6 @@
 .cardItem .t{
   font-weight:900;
   margin-bottom:6px;
-  cursor:pointer;
 }
 
 .cardItem .m{
@@ -151,7 +146,8 @@
   background: rgba(34,197,94,.12);
 }
 
-/* ✅ موبايل */
+.cardItem button, .cardItem a{ cursor:pointer; }
+
 @media(max-width:520px){
   .cardsGrid{ gap:8px; }
   .cardItem img{ height:120px; }
@@ -161,12 +157,15 @@
   .cardItem .pr{ font-size:14px; padding:5px 8px; margin-top:6px; }
 }
 
+@media(max-width:360px){
+  .cardsGrid{ grid-template-columns: 1fr; }
+}
+
 .price{ font-size:22px; font-weight:900; margin:10px 0; }
 
 /* =========================
    DETAILS GALLERY
 ========================= */
-
 .gallery{
   position:relative;
   border-radius:16px;
@@ -208,7 +207,6 @@
 /* =========================
    PREVIEW IMAGES
 ========================= */
-
 .preview{
   display:flex;
   gap:8px;
@@ -226,7 +224,6 @@
 /* =========================
    CHAT
 ========================= */
-
 .chatmsgs{
   height:320px;
   overflow:auto;
@@ -255,7 +252,6 @@
   color:#0b1220;
 }
 
-/* الوقت + حالة التسليم/القراءة */
 .msg .t{
   font-size:12px;
   opacity:.8;
@@ -265,22 +261,17 @@
   gap:6px;
 }
 
-/* ⏳ ✓ ✓✓ */
 .msg .st{
   font-size:12px;
   font-weight:900;
   opacity:.9;
 }
 
-/* مقروءة */
-.msg .st.read{
-  color:#22c55e;
-}
+.msg .st.read{ color:#22c55e; }
 
 /* =========================
    FULLSCREEN IMAGE MODAL
 ========================= */
-
 .imgModal{
   position: fixed;
   inset: 0;
@@ -344,7 +335,6 @@
 /* =========================
    AUTH MODAL
 ========================= */
-
 .modal{
   position:fixed;
   inset:0;
@@ -374,7 +364,6 @@
 /* =========================
    PAGES
 ========================= */
-
 .page{
   position:fixed;
   inset:0;
@@ -387,7 +376,6 @@
 /* =========================
    AVATAR + MENU
 ========================= */
-
 .avatarBtn{
   width:44px;
   height:44px;
@@ -445,7 +433,6 @@
 /* =========================
    INBOX LIST
 ========================= */
-
 .inboxList{
   display:flex;
   flex-direction:column;
@@ -545,7 +532,6 @@
   font-size:12px;
 }
 
-/* موبايل */
 @media(max-width:520px){
   .inboxItem{ padding:10px; }
   .inboxAvatar{ width:42px; height:42px; border-radius:12px; }
