@@ -15,13 +15,13 @@ let globalMenuCloserInstalled = false;
 export function initAuth() {
   // ✅ تثبيت الوضع الداكن دائماً
   document.documentElement.setAttribute("data-theme", "dark");
-  localStorage.setItem("theme", "dark"); // احتياط لو عندك كود قديم يقرأه
+  try { localStorage.setItem("theme", "dark"); } catch {}
 
   // ===== Modal open/close =====
   UI.actions.openAuth = () => UI.show(UI.el.authModal);
   UI.actions.closeAuth = () => UI.hide(UI.el.authModal);
 
-  // اغلاق عند الضغط خارج الكارد (احتياط)
+  // اغلاق عند الضغط خارج الكارد
   if (UI.el.authModal) {
     UI.el.authModal.addEventListener("click", (e) => {
       if (e.target === UI.el.authModal) UI.actions.closeAuth();
@@ -70,7 +70,7 @@ export function initAuth() {
     }
   };
 
-  // ===== Google Login (popup) =====
+  // ===== Google Login =====
   UI.el.btnGoogle.onclick = async () => {
     try {
       setBusy(true);
@@ -89,7 +89,7 @@ export function initAuth() {
     renderTopbar(user);
   });
 
-  // ✅ install ONE global click closer for menu (مرة واحدة فقط)
+  // ✅ close menu globally (مرة واحدة فقط)
   if (!globalMenuCloserInstalled) {
     globalMenuCloserInstalled = true;
     document.addEventListener(
@@ -116,7 +116,7 @@ export function initAuth() {
       ${
         user
           ? `
-            <!-- ✅ Avatar صغير فقط (بدون ايميل/اسم) -->
+            <!-- ✅ Avatar صغير فقط -->
             <button id="btnAccount" class="avatarBtn" title="${escapeAttr(email)}" aria-label="account">
               ${
                 photo
@@ -137,15 +137,12 @@ export function initAuth() {
     // ✅ Inbox
     document.getElementById("btnInbox").onclick = (e) => {
       e.stopPropagation();
-      // إذا ما سجل دخول -> افتح تسجيل الدخول
       if (!auth.currentUser) return UI.actions.openAuth();
-
-      // openInbox رح نضيفه بالـ ui.js
       if (typeof UI.actions.openInbox === "function") UI.actions.openInbox();
-      else alert("صفحة الرسائل غير جاهزة بعد (UI.actions.openInbox).");
+      else alert("صفحة الرسائل غير جاهزة بعد.");
     };
 
-    // زر إضافة إعلان
+    // ✅ إضافة إعلان
     document.getElementById("btnOpenAdd").onclick = () => {
       if (!auth.currentUser) return UI.actions.openAuth();
       if (typeof UI.actions.openAdd === "function") UI.actions.openAdd();
@@ -161,7 +158,6 @@ export function initAuth() {
     // قائمة الحساب
     const btnAccount = document.getElementById("btnAccount");
     const menu = document.getElementById("accountMenu");
-
     const closeMenu = () => menu.classList.add("hidden");
     const toggleMenu = () => menu.classList.toggle("hidden");
 
@@ -184,7 +180,7 @@ export function initAuth() {
       e.stopPropagation();
       closeMenu();
       UI.state.onlyMine = false;
-      await signOut(auth);
+      try { await signOut(auth); } catch {}
     };
   }
 }
@@ -196,7 +192,7 @@ export function requireAuth() {
   }
 }
 
-// ===== Small utils (local) =====
+// ===== Small utils =====
 function escapeHtml(s = "") {
   return String(s).replace(/[&<>"']/g, (m) => ({
     "&": "&amp;",
