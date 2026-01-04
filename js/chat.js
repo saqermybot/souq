@@ -317,10 +317,14 @@ async function loadInbox(){
   const qy = query(
     collection(db, "chats"),
     where("participants", "array-contains", me),
-    limit(60)
+    limit(80)
   );
 
   if (inboxUnsub) inboxUnsub();
+
+  // ✅ هاد هو المكان الصح (قبل onSnapshot)
+  let lastTotalUnread = 0;
+  let lastNotifyAt = 0;
 
   inboxUnsub = onSnapshot(qy, (snap)=>{
     const rows = [];
@@ -350,19 +354,33 @@ async function loadInbox(){
 
     setInboxIndicator(totalUnread);
 
-    // ✅ تنبيه صوتي + إشعار متصفح عند وصول جديد
-    if (totalUnread > lastTotalUnread){
-      playBeep();
-      // إذا الصفحة بالخلفية، إشعار متصفح
-      if (document.hidden){
-        notifyBrowser("رسالة جديدة", "عندك رسالة جديدة في Souq Syria");
+    // ✅ إشعار المتصفح عند زيادة غير المقروء
+    const now = Date.now();
+    const increased = totalUnread > lastTotalUnread;
+
+    if (increased && (now - lastNotifyAt) > 1200) {
+      lastNotifyAt = now;
+
+      const inboxOpen = UI.el?.inboxPage && !UI.el.inboxPage.classList.contains("hidden");
+      const shouldNotify = document.hidden || !inboxOpen;
+
+      if (shouldNotify) {
+        // إذا ما بدك "زر" هلق، بس استدعي ensurePermission مرة بـ app.js
+        // Notify.show رح يشتغل فقط إذا permission = granted
+        try{
+          Notify.show({
+            title: "رسالة جديدة 💬",
+            body: `عندك ${totalUnread} رسالة غير مقروءة`,
+            tag: "inbox"
+          });
+        }catch{}
       }
     }
+
     lastTotalUnread = totalUnread;
 
-    if (UI.el?.inboxList){
-      renderInbox(rows, me);
-    }
+    if (UI.el?.inboxList) renderInbox(rows, me);
+
   }, (err)=>{
     if (UI.el?.inboxList){
       UI.el.inboxList.innerHTML = `<div class="muted small">فشل تحميل الـ Inbox: ${escapeHtml(err?.message||"")}</div>`;
