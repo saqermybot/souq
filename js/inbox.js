@@ -11,14 +11,29 @@ import {
   limit
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
+const LS_LAST_SEEN = "inbox_lastSeen_ms";
+const LS_LAST_UPDATE = "inbox_lastUpdate_ms";
+
+let filterListingId = null; // ✅ فلتر اختياري
+
 export function initInbox() {
   UI.actions.openInbox = openInbox;
   UI.actions.closeInbox = closeInbox;
   UI.actions.loadInbox = loadInbox;
 }
 
-function openInbox() {
+/**
+ * openInbox(listingId?)
+ * - إذا listingId موجود => اعرض محادثات هذا الإعلان فقط
+ */
+function openInbox(listingId = null) {
   try { requireAuth(); } catch { return; }
+
+  filterListingId = listingId || null;
+
+  // ✅ اعتبر أن المستخدم "شاف" الرسائل بمجرد فتح inbox
+  try { localStorage.setItem(LS_LAST_SEEN, String(Date.now())); } catch {}
+  try { window.__refreshInboxDot?.(); } catch {}
 
   UI.showInboxPage();
   loadInbox();
@@ -26,6 +41,7 @@ function openInbox() {
 
 function closeInbox() {
   UI.hide(UI.el.inboxPage);
+  filterListingId = null;
 }
 
 async function loadInbox() {
@@ -36,18 +52,21 @@ async function loadInbox() {
 
   const me = auth.currentUser.uid;
 
-  // ✅ بدون orderBy لتفادي Index
-  const qy = query(
+  const base = query(
     collection(db, "chats"),
     where("participants", "array-contains", me),
-    limit(50)
+    limit(80)
   );
 
-  const snap = await getDocs(qy);
+  const snap = await getDocs(base);
 
   const rows = [];
   snap.forEach((ds) => {
     const d = ds.data() || {};
+
+    // ✅ فلتر حسب الإعلان (إذا مفعل)
+    if (filterListingId && d.listingId !== filterListingId) return;
+
     const updatedMs =
       d.updatedAt?.toDate ? d.updatedAt.toDate().getTime() :
       (d.updatedAt instanceof Date ? d.updatedAt.getTime() : 0);
@@ -55,13 +74,20 @@ async function loadInbox() {
     rows.push({ id: ds.id, ...d, _updatedMs: updatedMs });
   });
 
-  // ✅ رتب محلياً بالأحدث
+  // ✅ أحدث بالأول
   rows.sort((a, b) => (b._updatedMs || 0) - (a._updatedMs || 0));
 
   if (!rows.length) {
     UI.setInboxEmpty(true);
+    // حتى لو فاضي، خلّي النقطة تتحدث
+    try { window.__refreshInboxDot?.(); } catch {}
     return;
   }
+
+  // ✅ خزّن آخر تحديث حتى auth يطلع النقطة
+  const newest = rows[0]._updatedMs || 0;
+  try { localStorage.setItem(LS_LAST_UPDATE, String(newest)); } catch {}
+  try { window.__refreshInboxDot?.(); } catch {}
 
   rows.forEach((c) => {
     const participants = Array.isArray(c.participants) ? c.participants : [];
@@ -74,7 +100,6 @@ async function loadInbox() {
       ? c.updatedAt.toDate().toLocaleString()
       : "";
 
-    // Avatar حرف (لأننا ما معنا صورة الطرف الآخر)
     const letter = (otherId || "U")[0]?.toUpperCase() || "U";
 
     const item = document.createElement("div");
@@ -93,8 +118,6 @@ async function loadInbox() {
     `;
 
     item.onclick = () => {
-      // ✅ افتح الشات مباشرة
-      // openChat(listingId, listingTitle, ownerId/otherId)
       if (typeof UI.actions.openChat === "function") {
         UI.actions.openChat(c.listingId, c.listingTitle || "إعلان", otherId);
       }
