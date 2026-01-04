@@ -16,7 +16,8 @@ import {
   setDoc,
   updateDoc,
   where,
-  getDocs
+  runTransaction,
+  increment
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 export function initChat(){
@@ -37,7 +38,7 @@ function chatRoomId(listingId, a, b){
 
 let currentChat = { listingId:null, roomId:null, otherId:null, listingTitle:"" };
 
-// ✅ unsubscribe للـ inbox (لو بدك live)
+// ✅ unsubscribe للـ inbox (Live)
 let inboxUnsub = null;
 
 async function resolveOwnerId(listingId){
@@ -83,6 +84,7 @@ async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
 
   // ✅ أنشئ/حدّث وثيقة المحادثة الرئيسية (Meta) للـ Inbox
   const chatDocRef = doc(db, "chats", roomId);
+
   await setDoc(chatDocRef, {
     listingId,
     listingTitle,
@@ -90,8 +92,14 @@ async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
     sellerId: realOwnerId,
     participants: [me, realOwnerId].sort(),
     updatedAt: serverTimestamp(),
-    lastText: ""
+    lastText: "",
+    unread: { [me]: 0, [realOwnerId]: 0 } // ✅ أساس النظام
   }, { merge: true });
+
+  // ✅ عند فتح الشات: اعتبرها مقروءة للمستخدم الحالي
+  try{
+    await updateDoc(chatDocRef, { [`unread.${me}`]: 0 });
+  }catch{}
 
   const msgsRef = collection(db, "chats", roomId, "messages");
   const qy = query(msgsRef, orderBy("createdAt","asc"), limit(60));
@@ -130,6 +138,7 @@ async function sendMsg(){
   const msgsRef = collection(db, "chats", currentChat.roomId, "messages");
   const chatDocRef = doc(db, "chats", currentChat.roomId);
 
+  // ✅ أرسل الرسالة
   await addDoc(msgsRef, {
     text,
     senderId: me,
@@ -137,11 +146,33 @@ async function sendMsg(){
     expiresAt: new Date(Date.now() + 7*24*3600*1000)
   });
 
-  // ✅ حدّث الميتا (آخر رسالة + وقت)
+  // ✅ حدّث الميتا + عدّاد غير مقروء للطرف الآخر (Transaction)
   try{
-    await updateDoc(chatDocRef, {
-      lastText: text.slice(0, 120),
-      updatedAt: serverTimestamp()
+    const otherId = currentChat.otherId;
+
+    await runTransaction(db, async (tx) => {
+      const snap = await tx.get(chatDocRef);
+
+      if (!snap.exists()){
+        tx.set(chatDocRef, {
+          listingId: currentChat.listingId,
+          listingTitle: currentChat.listingTitle,
+          buyerId: me,
+          sellerId: otherId,
+          participants: [me, otherId].sort(),
+          updatedAt: serverTimestamp(),
+          lastText: text.slice(0,120),
+          unread: { [me]: 0, [otherId]: 1 }
+        }, { merge: true });
+        return;
+      }
+
+      tx.update(chatDocRef, {
+        lastText: text.slice(0, 120),
+        updatedAt: serverTimestamp(),
+        [`unread.${otherId}`]: increment(1),
+        [`unread.${me}`]: 0
+      });
     });
   }catch{}
 
@@ -159,10 +190,8 @@ async function openInbox(){
 }
 
 function closeInbox(){
-  // سكر live listener لو شغال
   if (inboxUnsub) inboxUnsub();
   inboxUnsub = null;
-
   UI.hide(UI.el.inboxPage);
 }
 
@@ -174,17 +203,14 @@ async function loadInbox(){
   UI.el.inboxList.innerHTML = `<div class="muted small">جاري تحميل المحادثات...</div>`;
   UI.setInboxEmpty(false);
 
-  // ✅ خيار 1: بدون orderBy لتفادي index requirements
-  // (منرتّب بالـ JS)
   const qy = query(
     collection(db, "chats"),
     where("participants", "array-contains", me),
     limit(60)
   );
 
-  // إذا بدك Live (يتحدّث لحظياً) استخدم onSnapshot
-  // أفضل للأداء من getDocs لأنو أنت بدك Inbox يشبه ماركت بلاتس
   if (inboxUnsub) inboxUnsub();
+
   inboxUnsub = onSnapshot(qy, (snap)=>{
     const rows = [];
     snap.forEach(d=>{
@@ -193,11 +219,10 @@ async function loadInbox(){
         id: d.id,
         listingId: data.listingId || "",
         listingTitle: data.listingTitle || "إعلان",
-        buyerId: data.buyerId || "",
-        sellerId: data.sellerId || "",
         participants: data.participants || [],
         lastText: data.lastText || "",
-        updatedAt: data.updatedAt || null
+        updatedAt: data.updatedAt || null,
+        unread: data.unread || {}
       });
     });
 
@@ -207,6 +232,18 @@ async function loadInbox(){
       const tb = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : 0;
       return tb - ta;
     });
+
+    // ✅ مجموع غير المقروء (Badge أعلى 💬)
+    const totalUnread = rows.reduce((sum, r) => {
+      const c = Number((r.unread && r.unread[me]) || 0);
+      return sum + (isNaN(c) ? 0 : c);
+    }, 0);
+
+    const b = document.getElementById("inboxBadge");
+    if (b){
+      b.textContent = String(totalUnread);
+      b.classList.toggle("hidden", totalUnread <= 0);
+    }
 
     renderInbox(rows, me);
   }, (err)=>{
@@ -227,20 +264,24 @@ function renderInbox(rows, me){
     const otherId = (r.participants || []).find(x => x !== me) || "";
     const title = r.listingTitle || "محادثة";
     const last = r.lastText ? escapeHtml(r.lastText) : `<span class="muted small">لا توجد رسائل بعد</span>`;
+    const unreadCount = Number((r.unread && r.unread[me]) || 0);
 
     const t = r.updatedAt?.toDate ? r.updatedAt.toDate().toLocaleString() : "";
+
     const item = document.createElement("div");
     item.className = "inboxItem";
     item.innerHTML = `
       <div class="inboxMain">
-        <div class="inboxTitle">${escapeHtml(title)}</div>
+        <div class="inboxTitle">
+          ${escapeHtml(title)}
+          ${unreadCount > 0 ? `<span class="badge">${unreadCount}</span>` : ``}
+        </div>
         <div class="inboxLast">${last}</div>
       </div>
       <div class="inboxMeta">${escapeHtml(t)}</div>
     `;
 
     item.onclick = async () => {
-      // افتح الشات على نفس الإعلان وبنفس الطرف الآخر
       await openChat(r.listingId, r.listingTitle, otherId);
     };
 
