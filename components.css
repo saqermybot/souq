@@ -46,6 +46,12 @@
   background: linear-gradient(135deg, var(--brand), var(--brand2));
   vertical-align:middle;
 }
+.carMeta{
+  font-size:13px;
+  color: var(--muted);
+  opacity:.95;
+  margin: -2px 0 6px;
+}
 
 /* مهم: menu absolute يحتاج parent relative */
 .authbar{
