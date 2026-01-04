@@ -409,6 +409,21 @@ button:disabled{opacity:.6; cursor:not-allowed}
   justify-content:center;
   font-size:18px;
 }
+/* ✅ نقطة إشعار للـ Inbox فوق زر 💬 */
+.iconBtn{
+  position:relative; /* مهم */
+}
+
+.inboxDot{
+  position:absolute;
+  top:8px;
+  right:8px;
+  width:10px;
+  height:10px;
+  border-radius:999px;
+  background:#ef4444;
+  box-shadow: 0 0 0 2px rgba(17,17,17,.55);
+}
 
 /* =========================
    INBOX (قائمة المحادثات)
