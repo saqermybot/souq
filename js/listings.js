@@ -1,4 +1,6 @@
-import { db } from "./firebase.js";
+// listings.js (آخر تعديل: زر "مراسلة" يفتح Inbox إذا الإعلان إلك، وإلا يفتح شات مع صاحب الإعلان)
+
+import { db, auth } from "./firebase.js";
 import { UI } from "./ui.js";
 import { escapeHtml, formatPrice } from "./utils.js";
 
@@ -22,8 +24,19 @@ export function initListings(){
     const l = UI.state.currentListing;
     if (!l) return;
 
-    // ✅ مرّر ownerId بشكل صريح حتى الشات يشتغل 100%
-    UI.actions.openChat(l.id, l.title || "إعلان", l.ownerId || null);
+    const me = auth.currentUser?.uid || "";
+    const ownerId = l.ownerId || null;
+
+    // ✅ إذا الإعلان إلك → افتح Inbox (مفلتر على هذا الإعلان)
+    if (me && ownerId && me === ownerId) {
+      if (typeof UI.actions.openInbox === "function") {
+        return UI.actions.openInbox(l.id); // مهم: openInbox يدعم listingId كفلتر
+      }
+      return alert("Inbox غير جاهز بعد.");
+    }
+
+    // ✅ إذا مو إلك → افتح الشات مع صاحب الإعلان
+    UI.actions.openChat(l.id, l.title || "إعلان", ownerId);
   };
 }
 
@@ -145,7 +158,4 @@ async function loadListings(reset = true){
   });
 
   UI.setEmptyState(UI.el.listings.children.length === 0);
-
-  // إذا ما أضفنا شي بسبب فلترة محلية، زر المزيد يبقى شغال لأنه ممكن الصفحة التالية فيها نتائج
-  // (بس إذا ما في docs أصلاً سكّرناه فوق)
 }
