@@ -4,6 +4,7 @@ import { initAddListing } from "./js/addListing.js";
 import { initAuth } from "./js/auth.js";
 import { initCategories } from "./js/categories.js";
 import { initChat } from "./js/chat.js";
+import { initInbox } from "./js/inbox.js"; // ✅ جديد
 
 // ✅ ثبّت الوضع الداكن دائماً (حتى لو كان في كود قديم يقرأ theme)
 document.documentElement.setAttribute("data-theme", "dark");
@@ -24,6 +25,9 @@ await initCategories();
 
 // ✅ chat (يعتمد على openDetails/currentListing)
 initChat();
+
+// ✅ inbox (يعتمد على auth + UI)
+initInbox();
 
 // ✅ دائماً خلي الفلاتر OFF عند أول فتح (عرض الكل تلقائياً)
 UI.state.filtersActive = false;
