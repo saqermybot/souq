@@ -15,6 +15,67 @@ let publishing = false;
 // ✅ لنظافة الذاكرة (object URLs)
 let previewUrls = [];
 
+/* =========================
+   ✅ Helpers للسيارات
+========================= */
+
+function isCarsCategory(categoryValue = "") {
+  const v = String(categoryValue || "").trim().toLowerCase();
+  return v === "سيارات" || v === "cars";
+}
+
+function getElMaybe(id) {
+  return document.getElementById(id);
+}
+
+function getCarFields() {
+  // IDs المقترحة (غير إجبارية)
+  const aType = getElMaybe("aType");
+  const aCarModel = getElMaybe("aCarModel");
+  const aCarYear = getElMaybe("aCarYear");
+
+  return {
+    typeId: aType ? String(aType.value || "").trim() : "",
+    model: aCarModel ? String(aCarModel.value || "").trim() : "",
+    year: aCarYear ? String(aCarYear.value || "").trim() : ""
+  };
+}
+
+function clearCarFields() {
+  const aType = getElMaybe("aType");
+  const aCarModel = getElMaybe("aCarModel");
+  const aCarYear = getElMaybe("aCarYear");
+
+  if (aType) aType.value = "";
+  if (aCarModel) aCarModel.value = "";
+  if (aCarYear) aCarYear.value = "";
+}
+
+function validateCarFields({ typeId, model, year }) {
+  // إذا ما في عناصر بالصفحة، ما نعمل فشل
+  // (يعني لسه ما ركبت الـ UI تبع السيارات)
+  const aType = getElMaybe("aType");
+  const aCarModel = getElMaybe("aCarModel");
+  const aCarYear = getElMaybe("aCarYear");
+  const hasCarUI = !!(aType || aCarModel || aCarYear);
+  if (!hasCarUI) return null;
+
+  if (!typeId) return "اختر نوع الإعلان (بيع أو إيجار)";
+  if (typeId !== "sale" && typeId !== "rent") return "نوع الإعلان غير صحيح";
+
+  if (!model) return "اكتب موديل السيارة";
+  if (model.length < 2) return "موديل السيارة قصير جداً";
+
+  if (!year) return "اكتب سنة السيارة";
+  const y = Number(year);
+  const nowY = new Date().getFullYear();
+  if (Number.isNaN(y) || y < 1970 || y > nowY + 1) return "سنة السيارة غير صحيحة";
+
+  return null;
+}
+
+/* ========================= */
+
 export function initAddListing() {
   // ✅ أهم شي: ربط زر "+ إعلان جديد" بفتح صفحة الإضافة
   UI.actions.openAdd = openAdd;
@@ -44,6 +105,10 @@ function clearForm() {
   UI.el.aCat.value = "";
   UI.el.aImages.value = "";
   UI.el.imgPreview.innerHTML = "";
+
+  // ✅ سيارات
+  clearCarFields();
+
   setStatus("");
   cleanupPreviewUrls();
 }
@@ -53,7 +118,6 @@ function setStatus(msg = "") {
 }
 
 function cleanupPreviewUrls(){
-  // revoke old object urls to avoid memory leak
   try{
     previewUrls.forEach(u => URL.revokeObjectURL(u));
   }catch{}
@@ -119,6 +183,14 @@ async function publish() {
   const err = validateForm({ title, description, price, city, category, files });
   if (err) return alert(err);
 
+  // ✅ سيارات: تحقق إضافي
+  const isCars = isCarsCategory(category);
+  const car = getCarFields();
+  if (isCars) {
+    const carErr = validateCarFields(car);
+    if (carErr) return alert(carErr);
+  }
+
   publishing = true;
   UI.el.btnPublish.disabled = true;
   UI.el.btnClear.disabled = true;
@@ -139,27 +211,37 @@ async function publish() {
     // ✅ انتهاء الصلاحية: 15 يوم من الآن (مبدئياً)
     const expiresAt = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000);
 
-    await addDoc(collection(db, "listings"), {
+    // ✅ payload
+    const payload = {
       title,
       description,
       price,
       currency,
       city,
       category,
-      images: urls, // array of strings
+      images: urls,
       ownerId: auth.currentUser.uid,
       isActive: true,
       createdAt: serverTimestamp(),
       expiresAt
-    });
+    };
+
+    // ✅ إضافة بيانات السيارات (فقط إذا الصنف سيارات)
+    if (isCars) {
+      payload.typeId = car.typeId; // sale / rent
+      payload.car = {
+        model: car.model,
+        year: Number(car.year)
+      };
+    }
+
+    await addDoc(collection(db, "listings"), payload);
 
     setStatus("تم نشر الإعلان ✅");
 
-    // ✅ سكر صفحة الإضافة وارجع للقائمة
     clearForm();
     UI.hide(UI.el.addBox);
 
-    // ✅ أعد تحميل مع retry بسيط لأن createdAt أحياناً بتتأخر شوي
     await reloadListingsWithRetry();
 
   } catch (e) {
