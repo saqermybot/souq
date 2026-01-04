@@ -58,9 +58,13 @@ export const UI = {
     this.el.btnAddBack.onclick = () => this.hide(this.el.addBox);
     this.el.btnChatBack.onclick = () => this.actions.closeChat();
 
-    // inbox buttons
-    this.el.btnInboxBack.onclick = () => this.actions.closeInbox();
-    this.el.btnInboxRefresh.onclick = () => this.actions.loadInbox();
+    // ✅ inbox buttons
+    this.el.btnInboxBack.onclick = () => {
+      // إذا المطور نسي يربط closeInbox، رجّع للصفحة الرئيسية
+      if (typeof this.actions.closeInbox === "function") this.actions.closeInbox();
+      else this.hideInboxPage();
+    };
+    this.el.btnInboxRefresh.onclick = () => this.actions.loadInbox?.();
 
     // share
     this.el.btnShare.onclick = async () => {
@@ -132,6 +136,7 @@ export const UI = {
     this.hide(this.el.inboxPage);
   },
 
+  // ✅ DETAILS
   showDetailsPage(){
     this.resetOverlays();
     this.show(this.el.detailsPage);
@@ -145,10 +150,15 @@ export const UI = {
     }
   },
 
+  // ✅ INBOX
   showInboxPage(){
     this.resetOverlays();
     this.show(this.el.inboxPage);
     window.scrollTo(0,0);
+  },
+
+  hideInboxPage(){
+    this.hide(this.el.inboxPage);
   },
 
   renderAuthBar(html){
