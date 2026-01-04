@@ -11,73 +11,9 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 let publishing = false;
-
-// ✅ لنظافة الذاكرة (object URLs)
 let previewUrls = [];
 
-/* =========================
-   ✅ Helpers للسيارات
-========================= */
-
-function isCarsCategory(categoryValue = "") {
-  const v = String(categoryValue || "").trim().toLowerCase();
-  return v === "سيارات" || v === "cars";
-}
-
-function getElMaybe(id) {
-  return document.getElementById(id);
-}
-
-function getCarFields() {
-  // IDs المقترحة (غير إجبارية)
-  const aType = getElMaybe("aType");
-  const aCarModel = getElMaybe("aCarModel");
-  const aCarYear = getElMaybe("aCarYear");
-
-  return {
-    typeId: aType ? String(aType.value || "").trim() : "",
-    model: aCarModel ? String(aCarModel.value || "").trim() : "",
-    year: aCarYear ? String(aCarYear.value || "").trim() : ""
-  };
-}
-
-function clearCarFields() {
-  const aType = getElMaybe("aType");
-  const aCarModel = getElMaybe("aCarModel");
-  const aCarYear = getElMaybe("aCarYear");
-
-  if (aType) aType.value = "";
-  if (aCarModel) aCarModel.value = "";
-  if (aCarYear) aCarYear.value = "";
-}
-
-function validateCarFields({ typeId, model, year }) {
-  // إذا ما في عناصر بالصفحة، ما نعمل فشل
-  // (يعني لسه ما ركبت الـ UI تبع السيارات)
-  const aType = getElMaybe("aType");
-  const aCarModel = getElMaybe("aCarModel");
-  const aCarYear = getElMaybe("aCarYear");
-  const hasCarUI = !!(aType || aCarModel || aCarYear);
-  if (!hasCarUI) return null;
-
-  if (!typeId) return "اختر نوع الإعلان (بيع أو إيجار)";
-  if (typeId !== "sale" && typeId !== "rent") return "نوع الإعلان غير صحيح";
-
-  if (!model) return "اكتب موديل السيارة";
-  if (model.length < 2) return "موديل السيارة قصير جداً";
-
-  if (!year) return "اكتب سنة السيارة";
-  const y = Number(year);
-  const nowY = new Date().getFullYear();
-  if (Number.isNaN(y) || y < 1970 || y > nowY + 1) return "سنة السيارة غير صحيحة";
-
-  return null;
-}
-
-/* ========================= */
-
 export function initAddListing() {
-  // ✅ أهم شي: ربط زر "+ إعلان جديد" بفتح صفحة الإضافة
   UI.actions.openAdd = openAdd;
 
   // زر رجوع
@@ -86,6 +22,100 @@ export function initAddListing() {
   UI.el.btnClear.onclick = clearForm;
   UI.el.aImages.onchange = previewImages;
   UI.el.btnPublish.onclick = publish;
+
+  // ✅ أنشئ الحقول الإضافية إذا غير موجودة
+  ensureDynamicFields();
+
+  // ✅ تبديل تلقائي حسب الصنف
+  UI.el.aCat.addEventListener("change", syncDynamicFieldsVisibility);
+  syncDynamicFieldsVisibility();
+}
+
+function ensureDynamicFields(){
+  // مكان ممتاز نحط فيه الحقول قبل الصور
+  const anchor = UI.el.aImages?.closest(".row") || UI.el.aImages?.parentElement || UI.el.addBox;
+  if (!anchor) return;
+
+  // لو الحقول موجودة ما نعيد إنشاءها
+  if (document.getElementById("carFields") || document.getElementById("estateFields")) return;
+
+  const wrap = document.createElement("div");
+  wrap.id = "dynamicFieldsWrap";
+  wrap.className = "box"; // إذا عندك class box، وإلا عادي
+
+  wrap.innerHTML = `
+    <!-- ✅ سيارات -->
+    <div id="carFields" class="hidden">
+      <div class="row">
+        <label class="muted small">نوع الإعلان</label>
+        <select id="aType" class="input">
+          <option value="">اختر (بيع / إيجار)</option>
+          <option value="بيع">بيع</option>
+          <option value="إيجار">إيجار</option>
+        </select>
+      </div>
+
+      <div class="row">
+        <label class="muted small">موديل السيارة</label>
+        <input id="aCarModel" class="input" placeholder="مثال: كيا ريو / هيونداي i10" />
+      </div>
+
+      <div class="row">
+        <label class="muted small">سنة الصنع</label>
+        <input id="aCarYear" class="input" type="number" min="1950" max="2035" placeholder="مثال: 2006" />
+      </div>
+    </div>
+
+    <!-- ✅ عقارات -->
+    <div id="estateFields" class="hidden">
+      <div class="row">
+        <label class="muted small">نوع الإعلان</label>
+        <select id="aTypeEstate" class="input">
+          <option value="">اختر (بيع / إيجار)</option>
+          <option value="بيع">بيع</option>
+          <option value="إيجار">إيجار</option>
+        </select>
+      </div>
+
+      <div class="row">
+        <label class="muted small">نوع العقار</label>
+        <select id="aEstateKind" class="input">
+          <option value="">اختر نوع العقار</option>
+          <option value="شقة">شقة</option>
+          <option value="محل">محل</option>
+          <option value="أرض">أرض</option>
+          <option value="بيت">بيت</option>
+        </select>
+      </div>
+
+      <div class="row">
+        <label class="muted small">عدد الغرف (اختياري)</label>
+        <input id="aRooms" class="input" type="number" min="0" max="20" placeholder="مثال: 3" />
+      </div>
+    </div>
+  `;
+
+  // إدخال الحقول قبل قسم الصور
+  anchor.parentElement?.insertBefore(wrap, anchor);
+
+  // خزن refs بسيطة (مو ضروري بس مفيد)
+  UI.el.aType = document.getElementById("aType");
+  UI.el.aCarModel = document.getElementById("aCarModel");
+  UI.el.aCarYear = document.getElementById("aCarYear");
+
+  UI.el.aTypeEstate = document.getElementById("aTypeEstate");
+  UI.el.aEstateKind = document.getElementById("aEstateKind");
+  UI.el.aRooms = document.getElementById("aRooms");
+}
+
+function syncDynamicFieldsVisibility(){
+  const cat = (UI.el.aCat?.value || "").trim();
+
+  const carBox = document.getElementById("carFields");
+  const estBox = document.getElementById("estateFields");
+
+  if (carBox) carBox.classList.toggle("hidden", cat !== "سيارات");
+  if (estBox) estBox.classList.toggle("hidden", cat !== "عقارات");
 }
 
 function openAdd() {
@@ -94,6 +124,7 @@ function openAdd() {
   setStatus("");
   UI.el.imgPreview.innerHTML = "";
   cleanupPreviewUrls();
+  syncDynamicFieldsVisibility();
 }
 
 function clearForm() {
@@ -105,12 +136,17 @@ function clearForm() {
   UI.el.aCat.value = "";
   UI.el.aImages.value = "";
   UI.el.imgPreview.innerHTML = "";
-
-  // ✅ سيارات
-  clearCarFields();
-
   setStatus("");
   cleanupPreviewUrls();
+
+  // ✅ تفريغ الحقول الديناميكية
+  document.getElementById("aType") && (document.getElementById("aType").value = "");
+  document.getElementById("aCarModel") && (document.getElementById("aCarModel").value = "");
+  document.getElementById("aCarYear") && (document.getElementById("aCarYear").value = "");
+
+  document.getElementById("aTypeEstate") && (document.getElementById("aTypeEstate").value = "");
+  document.getElementById("aEstateKind") && (document.getElementById("aEstateKind").value = "");
+  document.getElementById("aRooms") && (document.getElementById("aRooms").value = "");
 }
 
 function setStatus(msg = "") {
@@ -118,9 +154,7 @@ function setStatus(msg = "") {
 }
 
 function cleanupPreviewUrls(){
-  try{
-    previewUrls.forEach(u => URL.revokeObjectURL(u));
-  }catch{}
+  try{ previewUrls.forEach(u => URL.revokeObjectURL(u)); }catch{}
   previewUrls = [];
 }
 
@@ -150,7 +184,7 @@ function previewImages() {
   }
 }
 
-function validateForm({ title, description, price, city, category, files }) {
+function validateForm({ title, description, price, city, category, files, extra }) {
   if (!title) return "اكتب عنوان الإعلان";
   if (title.length < 3) return "العنوان قصير جداً";
   if (!description) return "اكتب وصف الإعلان";
@@ -159,16 +193,23 @@ function validateForm({ title, description, price, city, category, files }) {
   if (!city) return "اختر المدينة";
   if (!category) return "اختر الصنف";
   if (!files.length) return `اختر صورة واحدة على الأقل (حد أقصى ${MAX_IMAGES})`;
+
+  // ✅ شروط إضافية حسب الصنف
+  if (category === "سيارات") {
+    if (!extra.type) return "اختر (بيع/إيجار) للسيارة";
+    if (!extra.carModel) return "اكتب موديل السيارة";
+    if (!extra.carYear) return "اكتب سنة السيارة";
+  }
+  if (category === "عقارات") {
+    if (!extra.type) return "اختر (بيع/إيجار) للعقار";
+    if (!extra.estateKind) return "اختر نوع العقار";
+  }
+
   return null;
 }
 
 async function publish() {
-  try {
-    requireAuth();
-  } catch {
-    return;
-  }
-
+  try { requireAuth(); } catch { return; }
   if (publishing) return;
 
   const title = UI.el.aTitle.value.trim();
@@ -176,20 +217,15 @@ async function publish() {
   const price = Number(UI.el.aPrice.value);
   const currency = UI.el.aCurrency.value;
   const city = UI.el.aCity.value;
-  const category = UI.el.aCat.value;
+  const category = UI.el.aCat.value; // عربي
+
+  // ✅ جمع الحقول الإضافية
+  const extra = collectExtraFields(category);
 
   const files = Array.from(UI.el.aImages.files || []).slice(0, MAX_IMAGES);
 
-  const err = validateForm({ title, description, price, city, category, files });
+  const err = validateForm({ title, description, price, city, category, files, extra });
   if (err) return alert(err);
-
-  // ✅ سيارات: تحقق إضافي
-  const isCars = isCarsCategory(category);
-  const car = getCarFields();
-  if (isCars) {
-    const carErr = validateCarFields(car);
-    if (carErr) return alert(carErr);
-  }
 
   publishing = true;
   UI.el.btnPublish.disabled = true;
@@ -197,7 +233,6 @@ async function publish() {
   setStatus("جاري تجهيز الصور...");
 
   try {
-    // ✅ رفع صور
     const urls = [];
     for (let i = 0; i < files.length; i++) {
       setStatus(`رفع صورة ${i + 1}/${files.length} ...`);
@@ -208,34 +243,25 @@ async function publish() {
 
     setStatus("جاري نشر الإعلان...");
 
-    // ✅ انتهاء الصلاحية: 15 يوم من الآن (مبدئياً)
     const expiresAt = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000);
 
-    // ✅ payload
-    const payload = {
+    await addDoc(collection(db, "listings"), {
       title,
       description,
       price,
       currency,
       city,
       category,
+
+      // ✅ اضافات حسب الصنف
+      ...extra,
+
       images: urls,
       ownerId: auth.currentUser.uid,
       isActive: true,
       createdAt: serverTimestamp(),
       expiresAt
-    };
-
-    // ✅ إضافة بيانات السيارات (فقط إذا الصنف سيارات)
-    if (isCars) {
-      payload.typeId = car.typeId; // sale / rent
-      payload.car = {
-        model: car.model,
-        year: Number(car.year)
-      };
-    }
-
-    await addDoc(collection(db, "listings"), payload);
+    });
 
     setStatus("تم نشر الإعلان ✅");
 
@@ -254,22 +280,48 @@ async function publish() {
   }
 }
 
+function collectExtraFields(category){
+  // القيم الافتراضية
+  let type = "";
+  let carModel = "";
+  let carYear = null;
+
+  let estateKind = "";
+  let rooms = null;
+
+  if (category === "سيارات") {
+    type = (document.getElementById("aType")?.value || "").trim();
+    carModel = (document.getElementById("aCarModel")?.value || "").trim();
+
+    const y = Number(document.getElementById("aCarYear")?.value || 0);
+    carYear = y >= 1950 ? y : null;
+
+    return { type, carModel, carYear };
+  }
+
+  if (category === "عقارات") {
+    type = (document.getElementById("aTypeEstate")?.value || "").trim();
+    estateKind = (document.getElementById("aEstateKind")?.value || "").trim();
+
+    const r = Number(document.getElementById("aRooms")?.value || 0);
+    rooms = r > 0 ? r : null;
+
+    return { type, estateKind, rooms };
+  }
+
+  // أصناف ثانية لاحقاً
+  return {};
+}
+
 async function reloadListingsWithRetry() {
   const delays = [150, 600, 1200];
   for (let i = 0; i < delays.length; i++) {
-    try {
-      await UI.actions.loadListings(true);
-      return;
-    } catch {
-      await wait(delays[i]);
-    }
+    try { await UI.actions.loadListings(true); return; } catch { await wait(delays[i]); }
   }
   try { await UI.actions.loadListings(true); } catch {}
 }
 
-function wait(ms) {
-  return new Promise((r) => setTimeout(r, ms));
-}
+function wait(ms) { return new Promise((r) => setTimeout(r, ms)); }
 
 async function uploadToCloudinary(file) {
   const { cloudName, uploadPreset, folder } = CLOUDINARY;
@@ -284,6 +336,5 @@ async function uploadToCloudinary(file) {
   const data = await res.json();
 
   if (!res.ok) throw new Error(data?.error?.message || "Cloudinary upload failed");
-
   return data.secure_url;
 }
