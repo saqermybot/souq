@@ -6,7 +6,13 @@
   <title>Souq Syria</title>
 
   <!-- ✅ Cache busting -->
-  <link rel="stylesheet" href="./style.css?v=20260103_01" />
+  <link rel="stylesheet" href="./style.css?v=20260104_01" />
+
+  <!-- ✅ تثبيت الدارك مود -->
+  <script>
+    // نجبر الدارك دائماً (حتى قبل تحميل css)
+    document.documentElement.setAttribute("data-theme", "dark");
+  </script>
 </head>
 <body>
 
@@ -197,6 +203,6 @@
   </div>
 
   <!-- ✅ Cache busting -->
-  <script type="module" src="./app.js?v=20260103_01"></script>
+  <script type="module" src="./app.js?v=20260104_01"></script>
 </body>
 </html>
