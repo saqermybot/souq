@@ -12,6 +12,9 @@ import { UI } from "./ui.js";
 
 let globalMenuCloserInstalled = false;
 
+const LS_LAST_SEEN = "inbox_lastSeen_ms";
+const LS_LAST_UPDATE = "inbox_lastUpdate_ms";
+
 export function initAuth() {
   // ✅ تثبيت الوضع الداكن دائماً
   document.documentElement.setAttribute("data-theme", "dark");
@@ -21,14 +24,12 @@ export function initAuth() {
   UI.actions.openAuth = () => UI.show(UI.el.authModal);
   UI.actions.closeAuth = () => UI.hide(UI.el.authModal);
 
-  // اغلاق عند الضغط خارج الكارد
   if (UI.el.authModal) {
     UI.el.authModal.addEventListener("click", (e) => {
       if (e.target === UI.el.authModal) UI.actions.closeAuth();
     });
   }
 
-  // ===== Helpers =====
   const setBusy = (isBusy) => {
     if (!UI.el.btnLogin) return;
     UI.el.btnLogin.disabled = isBusy;
@@ -36,7 +37,6 @@ export function initAuth() {
     UI.el.btnGoogle.disabled = isBusy;
   };
 
-  // ===== Email/Password Login =====
   UI.el.btnLogin.onclick = async () => {
     try {
       const email = UI.el.email.value.trim();
@@ -53,7 +53,6 @@ export function initAuth() {
     }
   };
 
-  // ===== Register =====
   UI.el.btnRegister.onclick = async () => {
     try {
       const email = UI.el.email.value.trim();
@@ -70,7 +69,6 @@ export function initAuth() {
     }
   };
 
-  // ===== Google Login =====
   UI.el.btnGoogle.onclick = async () => {
     try {
       setBusy(true);
@@ -84,12 +82,10 @@ export function initAuth() {
     }
   };
 
-  // ===== Auth state =====
   onAuthStateChanged(auth, (user) => {
     renderTopbar(user);
   });
 
-  // ✅ close menu globally (مرة واحدة فقط)
   if (!globalMenuCloserInstalled) {
     globalMenuCloserInstalled = true;
     document.addEventListener(
@@ -102,21 +98,21 @@ export function initAuth() {
     );
   }
 
-  // ===== Topbar render =====
   function renderTopbar(user) {
     const photo = user?.photoURL || "";
     const email = user?.email || "";
 
     UI.renderAuthBar(`
-      <!-- ✅ زر الرسائل بدل زر الثيم -->
-      <button id="btnInbox" class="iconBtn" title="الرسائل" aria-label="inbox">💬</button>
+      <button id="btnInbox" class="iconBtn" title="الرسائل" aria-label="inbox">
+        💬
+        <span id="inboxDot" class="inboxDot hidden"></span>
+      </button>
 
       <button id="btnOpenAdd" class="secondary">+ إعلان جديد</button>
 
       ${
         user
           ? `
-            <!-- ✅ Avatar صغير فقط -->
             <button id="btnAccount" class="avatarBtn" title="${escapeAttr(email)}" aria-label="account">
               ${
                 photo
@@ -134,28 +130,29 @@ export function initAuth() {
       }
     `);
 
-    // ✅ Inbox
+    // ✅ طبّق مؤشر الرسائل فوراً بعد الرندر
+    refreshInboxDot();
+
     document.getElementById("btnInbox").onclick = (e) => {
       e.stopPropagation();
       if (!auth.currentUser) return UI.actions.openAuth();
+
+      // فتح Inbox
       if (typeof UI.actions.openInbox === "function") UI.actions.openInbox();
       else alert("صفحة الرسائل غير جاهزة بعد.");
     };
 
-    // ✅ إضافة إعلان
     document.getElementById("btnOpenAdd").onclick = () => {
       if (!auth.currentUser) return UI.actions.openAuth();
       if (typeof UI.actions.openAdd === "function") UI.actions.openAdd();
       else UI.show(UI.el.addBox);
     };
 
-    // إذا ما في user => زر دخول
     if (!user) {
       document.getElementById("btnOpenAuth").onclick = () => UI.actions.openAuth();
       return;
     }
 
-    // قائمة الحساب
     const btnAccount = document.getElementById("btnAccount");
     const menu = document.getElementById("accountMenu");
     const closeMenu = () => menu.classList.add("hidden");
@@ -166,7 +163,6 @@ export function initAuth() {
       toggleMenu();
     };
 
-    // إعلاناتي
     document.getElementById("btnMyAds").onclick = (e) => {
       e.stopPropagation();
       closeMenu();
@@ -175,14 +171,37 @@ export function initAuth() {
       UI.actions.loadListings(true);
     };
 
-    // خروج
     document.getElementById("btnLogout").onclick = async (e) => {
       e.stopPropagation();
       closeMenu();
       UI.state.onlyMine = false;
       try { await signOut(auth); } catch {}
+      // اخفاء النقطة بعد الخروج (اختياري)
+      refreshInboxDot(true);
     };
   }
+
+  // ===== Inbox dot helpers =====
+  function refreshInboxDot(forceHide = false) {
+    const dot = document.getElementById("inboxDot");
+    if (!dot) return;
+    if (forceHide) return dot.classList.add("hidden");
+
+    let lastSeen = 0, lastUpd = 0;
+    try {
+      lastSeen = parseInt(localStorage.getItem(LS_LAST_SEEN) || "0", 10) || 0;
+      lastUpd  = parseInt(localStorage.getItem(LS_LAST_UPDATE) || "0", 10) || 0;
+    } catch {}
+
+    // إذا في تحديث أحدث من آخر فتح
+    const hasNew = lastUpd > lastSeen;
+    dot.classList.toggle("hidden", !hasNew);
+  }
+
+  // خليه متاح لباقي الملفات (inbox.js) لتحديث النقطة بعد التحميل/الفتح
+  window.__refreshInboxDot = () => {
+    try { refreshInboxDot(); } catch {}
+  };
 }
 
 export function requireAuth() {
@@ -192,7 +211,6 @@ export function requireAuth() {
   }
 }
 
-// ===== Small utils =====
 function escapeHtml(s = "") {
   return String(s).replace(/[&<>"']/g, (m) => ({
     "&": "&amp;",
