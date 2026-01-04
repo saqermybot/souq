@@ -17,14 +17,14 @@ import {
   updateDoc,
   where,
   runTransaction,
-  increment
+  increment,
+  writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 export function initChat(){
   UI.actions.openChat = openChat;
   UI.actions.closeChat = closeChat;
 
-  // ✅ Inbox actions (نستخدمها للهيدر + صفحة inbox)
   UI.actions.openInbox = openInbox;
   UI.actions.closeInbox = closeInbox;
   UI.actions.loadInbox = loadInbox;
@@ -37,8 +37,6 @@ function chatRoomId(listingId, a, b){
 }
 
 let currentChat = { listingId:null, roomId:null, otherId:null, listingTitle:"" };
-
-// ✅ unsubscribe للـ inbox (Live)
 let inboxUnsub = null;
 
 async function resolveOwnerId(listingId){
@@ -53,26 +51,42 @@ async function resolveOwnerId(listingId){
 }
 
 /* =========================
-   ✅ TOP INDICATORS (Badge/Dot)
+   ✅ TOP INDICATORS (Dot/Badge)
 ========================= */
 function setInboxIndicator(totalUnread){
-  // Badge رقم (أنت مستخدمه حالياً في auth.js)
+  const dot = document.getElementById("inboxDot");
+  if (dot) dot.classList.toggle("hidden", !(totalUnread > 0));
+
   const badge = document.getElementById("inboxBadge");
   if (badge){
     badge.textContent = String(totalUnread);
     badge.classList.toggle("hidden", !(totalUnread > 0));
   }
+}
 
-  // Dot (إذا رجعت له لاحقاً)
-  const dot = document.getElementById("inboxDot");
-  if (dot){
-    dot.classList.toggle("hidden", !(totalUnread > 0));
+function tsToText(ts){
+  try{
+    return ts?.toDate ? ts.toDate().toLocaleString() : "";
+  }catch{
+    return "";
   }
 }
 
-/* =========================
-   ✅ OPEN CHAT
-========================= */
+function getStatusIcon(m, me, otherId){
+  // نعرض الحالة فقط على رسائل "أنا"
+  if (m.senderId !== me) return "";
+
+  const delivered = !!(m.deliveredTo && m.deliveredTo[otherId]);
+  const read      = !!(m.readBy && m.readBy[otherId]);
+
+  if (read) return "✓✓";
+  if (delivered) return "✓";
+  return "⏳";
+}
+
+/**
+ * openChat(listingId, listingTitle, ownerId?)
+ */
 async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
   try{ requireAuth(); }catch{ return; }
 
@@ -87,7 +101,6 @@ async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
     UI.el.chatMsgs.innerHTML = `<div class="muted">تعذر تحديد صاحب الإعلان. جرّب فتح الإعلان ثم اضغط مراسلة.</div>`;
     return;
   }
-
   if (realOwnerId === me){
     UI.el.chatMsgs.innerHTML = `<div class="muted">لا يمكن مراسلة نفسك.</div>`;
     return;
@@ -98,7 +111,7 @@ async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
 
   const chatDocRef = doc(db, "chats", roomId);
 
-  // ✅ تأكد وجود الميتا + unread أساسياً
+  // ✅ ميتا + unread
   await setDoc(chatDocRef, {
     listingId,
     listingTitle,
@@ -110,31 +123,62 @@ async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
     unread: { [me]: 0, [realOwnerId]: 0 }
   }, { merge: true });
 
-  // ✅ فتح الشات = مقروءة للمستخدم الحالي
-  try{
-    await updateDoc(chatDocRef, { [`unread.${me}`]: 0 });
-  }catch{}
-
-  // ✅ خفّف العداد فوراً بالهيدر
-  try{ if (typeof UI.actions.loadInbox === "function") UI.actions.loadInbox(); }catch{}
+  // ✅ فتح الشات = تصفير unread للمستخدم الحالي
+  try{ await updateDoc(chatDocRef, { [`unread.${me}`]: 0 }); }catch{}
 
   const msgsRef = collection(db, "chats", roomId, "messages");
   const qy = query(msgsRef, orderBy("createdAt","asc"), limit(80));
 
   if (UI.state.chatUnsub) UI.state.chatUnsub();
-  UI.state.chatUnsub = onSnapshot(qy, (snap)=>{
+  UI.state.chatUnsub = onSnapshot(qy, async (snap)=>{
+    // ✅ عند وصول رسائل جديدة للطرف الحالي: نعلّم Delivered + Read
+    // ملاحظة: نستخدم docChanges حتى ما نحدّث كل مرة كل الرسائل
+    try{
+      const batch = writeBatch(db);
+      let dirty = false;
+
+      snap.docChanges().forEach(ch=>{
+        if (ch.type !== "added") return;
+        const m = ch.doc.data() || {};
+        if (m.senderId === me) return;
+
+        const msgRef = doc(db, "chats", roomId, "messages", ch.doc.id);
+
+        // Delivered لهذا المستخدم
+        if (!(m.deliveredTo && m.deliveredTo[me])){
+          batch.update(msgRef, { [`deliveredTo.${me}`]: serverTimestamp() });
+          dirty = true;
+        }
+        // Read لهذا المستخدم (طالما الشات مفتوح)
+        if (!(m.readBy && m.readBy[me])){
+          batch.update(msgRef, { [`readBy.${me}`]: serverTimestamp() });
+          dirty = true;
+        }
+      });
+
+      if (dirty) await batch.commit();
+    }catch{}
+
+    // ✅ رندر
     UI.el.chatMsgs.innerHTML = "";
     snap.forEach(d=>{
       const m = d.data() || {};
       const div = document.createElement("div");
       div.className = "msg" + (m.senderId===me ? " me": "");
-      const time = m.createdAt?.toDate ? m.createdAt.toDate().toLocaleString() : "";
+
+      const time = tsToText(m.createdAt);
+      const st   = getStatusIcon(m, me, realOwnerId);
+
       div.innerHTML = `
         <div>${escapeHtml(m.text||"")}</div>
-        <div class="t">${escapeHtml(time)}</div>
+        <div class="t">
+          ${escapeHtml(time)}
+          ${st ? `<span class="st">${escapeHtml(st)}</span>` : ``}
+        </div>
       `;
       UI.el.chatMsgs.appendChild(div);
     });
+
     UI.el.chatMsgs.scrollTop = UI.el.chatMsgs.scrollHeight;
   });
 }
@@ -146,9 +190,6 @@ function closeChat(){
   currentChat = { listingId:null, roomId:null, otherId:null, listingTitle:"" };
 }
 
-/* =========================
-   ✅ SEND MESSAGE
-========================= */
 async function sendMsg(){
   try{ requireAuth(); }catch{ return; }
 
@@ -157,22 +198,25 @@ async function sendMsg(){
   if (!currentChat.roomId) return;
 
   const me = auth.currentUser.uid;
+  const otherId = currentChat.otherId;
 
   const msgsRef = collection(db, "chats", currentChat.roomId, "messages");
   const chatDocRef = doc(db, "chats", currentChat.roomId);
 
-  // ✅ أرسل الرسالة
+  // ✅ أرسل الرسالة + ضع delivered/read لنفسي (أنا شايفها)
   await addDoc(msgsRef, {
     text,
     senderId: me,
     createdAt: serverTimestamp(),
-    expiresAt: new Date(Date.now() + 7*24*3600*1000)
+    expiresAt: new Date(Date.now() + 7*24*3600*1000),
+
+    // ✅ حالات واتساب
+    deliveredTo: { [me]: serverTimestamp() },
+    readBy:      { [me]: serverTimestamp() }
   });
 
-  // ✅ حدّث الميتا + عدّاد غير مقروء للطرف الآخر
+  // ✅ حدّث الميتا + unread للطرف الآخر
   try{
-    const otherId = currentChat.otherId;
-
     await runTransaction(db, async (tx) => {
       const snap = await tx.get(chatDocRef);
 
@@ -205,15 +249,16 @@ async function sendMsg(){
 /* =========================
    ✅ INBOX
 ========================= */
+
 async function openInbox(){
   try{ requireAuth(); }catch{ return; }
   UI.showInboxPage();
-
-  // ✅ مهم: بعد ما الصفحة تنرسم، نعيد تحميل (ليتأكد يمسك العنصر الجديد)
   await loadInbox();
 }
 
 function closeInbox(){
+  if (inboxUnsub) inboxUnsub();
+  inboxUnsub = null;
   UI.hide(UI.el.inboxPage);
 }
 
@@ -222,17 +267,15 @@ async function loadInbox(){
 
   const me = auth.currentUser.uid;
 
-  // ✅ لا تعتمد على UI.el.inboxList (ممكن يتبدّل بالـ showInboxPage)
-  const listEl = document.getElementById("inboxList");
-  if (listEl){
-    listEl.innerHTML = `<div class="muted small">جاري تحميل المحادثات...</div>`;
-    UI.setInboxEmpty?.(false);
+  if (UI.el?.inboxList){
+    UI.el.inboxList.innerHTML = `<div class="muted small">جاري تحميل المحادثات...</div>`;
+    UI.setInboxEmpty(false);
   }
 
   const qy = query(
     collection(db, "chats"),
     where("participants", "array-contains", me),
-    limit(60)
+    limit(80)
   );
 
   if (inboxUnsub) inboxUnsub();
@@ -252,14 +295,12 @@ async function loadInbox(){
       });
     });
 
-    // ✅ ترتيب محلي حسب updatedAt
     rows.sort((a,b)=>{
       const ta = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : 0;
       const tb = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : 0;
       return tb - ta;
     });
 
-    // ✅ مجموع غير المقروء للهيدر
     const totalUnread = rows.reduce((sum, r) => {
       const c = Number((r.unread && r.unread[me]) || 0);
       return sum + (isNaN(c) ? 0 : c);
@@ -267,33 +308,29 @@ async function loadInbox(){
 
     setInboxIndicator(totalUnread);
 
-    // ✅ إذا صفحة inbox مفتوحة حالياً، ارسم القائمة
-    const currentListEl = document.getElementById("inboxList");
-    if (currentListEl){
-      renderInbox(rows, me, currentListEl);
-    }
+    if (UI.el?.inboxList) renderInbox(rows, me);
   }, (err)=>{
-    const currentListEl = document.getElementById("inboxList");
-    if (currentListEl){
-      currentListEl.innerHTML = `<div class="muted small">فشل تحميل الـ Inbox: ${escapeHtml(err?.message||"")}</div>`;
+    if (UI.el?.inboxList){
+      UI.el.inboxList.innerHTML = `<div class="muted small">فشل تحميل الـ Inbox: ${escapeHtml(err?.message||"")}</div>`;
     }
   });
 }
 
-function renderInbox(rows, me, listEl){
-  listEl.innerHTML = "";
+function renderInbox(rows, me){
+  UI.el.inboxList.innerHTML = "";
 
   if (!rows.length){
-    UI.setInboxEmpty?.(true);
+    UI.setInboxEmpty(true);
     return;
   }
-  UI.setInboxEmpty?.(false);
+  UI.setInboxEmpty(false);
 
   rows.forEach(r=>{
     const otherId = (r.participants || []).find(x => x !== me) || "";
     const title = r.listingTitle || "محادثة";
     const last = r.lastText ? escapeHtml(r.lastText) : `<span class="muted small">لا توجد رسائل بعد</span>`;
     const unreadCount = Number((r.unread && r.unread[me]) || 0);
+
     const t = r.updatedAt?.toDate ? r.updatedAt.toDate().toLocaleString() : "";
 
     const item = document.createElement("div");
@@ -302,7 +339,7 @@ function renderInbox(rows, me, listEl){
       <div class="inboxMain">
         <div class="inboxTitle">
           ${escapeHtml(title)}
-          ${unreadCount > 0 ? `<span class="badge" style="margin-inline-start:8px">${unreadCount}</span>` : ``}
+          ${unreadCount > 0 ? `<span class="badge">${unreadCount}</span>` : ``}
         </div>
         <div class="inboxLast">${last}</div>
       </div>
@@ -313,6 +350,6 @@ function renderInbox(rows, me, listEl){
       await openChat(r.listingId, r.listingTitle, otherId);
     };
 
-    listEl.appendChild(item);
+    UI.el.inboxList.appendChild(item);
   });
 }
