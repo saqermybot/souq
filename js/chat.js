@@ -42,16 +42,32 @@ let currentChat = { listingId:null, roomId:null, otherId:null, listingTitle:"" }
 let inboxUnsub = null;
 
 async function resolveOwnerId(listingId){
-  // 1) من currentListing إن وجد
   const o1 = UI.state.currentListing?.ownerId;
   if (o1) return o1;
 
-  // 2) من Firestore كـ fallback
   try{
     const snap = await getDoc(doc(db, "listings", listingId));
     if (snap.exists()) return snap.data()?.ownerId || null;
   }catch{}
   return null;
+}
+
+/* =========================
+   ✅ TOP INDICATORS (Dot/Badge)
+========================= */
+function setInboxIndicator(totalUnread){
+  // 1) Dot (حسب auth.js عندك)
+  const dot = document.getElementById("inboxDot");
+  if (dot){
+    dot.classList.toggle("hidden", !(totalUnread > 0));
+  }
+
+  // 2) Badge رقم (إذا حابب تستعمله)
+  const badge = document.getElementById("inboxBadge");
+  if (badge){
+    badge.textContent = String(totalUnread);
+    badge.classList.toggle("hidden", !(totalUnread > 0));
+  }
 }
 
 /**
@@ -65,8 +81,6 @@ async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
   UI.el.chatTitle.textContent = `محادثة: ${listingTitle}`;
 
   const me = auth.currentUser.uid;
-
-  // ✅ احصل على ownerId بشكل موثوق
   const realOwnerId = ownerId || await resolveOwnerId(listingId);
 
   if (!realOwnerId){
@@ -82,9 +96,9 @@ async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
   const roomId = chatRoomId(listingId, me, realOwnerId);
   currentChat = { listingId, roomId, otherId: realOwnerId, listingTitle };
 
-  // ✅ أنشئ/حدّث وثيقة المحادثة الرئيسية (Meta) للـ Inbox
   const chatDocRef = doc(db, "chats", roomId);
 
+  // ✅ تأكد وجود الميتا + unread أساسياً
   await setDoc(chatDocRef, {
     listingId,
     listingTitle,
@@ -93,12 +107,19 @@ async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
     participants: [me, realOwnerId].sort(),
     updatedAt: serverTimestamp(),
     lastText: "",
-    unread: { [me]: 0, [realOwnerId]: 0 } // ✅ أساس النظام
+    unread: { [me]: 0, [realOwnerId]: 0 }
   }, { merge: true });
 
-  // ✅ عند فتح الشات: اعتبرها مقروءة للمستخدم الحالي
+  // ✅ فتح الشات = اعتبرها مقروءة للمستخدم الحالي
   try{
     await updateDoc(chatDocRef, { [`unread.${me}`]: 0 });
+  }catch{}
+
+  // ✅ بعد تصفير unread، حاول تحدث المؤشر إذا كان loadInbox شغال
+  // (مش ضروري، لكن مفيد إذا كان المستخدم فات عالشات مباشرة)
+  try{
+    // لو بدك: شغّل loadInbox مرة واحدة لتحديث الدوت
+    if (typeof UI.actions.loadInbox === "function") UI.actions.loadInbox();
   }catch{}
 
   const msgsRef = collection(db, "chats", roomId, "messages");
@@ -200,8 +221,11 @@ async function loadInbox(){
 
   const me = auth.currentUser.uid;
 
-  UI.el.inboxList.innerHTML = `<div class="muted small">جاري تحميل المحادثات...</div>`;
-  UI.setInboxEmpty(false);
+  // إذا كانت عناصر الـ UI موجودة
+  if (UI.el?.inboxList){
+    UI.el.inboxList.innerHTML = `<div class="muted small">جاري تحميل المحادثات...</div>`;
+    UI.setInboxEmpty(false);
+  }
 
   const qy = query(
     collection(db, "chats"),
@@ -233,21 +257,22 @@ async function loadInbox(){
       return tb - ta;
     });
 
-    // ✅ مجموع غير المقروء (Badge أعلى 💬)
+    // ✅ مجموع غير المقروء (للنقطة/العداد)
     const totalUnread = rows.reduce((sum, r) => {
       const c = Number((r.unread && r.unread[me]) || 0);
       return sum + (isNaN(c) ? 0 : c);
     }, 0);
 
-    const b = document.getElementById("inboxBadge");
-    if (b){
-      b.textContent = String(totalUnread);
-      b.classList.toggle("hidden", totalUnread <= 0);
-    }
+    setInboxIndicator(totalUnread);
 
-    renderInbox(rows, me);
+    // إذا صفحة inbox مفتوحة، اعرض القائمة
+    if (UI.el?.inboxList){
+      renderInbox(rows, me);
+    }
   }, (err)=>{
-    UI.el.inboxList.innerHTML = `<div class="muted small">فشل تحميل الـ Inbox: ${escapeHtml(err?.message||"")}</div>`;
+    if (UI.el?.inboxList){
+      UI.el.inboxList.innerHTML = `<div class="muted small">فشل تحميل الـ Inbox: ${escapeHtml(err?.message||"")}</div>`;
+    }
   });
 }
 
@@ -282,6 +307,7 @@ function renderInbox(rows, me){
     `;
 
     item.onclick = async () => {
+      // ✅ فتح المحادثة => تصفير unread للمستخدم الحالي داخل openChat
       await openChat(r.listingId, r.listingTitle, otherId);
     };
 
