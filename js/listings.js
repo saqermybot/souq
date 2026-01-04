@@ -17,10 +17,13 @@ export function initListings(){
   UI.actions.loadListings = loadListings;
   UI.actions.openDetails = openDetails;
 
-  // زر مراسلة من صفحة التفاصيل
+  // ✅ زر مراسلة من صفحة التفاصيل
   UI.el.btnChat.onclick = () => {
-    if (!UI.state.currentListing) return;
-    UI.actions.openChat(UI.state.currentListing.id, UI.state.currentListing.title);
+    const l = UI.state.currentListing;
+    if (!l) return;
+
+    // ✅ مرّر ownerId بشكل صريح حتى الشات يشتغل 100%
+    UI.actions.openChat(l.id, l.title || "إعلان", l.ownerId || null);
   };
 }
 
