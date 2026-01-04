@@ -13,16 +13,9 @@ import { UI } from "./ui.js";
 let globalMenuCloserInstalled = false;
 
 export function initAuth() {
-  // ===== Theme load/save =====
-  const savedTheme = localStorage.getItem("theme") || "light";
-  document.documentElement.setAttribute("data-theme", savedTheme);
-
-  function toggleTheme() {
-    const cur = document.documentElement.getAttribute("data-theme") || "light";
-    const next = cur === "dark" ? "light" : "dark";
-    document.documentElement.setAttribute("data-theme", next);
-    localStorage.setItem("theme", next);
-  }
+  // ✅ تثبيت الوضع الداكن دائماً
+  document.documentElement.setAttribute("data-theme", "dark");
+  localStorage.setItem("theme", "dark"); // احتياط لو عندك كود قديم يقرأه
 
   // ===== Modal open/close =====
   UI.actions.openAuth = () => UI.show(UI.el.authModal);
@@ -48,7 +41,6 @@ export function initAuth() {
     try {
       const email = UI.el.email.value.trim();
       const pass = UI.el.password.value;
-
       if (!email || !pass) return alert("اكتب الإيميل والباسورد");
 
       setBusy(true);
@@ -66,7 +58,6 @@ export function initAuth() {
     try {
       const email = UI.el.email.value.trim();
       const pass = UI.el.password.value;
-
       if (!email || !pass) return alert("اكتب الإيميل والباسورد");
 
       setBusy(true);
@@ -117,7 +108,8 @@ export function initAuth() {
     const email = user?.email || "";
 
     UI.renderAuthBar(`
-      <button id="btnTheme" class="themeBtn" title="Theme">🌓</button>
+      <!-- ✅ زر الرسائل بدل زر الثيم -->
+      <button id="btnInbox" class="iconBtn" title="الرسائل" aria-label="inbox">💬</button>
 
       <button id="btnOpenAdd" class="secondary">+ إعلان جديد</button>
 
@@ -142,10 +134,15 @@ export function initAuth() {
       }
     `);
 
-    // Theme
-    document.getElementById("btnTheme").onclick = (e) => {
+    // ✅ Inbox
+    document.getElementById("btnInbox").onclick = (e) => {
       e.stopPropagation();
-      toggleTheme();
+      // إذا ما سجل دخول -> افتح تسجيل الدخول
+      if (!auth.currentUser) return UI.actions.openAuth();
+
+      // openInbox رح نضيفه بالـ ui.js
+      if (typeof UI.actions.openInbox === "function") UI.actions.openInbox();
+      else alert("صفحة الرسائل غير جاهزة بعد (UI.actions.openInbox).");
     };
 
     // زر إضافة إعلان
@@ -173,7 +170,7 @@ export function initAuth() {
       toggleMenu();
     };
 
-    // إعلاناتي (اختياري - إذا ما بدك الميزة شيلها)
+    // إعلاناتي
     document.getElementById("btnMyAds").onclick = (e) => {
       e.stopPropagation();
       closeMenu();
