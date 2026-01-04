@@ -67,7 +67,14 @@ body{
   vertical-align:middle;
 }
 
-.authbar{display:flex; gap:8px; align-items:center; flex-wrap:wrap}
+/* مهم: menu absolute يحتاج parent relative */
+.authbar{
+  display:flex;
+  gap:8px;
+  align-items:center;
+  flex-wrap:wrap;
+  position:relative;
+}
 
 .container{
   max-width:860px;
@@ -149,37 +156,16 @@ button:disabled{opacity:.6; cursor:not-allowed}
   gap:10px;
 }
 
-/* ✅ مهم: نخليها "سطرين" حتى على الموبايل */
+/* ✅ سطرين على الموبايل */
 @media(max-width:520px){
-  .cardsGrid{
-    grid-template-columns: repeat(2, 1fr); /* بدل 1fr */
-    gap:8px;
-  }
+  .cardsGrid{ gap:8px; }
 
-  /* ✅ كروت أصغر */
-  .cardItem img{
-    height:120px;
-  }
-  .cardItem .p{
-    padding:8px;
-  }
-  .cardItem .t{
-    font-size:14px;
-    margin-bottom:4px;
-  }
-  .cardItem .m{
-    font-size:12px;
-  }
-  .cardItem .pr{
-    font-size:14px;
-    padding:5px 8px;
-    margin-top:6px;
-  }
-  .cardItem button{
-    padding:9px 12px;
-    font-size:14px;
-    margin-top:8px;
-  }
+  .cardItem img{ height:120px; }
+  .cardItem .p{ padding:8px; }
+  .cardItem .t{ font-size:14px; margin-bottom:4px; }
+  .cardItem .m{ font-size:12px; }
+  .cardItem .pr{ font-size:14px; padding:5px 8px; margin-top:6px; }
+  .cardItem button{ padding:9px 12px; font-size:14px; margin-top:8px; }
 }
 
 .cardItem{
@@ -218,37 +204,6 @@ button:disabled{opacity:.6; cursor:not-allowed}
 
 .price{font-size:22px; font-weight:900; margin:10px 0}
 
-/* Details page overlay (full screen like a page) */
-.detailsPage{
-  position: fixed;
-  inset: 0;
-  background: var(--bg);
-  z-index: 40;
-  overflow: auto;
-  padding-bottom: 24px;
-}
-.detailsTop{
-  position: sticky;
-  top: 0;
-  z-index: 45;
-  background: var(--card);
-  border-bottom: 1px solid var(--border);
-  padding: 10px 10px;
-  display:flex;
-  align-items:center;
-  justify-content: space-between;
-  gap:10px;
-}
-.detailsTitleMini{
-  font-weight:900;
-}
-.detailsTopRight{display:flex; gap:8px; align-items:center}
-.detailsBody{
-  max-width: 860px;
-  margin: 12px auto;
-  padding: 0 10px;
-}
-
 /* Details gallery */
 .gallery{
   position:relative;
@@ -282,10 +237,7 @@ button:disabled{opacity:.6; cursor:not-allowed}
 #gNext{left:10px}
 
 .dots{display:flex; gap:6px; justify-content:center; margin:8px 0 2px}
-.dot{
-  width:8px; height:8px; border-radius:999px;
-  background:#d0d5dd;
-}
+.dot{ width:8px; height:8px; border-radius:999px; background:#d0d5dd; }
 .dot.active{background:#111}
 
 /* Preview images */
@@ -343,7 +295,7 @@ button:disabled{opacity:.6; cursor:not-allowed}
   object-fit: contain;
   border-radius: 12px;
 }
-.imgClose{
+#imgClose{
   position:absolute;
   top:14px;
   right:14px;
@@ -353,7 +305,7 @@ button:disabled{opacity:.6; cursor:not-allowed}
   border:0;
   background: rgba(255,255,255,.12);
   color:#fff;
-  font-size:20px;
+  font-size:16px;
 }
 .imgNav{
   position:absolute;
@@ -370,8 +322,8 @@ button:disabled{opacity:.6; cursor:not-allowed}
   align-items:center;
   justify-content:center;
 }
-.imgPrev{ right:12px; }
-.imgNext{ left:12px; }
+#imgPrev{ right:12px; }
+#imgNext{ left:12px; }
 
 .imgCounter{
   position:absolute;
@@ -408,48 +360,7 @@ button:disabled{opacity:.6; cursor:not-allowed}
   margin-bottom:10px;
 }
 
-/* Theme button in topbar */
-.themeBtn{
-  background: rgba(255,255,255,.12);
-  color:#fff;
-  border: 1px solid rgba(255,255,255,.18);
-}
-/* ====== TOPBAR BRAND DOT ====== */
-.dotBrand{
-  width:10px;height:10px;border-radius:999px;
-  background:#2aa7ff;
-  display:inline-block;
-  margin-left:8px;
-}
-
-/* ====== AUTH CHIP (صورة صغيرة بالايسر) ====== */
-.userChip{
-  display:flex;
-  align-items:center;
-  gap:10px;
-  padding:6px 10px;
-  border-radius:14px;
-  border:1px solid rgba(255,255,255,.18);
-  background:rgba(255,255,255,.06);
-  color:#fff;
-  max-width:220px;
-}
-.userChip .avatar{
-  width:34px;height:34px;border-radius:12px;
-  background:rgba(255,255,255,.12);
-  overflow:hidden;
-  flex:0 0 auto;
-}
-.userChip .avatar img{width:100%;height:100%;object-fit:cover;display:block}
-.userChip .email{
-  font-size:12.5px;
-  opacity:.9;
-  overflow:hidden;
-  text-overflow:ellipsis;
-  white-space:nowrap;
-}
-
-/* ====== DETAILS FULL PAGE ====== */
+/* ====== PAGES (details/add/chat) ====== */
 .page{
   position:fixed;
   inset:0;
@@ -458,35 +369,19 @@ button:disabled{opacity:.6; cursor:not-allowed}
   padding:12px;
   overflow:auto;
 }
-.pageTop{
-  display:flex;
-  gap:10px;
-  align-items:center;
-  justify-content:space-between;
-  max-width:860px;
-  margin:0 auto 10px;
-}
-.pageCard{
-  max-width:860px;
-  margin:0 auto 30px;
-  background:var(--card);
-  border:1px solid var(--border);
-  border-radius:var(--radius);
-  padding:14px;
-  box-shadow:0 1px 0 rgba(0,0,0,.03);
-}
-/* Avatar صغير بدل userChip */
+
+/* Avatar صغير (بدون ايميل/اسم) */
 .avatarBtn{
-  width:38px;
-  height:38px;
-  border-radius:12px;
-  border:1px solid rgba(255,255,255,.18);
-  background:rgba(255,255,255,.06);
+  width:44px;
+  height:44px;
+  border-radius:14px;
+  background: rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.18);
   padding:0;
+  overflow:hidden;
   display:flex;
   align-items:center;
   justify-content:center;
-  overflow:hidden;
   color:#fff;
 }
 .avatarBtn img{
@@ -501,23 +396,7 @@ button:disabled{opacity:.6; cursor:not-allowed}
   opacity:.95;
 }
 
-/* مهم: menu absolute يحتاج parent relative */
-.authbar{ position:relative; }
-
-/* menu */
-.menu{
-  position:absolute;
-  top:48px;
-  left:0;            /* ✅ بالزاوية اليسار */
-  min-width:140px;
-  background: var(--card);
-  border:1px solid var(--border);
-  border-radius:12px;
-  box-shadow: var(--shadow);
-  padding:6px;
-  z-index: 999;
-}
-/* زر أيقونة بالهيدر */
+/* زر أيقونة بالهيدر (للمستقبل: رسائل/Inbox) */
 .iconBtn{
   width:44px;
   height:44px;
@@ -531,30 +410,19 @@ button:disabled{opacity:.6; cursor:not-allowed}
   font-size:18px;
 }
 
-/* Avatar صغير */
-.avatarBtn{
-  width:44px;
-  height:44px;
-  border-radius:14px;
-  background: rgba(255,255,255,.12);
-  border: 1px solid rgba(255,255,255,.18);
-  padding:0;
-  overflow:hidden;
-  display:flex;
-  align-items:center;
-  justify-content:center;
+/* menu */
+.menu{
+  position:absolute;
+  top:52px;
+  left:0;
+  min-width:150px;
+  background: var(--card);
+  border:1px solid var(--border);
+  border-radius:12px;
+  box-shadow: var(--shadow);
+  padding:6px;
+  z-index: 999;
 }
-.avatarBtn img{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-  display:block;
-}
-.avatarLetter{
-  font-weight:900;
-  color:#fff;
-}
-
 .menuItem{
   width:100%;
   text-align:right;
@@ -563,6 +431,7 @@ button:disabled{opacity:.6; cursor:not-allowed}
   border:0;
   padding:10px 12px;
   border-radius:10px;
+  cursor:pointer;
 }
 .menuItem:hover{ background: rgba(148,163,184,.12); }
 .menuItem.danger{ color: var(--danger); }
