@@ -14,12 +14,20 @@ import {
   doc,
   getDoc,
   setDoc,
-  updateDoc
+  updateDoc,
+  where,
+  getDocs
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 export function initChat(){
   UI.actions.openChat = openChat;
   UI.actions.closeChat = closeChat;
+
+  // ✅ Inbox actions
+  UI.actions.openInbox = openInbox;
+  UI.actions.closeInbox = closeInbox;
+  UI.actions.loadInbox = loadInbox;
+
   UI.el.btnSend.onclick = sendMsg;
 }
 
@@ -28,6 +36,9 @@ function chatRoomId(listingId, a, b){
 }
 
 let currentChat = { listingId:null, roomId:null, otherId:null, listingTitle:"" };
+
+// ✅ unsubscribe للـ inbox (لو بدك live)
+let inboxUnsub = null;
 
 async function resolveOwnerId(listingId){
   // 1) من currentListing إن وجد
@@ -44,7 +55,6 @@ async function resolveOwnerId(listingId){
 
 /**
  * openChat(listingId, listingTitle, ownerId?)
- * - ownerId optional لكن الأفضل تمريره من صفحة التفاصيل
  */
 async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
   try{ requireAuth(); }catch{ return; }
@@ -71,7 +81,7 @@ async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
   const roomId = chatRoomId(listingId, me, realOwnerId);
   currentChat = { listingId, roomId, otherId: realOwnerId, listingTitle };
 
-  // ✅ أنشئ/حدّث وثيقة المحادثة الرئيسية (Meta) حتى نقدر نعمل Inbox لاحقاً
+  // ✅ أنشئ/حدّث وثيقة المحادثة الرئيسية (Meta) للـ Inbox
   const chatDocRef = doc(db, "chats", roomId);
   await setDoc(chatDocRef, {
     listingId,
@@ -133,9 +143,107 @@ async function sendMsg(){
       lastText: text.slice(0, 120),
       updatedAt: serverTimestamp()
     });
-  }catch{
-    // لو فشل update لأي سبب، ما نوقف الإرسال
-  }
+  }catch{}
 
   UI.el.chatInput.value = "";
+}
+
+/* =========================
+   ✅ INBOX
+========================= */
+
+async function openInbox(){
+  try{ requireAuth(); }catch{ return; }
+  UI.showInboxPage();
+  await loadInbox();
+}
+
+function closeInbox(){
+  // سكر live listener لو شغال
+  if (inboxUnsub) inboxUnsub();
+  inboxUnsub = null;
+
+  UI.hide(UI.el.inboxPage);
+}
+
+async function loadInbox(){
+  try{ requireAuth(); }catch{ return; }
+
+  const me = auth.currentUser.uid;
+
+  UI.el.inboxList.innerHTML = `<div class="muted small">جاري تحميل المحادثات...</div>`;
+  UI.setInboxEmpty(false);
+
+  // ✅ خيار 1: بدون orderBy لتفادي index requirements
+  // (منرتّب بالـ JS)
+  const qy = query(
+    collection(db, "chats"),
+    where("participants", "array-contains", me),
+    limit(60)
+  );
+
+  // إذا بدك Live (يتحدّث لحظياً) استخدم onSnapshot
+  // أفضل للأداء من getDocs لأنو أنت بدك Inbox يشبه ماركت بلاتس
+  if (inboxUnsub) inboxUnsub();
+  inboxUnsub = onSnapshot(qy, (snap)=>{
+    const rows = [];
+    snap.forEach(d=>{
+      const data = d.data() || {};
+      rows.push({
+        id: d.id,
+        listingId: data.listingId || "",
+        listingTitle: data.listingTitle || "إعلان",
+        buyerId: data.buyerId || "",
+        sellerId: data.sellerId || "",
+        participants: data.participants || [],
+        lastText: data.lastText || "",
+        updatedAt: data.updatedAt || null
+      });
+    });
+
+    // ✅ ترتيب محلي حسب updatedAt
+    rows.sort((a,b)=>{
+      const ta = a.updatedAt?.toMillis ? a.updatedAt.toMillis() : 0;
+      const tb = b.updatedAt?.toMillis ? b.updatedAt.toMillis() : 0;
+      return tb - ta;
+    });
+
+    renderInbox(rows, me);
+  }, (err)=>{
+    UI.el.inboxList.innerHTML = `<div class="muted small">فشل تحميل الـ Inbox: ${escapeHtml(err?.message||"")}</div>`;
+  });
+}
+
+function renderInbox(rows, me){
+  UI.el.inboxList.innerHTML = "";
+
+  if (!rows.length){
+    UI.setInboxEmpty(true);
+    return;
+  }
+  UI.setInboxEmpty(false);
+
+  rows.forEach(r=>{
+    const otherId = (r.participants || []).find(x => x !== me) || "";
+    const title = r.listingTitle || "محادثة";
+    const last = r.lastText ? escapeHtml(r.lastText) : `<span class="muted small">لا توجد رسائل بعد</span>`;
+
+    const t = r.updatedAt?.toDate ? r.updatedAt.toDate().toLocaleString() : "";
+    const item = document.createElement("div");
+    item.className = "inboxItem";
+    item.innerHTML = `
+      <div class="inboxMain">
+        <div class="inboxTitle">${escapeHtml(title)}</div>
+        <div class="inboxLast">${last}</div>
+      </div>
+      <div class="inboxMeta">${escapeHtml(t)}</div>
+    `;
+
+    item.onclick = async () => {
+      // افتح الشات على نفس الإعلان وبنفس الطرف الآخر
+      await openChat(r.listingId, r.listingTitle, otherId);
+    };
+
+    UI.el.inboxList.appendChild(item);
+  });
 }
