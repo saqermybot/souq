@@ -1,4 +1,4 @@
-// listings.js (آخر تعديل: زر "مراسلة" يفتح Inbox إذا الإعلان إلك، وإلا يفتح شات مع صاحب الإعلان)
+// listings.js (آخر تعديل: سطر سيارات بالكارد + زر "مراسلة" يفتح Inbox إذا الإعلان إلك، وإلا يفتح شات)
 
 import { db, auth } from "./firebase.js";
 import { UI } from "./ui.js";
@@ -15,6 +15,46 @@ import {
   startAfter
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
+/* =========================
+   ✅ Helpers للسيارات
+========================= */
+
+function typeToAr(typeId){
+  if (typeId === "sale") return "بيع";
+  if (typeId === "rent") return "إيجار";
+  return "";
+}
+
+function getCarModel(data){
+  // ندعم أكثر من شكل تخزين لتجنب كسر القديم
+  return (data.car?.model ?? data.model ?? "").toString().trim();
+}
+
+function getCarYear(data){
+  return (data.car?.year ?? data.year ?? "").toString().trim();
+}
+
+function getTypeId(data){
+  return (data.typeId ?? data.car?.typeId ?? data.type ?? "").toString().trim();
+}
+
+function isCarsCategory(data){
+  // ندعم عربي/إنجليزي + categoryId لو موجود
+  const c = (data.categoryId || data.category || "").toString().trim().toLowerCase();
+  return c === "cars" || c === "سيارات";
+}
+
+function carLine(data){
+  const type = typeToAr(getTypeId(data));
+  const model = getCarModel(data);
+  const year  = getCarYear(data);
+
+  const parts = [type, model, year].filter(Boolean);
+  return parts.join(" • ");
+}
+
+/* ========================= */
+
 export function initListings(){
   UI.actions.loadListings = loadListings;
   UI.actions.openDetails = openDetails;
@@ -30,7 +70,7 @@ export function initListings(){
     // ✅ إذا الإعلان إلك → افتح Inbox (مفلتر على هذا الإعلان)
     if (me && ownerId && me === ownerId) {
       if (typeof UI.actions.openInbox === "function") {
-        return UI.actions.openInbox(l.id); // مهم: openInbox يدعم listingId كفلتر
+        return UI.actions.openInbox(l.id); // openInbox يدعم listingId كفلتر
       }
       return alert("Inbox غير جاهز بعد.");
     }
@@ -116,8 +156,6 @@ async function loadListings(reset = true){
   const cityVal = useFilters ? (UI.el.cityFilter.value || "") : "";
   const catVal  = useFilters ? (UI.el.catFilter.value || "") : "";
 
-  let added = 0;
-
   snap.forEach(ds=>{
     const data = ds.data();
 
@@ -137,12 +175,18 @@ async function loadListings(reset = true){
 
     const img = (data.images && data.images[0]) ? data.images[0] : "";
 
+    // ✅ سطر سيارات
+    const carMeta = isCarsCategory(data) ? carLine(data) : "";
+
     const card = document.createElement("div");
     card.className = "cardItem";
     card.innerHTML = `
       <img src="${img}" alt="" />
       <div class="p">
         <div class="t">${escapeHtml(data.title || "بدون عنوان")}</div>
+
+        ${carMeta ? `<div class="carMeta">${escapeHtml(carMeta)}</div>` : ``}
+
         <div class="m">${escapeHtml(data.city||"")} • ${escapeHtml(data.category||"")}</div>
         <div class="pr">${escapeHtml(formatPrice(data.price, data.currency))}</div>
         <button class="secondary">عرض الإعلان</button>
@@ -154,7 +198,6 @@ async function loadListings(reset = true){
     card.querySelector("button").onclick = () => openDetails(ds.id, data);
 
     UI.el.listings.appendChild(card);
-    added++;
   });
 
   UI.setEmptyState(UI.el.listings.children.length === 0);
