@@ -10,7 +10,7 @@ document.documentElement.setAttribute("data-theme", "dark");
 localStorage.setItem("theme", "dark");
 
 UI.init();
-
+Notify.ensurePermission();
 // ✅ جهّز actions أولاً
 initListings();
 initAddListing();
