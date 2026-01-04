@@ -39,6 +39,40 @@ function chatRoomId(listingId, a, b){
 let currentChat = { listingId:null, roomId:null, otherId:null, listingTitle:"" };
 let inboxUnsub = null;
 
+// ====== Notifications (sound + browser notif while page open) ======
+let lastTotalUnread = 0;
+
+function playBeep(){
+  try{
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = "sine";
+    o.frequency.value = 880;
+    g.gain.value = 0.05;
+    o.start();
+    setTimeout(() => { o.stop(); ctx.close(); }, 120);
+  }catch{}
+}
+
+function notifyBrowser(title, body){
+  try{
+    if (!("Notification" in window)) return;
+    if (Notification.permission === "default") {
+      // اطلب مرة واحدة (ممكن أول رسالة جديدة)
+      Notification.requestPermission().then(()=>{});
+      return;
+    }
+    if (Notification.permission !== "granted") return;
+
+    // إشعار بسيط
+    new Notification(title, { body });
+  }catch{}
+}
+
 async function resolveOwnerId(listingId){
   const o1 = UI.state.currentListing?.ownerId;
   if (o1) return o1;
@@ -54,9 +88,11 @@ async function resolveOwnerId(listingId){
    ✅ TOP INDICATORS (Dot/Badge)
 ========================= */
 function setInboxIndicator(totalUnread){
+  // Dot (لو موجود)
   const dot = document.getElementById("inboxDot");
   if (dot) dot.classList.toggle("hidden", !(totalUnread > 0));
 
+  // Badge (لو موجود)
   const badge = document.getElementById("inboxBadge");
   if (badge){
     badge.textContent = String(totalUnread);
@@ -64,24 +100,22 @@ function setInboxIndicator(totalUnread){
   }
 }
 
-function tsToText(ts){
-  try{
-    return ts?.toDate ? ts.toDate().toLocaleString() : "";
-  }catch{
-    return "";
-  }
+// ===== helpers: delivery/read maps =====
+function hasMapKey(obj, key){
+  return obj && typeof obj === "object" && obj[key];
 }
 
-function getStatusIcon(m, me, otherId){
-  // نعرض الحالة فقط على رسائل "أنا"
+function statusIconForMessage(m, me, otherId, isPending){
+  // فقط لرسائلي
   if (m.senderId !== me) return "";
 
-  const delivered = !!(m.deliveredTo && m.deliveredTo[otherId]);
-  const read      = !!(m.readBy && m.readBy[otherId]);
+  if (isPending) return "⏳";          // لسه ما انحفظت
+  const readBy = m.readBy || {};
+  const deliveredTo = m.deliveredTo || {};
 
-  if (read) return "✓✓";
-  if (delivered) return "✓";
-  return "⏳";
+  if (hasMapKey(readBy, otherId)) return `<span class="st read">✓✓</span>`;
+  if (hasMapKey(deliveredTo, otherId)) return `<span class="st">✓✓</span>`;
+  return `<span class="st">✓</span>`;
 }
 
 /**
@@ -101,6 +135,7 @@ async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
     UI.el.chatMsgs.innerHTML = `<div class="muted">تعذر تحديد صاحب الإعلان. جرّب فتح الإعلان ثم اضغط مراسلة.</div>`;
     return;
   }
+
   if (realOwnerId === me){
     UI.el.chatMsgs.innerHTML = `<div class="muted">لا يمكن مراسلة نفسك.</div>`;
     return;
@@ -111,7 +146,7 @@ async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
 
   const chatDocRef = doc(db, "chats", roomId);
 
-  // ✅ ميتا + unread
+  // ✅ تأكد وجود الميتا + unread أساسياً
   await setDoc(chatDocRef, {
     listingId,
     listingTitle,
@@ -123,63 +158,72 @@ async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
     unread: { [me]: 0, [realOwnerId]: 0 }
   }, { merge: true });
 
-  // ✅ فتح الشات = تصفير unread للمستخدم الحالي
-  try{ await updateDoc(chatDocRef, { [`unread.${me}`]: 0 }); }catch{}
+  // ✅ فتح الشات = اعتبرها مقروءة بالمحادثة (unread meta)
+  try{
+    await updateDoc(chatDocRef, { [`unread.${me}`]: 0 });
+  }catch{}
 
   const msgsRef = collection(db, "chats", roomId, "messages");
-  const qy = query(msgsRef, orderBy("createdAt","asc"), limit(80));
+  const qy = query(msgsRef, orderBy("createdAt","asc"), limit(60));
 
   if (UI.state.chatUnsub) UI.state.chatUnsub();
+
   UI.state.chatUnsub = onSnapshot(qy, async (snap)=>{
-    // ✅ عند وصول رسائل جديدة للطرف الحالي: نعلّم Delivered + Read
-    // ملاحظة: نستخدم docChanges حتى ما نحدّث كل مرة كل الرسائل
-    try{
-      const batch = writeBatch(db);
-      let dirty = false;
-
-      snap.docChanges().forEach(ch=>{
-        if (ch.type !== "added") return;
-        const m = ch.doc.data() || {};
-        if (m.senderId === me) return;
-
-        const msgRef = doc(db, "chats", roomId, "messages", ch.doc.id);
-
-        // Delivered لهذا المستخدم
-        if (!(m.deliveredTo && m.deliveredTo[me])){
-          batch.update(msgRef, { [`deliveredTo.${me}`]: serverTimestamp() });
-          dirty = true;
-        }
-        // Read لهذا المستخدم (طالما الشات مفتوح)
-        if (!(m.readBy && m.readBy[me])){
-          batch.update(msgRef, { [`readBy.${me}`]: serverTimestamp() });
-          dirty = true;
-        }
-      });
-
-      if (dirty) await batch.commit();
-    }catch{}
-
-    // ✅ رندر
     UI.el.chatMsgs.innerHTML = "";
+
+    // ✅ بعد ما نوصل للـ snapshot: علّم رسائل الطرف الثاني وصلت/انقرأت
+    // - Delivered: أي رسالة مو إلي ومو متعلّمة deliveredTo[me]
+    // - Read: بما أني داخل الشات الآن => علّم readBy[me]
+    const b = writeBatch(db);
+    let needCommit = false;
+
     snap.forEach(d=>{
       const m = d.data() || {};
+      const isPending = d.metadata?.hasPendingWrites;
+
+      // Render
       const div = document.createElement("div");
       div.className = "msg" + (m.senderId===me ? " me": "");
-
-      const time = tsToText(m.createdAt);
-      const st   = getStatusIcon(m, me, realOwnerId);
+      const time = m.createdAt?.toDate ? m.createdAt.toDate().toLocaleString() : "";
+      const st = statusIconForMessage(m, me, realOwnerId, !!isPending);
 
       div.innerHTML = `
         <div>${escapeHtml(m.text||"")}</div>
         <div class="t">
           ${escapeHtml(time)}
-          ${st ? `<span class="st">${escapeHtml(st)}</span>` : ``}
+          ${st}
         </div>
       `;
       UI.el.chatMsgs.appendChild(div);
+
+      // Mark delivery/read for incoming messages
+      if (m.senderId && m.senderId !== me){
+        const deliveredTo = m.deliveredTo || {};
+        const readBy = m.readBy || {};
+
+        const msgRef = doc(db, "chats", roomId, "messages", d.id);
+
+        if (!deliveredTo[me]){
+          b.set(msgRef, { deliveredTo: { [me]: serverTimestamp() } }, { merge: true });
+          needCommit = true;
+        }
+
+        // إذا أنا فاتح الشات => read
+        if (!readBy[me]){
+          b.set(msgRef, { readBy: { [me]: serverTimestamp() } }, { merge: true });
+          needCommit = true;
+        }
+      }
     });
 
     UI.el.chatMsgs.scrollTop = UI.el.chatMsgs.scrollHeight;
+
+    if (needCommit){
+      try{ await b.commit(); }catch{}
+    }
+
+    // بعد القراءة، صفّر unread على مستوى الميتا مرة ثانية (احتياط)
+    try{ await updateDoc(chatDocRef, { [`unread.${me}`]: 0 }); }catch{}
   });
 }
 
@@ -203,19 +247,17 @@ async function sendMsg(){
   const msgsRef = collection(db, "chats", currentChat.roomId, "messages");
   const chatDocRef = doc(db, "chats", currentChat.roomId);
 
-  // ✅ أرسل الرسالة + ضع delivered/read لنفسي (أنا شايفها)
+  // ✅ أرسل الرسالة (يظهر ⏳ تلقائياً بسبب hasPendingWrites)
   await addDoc(msgsRef, {
     text,
     senderId: me,
     createdAt: serverTimestamp(),
-    expiresAt: new Date(Date.now() + 7*24*3600*1000),
-
-    // ✅ حالات واتساب
-    deliveredTo: { [me]: serverTimestamp() },
-    readBy:      { [me]: serverTimestamp() }
+    deliveredTo: {}, // لاحقاً بنحط deliveredTo[other]
+    readBy: {},      // لاحقاً بنحط readBy[other]
+    expiresAt: new Date(Date.now() + 7*24*3600*1000)
   });
 
-  // ✅ حدّث الميتا + unread للطرف الآخر
+  // ✅ حدّث الميتا + عدّاد غير مقروء للطرف الآخر
   try{
     await runTransaction(db, async (tx) => {
       const snap = await tx.get(chatDocRef);
@@ -275,7 +317,7 @@ async function loadInbox(){
   const qy = query(
     collection(db, "chats"),
     where("participants", "array-contains", me),
-    limit(80)
+    limit(60)
   );
 
   if (inboxUnsub) inboxUnsub();
@@ -308,7 +350,19 @@ async function loadInbox(){
 
     setInboxIndicator(totalUnread);
 
-    if (UI.el?.inboxList) renderInbox(rows, me);
+    // ✅ تنبيه صوتي + إشعار متصفح عند وصول جديد
+    if (totalUnread > lastTotalUnread){
+      playBeep();
+      // إذا الصفحة بالخلفية، إشعار متصفح
+      if (document.hidden){
+        notifyBrowser("رسالة جديدة", "عندك رسالة جديدة في Souq Syria");
+      }
+    }
+    lastTotalUnread = totalUnread;
+
+    if (UI.el?.inboxList){
+      renderInbox(rows, me);
+    }
   }, (err)=>{
     if (UI.el?.inboxList){
       UI.el.inboxList.innerHTML = `<div class="muted small">فشل تحميل الـ Inbox: ${escapeHtml(err?.message||"")}</div>`;
@@ -330,7 +384,6 @@ function renderInbox(rows, me){
     const title = r.listingTitle || "محادثة";
     const last = r.lastText ? escapeHtml(r.lastText) : `<span class="muted small">لا توجد رسائل بعد</span>`;
     const unreadCount = Number((r.unread && r.unread[me]) || 0);
-
     const t = r.updatedAt?.toDate ? r.updatedAt.toDate().toLocaleString() : "";
 
     const item = document.createElement("div");
