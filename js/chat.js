@@ -95,7 +95,7 @@ function setInboxIndicator(totalUnread){
   // Badge (لو موجود)
   const badge = document.getElementById("inboxBadge");
   if (badge){
-    badge.textContent = String(totalUnread);
+    badge.textContent = totalUnread > 99 ? "99+" : String(totalUnread);
     badge.classList.toggle("hidden", !(totalUnread > 0));
   }
 }
