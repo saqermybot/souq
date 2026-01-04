@@ -86,7 +86,7 @@ export function initAuth() {
   onAuthStateChanged(auth, (user) => {
     renderTopbar(user);
 
-    // ✅ أهم سطر: شغّل inbox listener تلقائياً ليحدث الـ Badge بدون فتح صفحة الرسائل
+    // ✅ شغّل inbox listener تلقائياً ليحدث الـ Badge بدون فتح صفحة الرسائل
     if (user && typeof UI.actions.loadInbox === "function") {
       UI.actions.loadInbox(); // موجودة عندك في chat.js وتعمل onSnapshot
     } else {
@@ -116,8 +116,8 @@ export function initAuth() {
     UI.renderAuthBar(`
       <button id="btnInbox" class="iconBtn" title="الرسائل" aria-label="inbox">
         💬
-        <!-- ✅ Badge رقم (يتعبّى تلقائياً من chat.js loadInbox) -->
-        <span id="inboxBadge" class="badge hidden">0</span>
+        <!-- ✅ Badge أحمر (ستايله من CSS عبر #inboxBadge) -->
+        <span id="inboxBadge" class="hidden">0</span>
       </button>
 
       <button id="btnOpenAdd" class="secondary">+ إعلان جديد</button>
