@@ -558,5 +558,16 @@ button:disabled{opacity:.6; cursor:not-allowed}
   border-radius:10px;
   cursor:pointer;
 }
+.inboxDot{
+  position:absolute;
+  width:10px;
+  height:10px;
+  border-radius:999px;
+  background:#ef4444;
+  top:8px;
+  left:8px; /* لأن الواجهة RTL */
+  border:2px solid rgba(0,0,0,.35);
+}
+.iconBtn{ position:relative; }
 .menuItem:hover{ background: rgba(148,163,184,.12); }
 .menuItem.danger{ color: var(--danger); }
