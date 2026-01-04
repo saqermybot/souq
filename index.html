@@ -1,0 +1,221 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Souq Syria</title>
+
+  <!-- ✅ Cache busting -->
+  <link rel="stylesheet" href="./css/base.css">
+  <link rel="stylesheet" href="./css/components.css">
+
+  <!-- ✅ تثبيت الدارك مود -->
+  <script>
+    // نجبر الدارك دائماً (حتى قبل تحميل css)
+    document.documentElement.setAttribute("data-theme", "dark");
+  </script>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="dot"></span>
+      Souq Syria
+    </div>
+    <div id="authBar" class="authbar"></div>
+  </header>
+
+  <main class="container">
+
+    <!-- FILTER DRAWER (اسحب من الأعلى) -->
+    <section id="filterDrawer" class="filterDrawer">
+      <div id="filterHandle" class="filterHandle">
+        <div class="handleBar"></div>
+        <div class="handleText">عن ماذا تبحث؟</div>
+      </div>
+
+      <div id="filterContent" class="card searchCard">
+        <div class="row">
+          <input id="qSearch" placeholder="بحث عن إعلان..." />
+        </div>
+
+        <div class="grid" style="margin-top:10px">
+          <select id="cityFilter"></select>
+          <select id="catFilter"></select>
+        </div>
+
+        <div class="row actions" style="margin-top:10px">
+          <button id="btnApply" class="secondary">تطبيق</button>
+          <button id="btnReset" class="ghost">مسح</button>
+        </div>
+
+        <div class="muted small" style="margin-top:8px">
+          * الفلاتر تُطبَّق فقط عند الضغط على "تطبيق".
+        </div>
+      </div>
+    </section>
+
+    <!-- LISTINGS -->
+    <section class="card">
+      <div class="sectionHead">
+        <h3>الإعلانات</h3>
+        <button id="btnMore" class="secondary">المزيد</button>
+      </div>
+
+      <div id="listings" class="cardsGrid"></div>
+
+      <div id="loadMoreSentinel" style="height:1px"></div>
+
+      <div id="infiniteSentinel" class="infiniteSentinel"></div>
+
+      <div id="emptyState" class="muted small" style="display:none;margin-top:10px">
+        لا يوجد نتائج حالياً
+      </div>
+    </section>
+
+    <!-- DETAILS PAGE (Full Page) -->
+    <section id="detailsPage" class="page hidden">
+      <div class="pageInner card">
+        <div class="pageHead">
+          <button id="btnBack" class="ghost">رجوع</button>
+          <button id="btnShare" class="secondary">مشاركة</button>
+        </div>
+
+        <div class="gallery">
+          <button id="gPrev" class="gbtn">‹</button>
+          <img id="gImg" class="gimg" alt="image" />
+          <button id="gNext" class="gbtn">›</button>
+        </div>
+
+        <div id="gDots" class="dots"></div>
+
+        <h2 id="dTitle"></h2>
+        <div class="muted" id="dMeta"></div>
+        <div class="price" id="dPrice"></div>
+        <p id="dDesc"></p>
+
+        <div class="row actions">
+          <button id="btnChat">مراسلة</button>
+          <button id="btnDelete" class="danger hidden">حذف الإعلان</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- ✅ INBOX PAGE (رسائل) -->
+    <section id="inboxPage" class="page hidden">
+      <div class="pageInner card">
+        <div class="pageHead">
+          <button id="btnInboxBack" class="ghost">رجوع</button>
+          <h3 style="margin:0">الرسائل</h3>
+          <button id="btnInboxRefresh" class="secondary">تحديث</button>
+        </div>
+
+        <div id="inboxList" class="inboxList"></div>
+
+        <div id="inboxEmpty" class="muted small" style="display:none;margin-top:10px">
+          لا يوجد محادثات حالياً
+        </div>
+      </div>
+    </section>
+
+    <!-- ADD LISTING -->
+    <section id="addBox" class="page hidden">
+      <div class="pageInner card">
+        <div class="pageHead">
+          <button id="btnAddBack" class="ghost">رجوع</button>
+          <div class="muted small" id="uploadStatus"></div>
+        </div>
+
+        <h2>إعلان جديد</h2>
+
+        <input id="aTitle" placeholder="العنوان" />
+        <textarea id="aDesc" placeholder="الوصف" rows="4"></textarea>
+
+        <div class="grid">
+          <input id="aPrice" type="number" placeholder="السعر" />
+          <select id="aCurrency">
+            <option value="SYP">SYP</option>
+            <option value="USD">USD</option>
+            <option value="EUR">EUR</option>
+          </select>
+        </div>
+
+        <div class="grid">
+          <select id="aCity"></select>
+          <select id="aCat"></select>
+        </div>
+
+        <div class="muted small">اختر من 1 إلى 3 صور (حد أقصى 3)</div>
+        <input id="aImages" type="file" accept="image/*" multiple />
+        <div id="imgPreview" class="preview"></div>
+
+        <div class="row actions">
+          <button id="btnPublish">نشر</button>
+          <button id="btnClear" class="secondary">مسح</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- CHAT -->
+    <section id="chatBox" class="page hidden">
+      <div class="pageInner card">
+        <div class="pageHead">
+          <button id="btnChatBack" class="ghost">رجوع</button>
+          <h3 id="chatTitle" style="margin:0">محادثة</h3>
+        </div>
+
+        <div id="chatMsgs" class="chatmsgs"></div>
+
+        <div class="row">
+          <input id="chatInput" placeholder="اكتب رسالة..." />
+          <button id="btnSend">إرسال</button>
+        </div>
+
+        <p class="muted small">المحادثات تُحذف تلقائيًا لاحقاً (ميزة قادمة).</p>
+      </div>
+    </section>
+
+  </main>
+
+  <!-- AUTH MODAL -->
+  <div id="authModal" class="modal hidden">
+    <div class="modalCard">
+      <div class="modalHead">
+        <div style="font-weight:900">تسجيل الدخول</div>
+        <button id="btnCloseAuth" class="ghost">إغلاق</button>
+      </div>
+
+      <div class="row">
+        <input id="email" placeholder="Email" autocomplete="email" />
+      </div>
+
+      <div class="row" style="margin-top:10px">
+        <input id="password" type="password" placeholder="Password" autocomplete="current-password" />
+      </div>
+
+      <div class="row actions" style="margin-top:12px">
+        <button id="btnLogin">دخول</button>
+        <button id="btnRegister" class="secondary">تسجيل</button>
+      </div>
+
+      <button id="btnGoogle" class="secondary full" style="margin-top:10px">دخول عبر Google</button>
+      <p class="muted small" style="margin-top:8px">Email + Google</p>
+    </div>
+  </div>
+
+  <!-- IMAGE MODAL (Fullscreen) -->
+  <div id="imgModal" class="imgModal hidden">
+    <div class="imgTop">
+      <div id="imgCounter" class="imgCounter"></div>
+      <button id="imgClose" class="ghost">إغلاق</button>
+    </div>
+
+    <button id="imgPrev" class="imgNav">‹</button>
+    <img id="imgFull" class="imgFull" alt="full" />
+    <button id="imgNext" class="imgNav">›</button>
+  </div>
+
+  <!-- ✅ Cache busting -->
+  <script type="module" src="./app.js?v=refactor_20260104"></script>
+</body>
+</html>
