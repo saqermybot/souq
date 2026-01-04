@@ -2,7 +2,7 @@ import { db, auth } from "./firebase.js";
 import { UI } from "./ui.js";
 import { escapeHtml } from "./utils.js";
 import { requireAuth } from "./auth.js";
-
+import { Notify } from "./notify.js";
 import {
   addDoc,
   collection,
