@@ -182,8 +182,33 @@
   color:#fff;
   margin-right:auto;
 }
-[data-theme="dark"] .msg.me{ background:#e5e7eb; color:#0b1220; }
-.msg .t{font-size:12px; opacity:.8; margin-top:4px}
+
+[data-theme="dark"] .msg.me{
+  background:#e5e7eb;
+  color:#0b1220;
+}
+
+/* الوقت + حالة التسليم/القراءة */
+.msg .t{
+  font-size:12px;
+  opacity:.8;
+  margin-top:4px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+
+/* ⏳ ✓ ✓✓ */
+.msg .st{
+  font-size:12px;
+  font-weight:900;
+  opacity:.9;
+}
+
+/* ✓✓ مقروءة (أزرق مثل واتساب) */
+.msg .st.read{
+  color:#22c55e;
+}
 
 /* Fullscreen image modal */
 .imgModal{
