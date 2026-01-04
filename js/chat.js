@@ -41,6 +41,14 @@ let currentChat = { listingId:null, roomId:null, otherId:null, listingTitle:"" }
 // ✅ unsubscribe للـ inbox (Live)
 let inboxUnsub = null;
 
+// ✅ unsubscribe للـ chat meta + messages
+let chatMetaUnsub = null;
+let chatMsgsUnsub = null;
+
+// ✅ حافظ آخر بيانات لنعيد رسم ✓✓ عند تحديث lastRead
+let lastMsgsCache = [];
+let lastMetaCache = null;
+
 async function resolveOwnerId(listingId){
   const o1 = UI.state.currentListing?.ownerId;
   if (o1) return o1;
@@ -53,21 +61,81 @@ async function resolveOwnerId(listingId){
 }
 
 /* =========================
-   ✅ TOP INDICATORS (Dot/Badge)
+   ✅ TOP INDICATORS (Badge)
 ========================= */
 function setInboxIndicator(totalUnread){
-  // 1) Dot (حسب auth.js عندك)
-  const dot = document.getElementById("inboxDot");
-  if (dot){
-    dot.classList.toggle("hidden", !(totalUnread > 0));
-  }
-
-  // 2) Badge رقم (إذا حابب تستعمله)
+  // Badge رقم (auth.js بيرندر inboxBadge)
   const badge = document.getElementById("inboxBadge");
   if (badge){
     badge.textContent = String(totalUnread);
     badge.classList.toggle("hidden", !(totalUnread > 0));
   }
+
+  // لو عندك dot قديم، ما بيضر
+  const dot = document.getElementById("inboxDot");
+  if (dot){
+    dot.classList.toggle("hidden", !(totalUnread > 0));
+  }
+}
+
+/* =========================
+   ✅ READ RECEIPT HELPERS (✓ / ✓✓)
+========================= */
+function toMillis(ts){
+  // Firestore Timestamp => millis
+  try{
+    if (!ts) return 0;
+    if (typeof ts.toMillis === "function") return ts.toMillis();
+    if (typeof ts.toDate === "function") return ts.toDate().getTime();
+    if (ts instanceof Date) return ts.getTime();
+  }catch{}
+  return 0;
+}
+
+function getOtherLastReadMs(meta, otherId){
+  const lr = meta?.lastRead || {};
+  return toMillis(lr?.[otherId]);
+}
+
+function renderMessages(msgs, meta){
+  if (!UI.el?.chatMsgs) return;
+
+  const me = auth.currentUser?.uid || "";
+  const otherId = currentChat.otherId;
+  const otherLastReadMs = getOtherLastReadMs(meta, otherId);
+
+  UI.el.chatMsgs.innerHTML = "";
+
+  msgs.forEach((m)=>{
+    const isMe = m.senderId === me;
+
+    const createdMs = toMillis(m.createdAt);
+    const time = m.createdAt?.toDate ? m.createdAt.toDate().toLocaleString() : "";
+
+    // ✅ status: للرسائل اللي أنا بعتها فقط
+    // ✓ = sent (موجودة بالـ DB)
+    // ✓✓ = read (الطرف الآخر فتح المحادثة بعد وقت إرسال الرسالة)
+    let ticks = "";
+    if (isMe){
+      const read = otherLastReadMs && createdMs && otherLastReadMs >= createdMs;
+      ticks = read ? "✓✓" : "✓";
+    }
+
+    const div = document.createElement("div");
+    div.className = "msg" + (isMe ? " me": "");
+
+    div.innerHTML = `
+      <div>${escapeHtml(m.text||"")}</div>
+      <div class="t">
+        <span>${escapeHtml(time)}</span>
+        ${isMe ? `<span class="ticks">${ticks}</span>` : ``}
+      </div>
+    `;
+
+    UI.el.chatMsgs.appendChild(div);
+  });
+
+  UI.el.chatMsgs.scrollTop = UI.el.chatMsgs.scrollHeight;
 }
 
 /**
@@ -98,7 +166,7 @@ async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
 
   const chatDocRef = doc(db, "chats", roomId);
 
-  // ✅ تأكد وجود الميتا + unread أساسياً
+  // ✅ تأكد وجود الميتا + unread + lastRead أساسياً
   await setDoc(chatDocRef, {
     listingId,
     listingTitle,
@@ -107,44 +175,72 @@ async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
     participants: [me, realOwnerId].sort(),
     updatedAt: serverTimestamp(),
     lastText: "",
-    unread: { [me]: 0, [realOwnerId]: 0 }
+    unread: { [me]: 0, [realOwnerId]: 0 },
+    lastRead: { [me]: serverTimestamp() } // ✅ فتح الشات = مقروء
   }, { merge: true });
 
-  // ✅ فتح الشات = اعتبرها مقروءة للمستخدم الحالي
+  // ✅ فتح الشات = صفّر unread للمستخدم الحالي + حدّث lastRead للمستخدم الحالي
   try{
-    await updateDoc(chatDocRef, { [`unread.${me}`]: 0 });
-  }catch{}
-
-  // ✅ بعد تصفير unread، حاول تحدث المؤشر إذا كان loadInbox شغال
-  // (مش ضروري، لكن مفيد إذا كان المستخدم فات عالشات مباشرة)
-  try{
-    // لو بدك: شغّل loadInbox مرة واحدة لتحديث الدوت
-    if (typeof UI.actions.loadInbox === "function") UI.actions.loadInbox();
-  }catch{}
-
-  const msgsRef = collection(db, "chats", roomId, "messages");
-  const qy = query(msgsRef, orderBy("createdAt","asc"), limit(60));
-
-  if (UI.state.chatUnsub) UI.state.chatUnsub();
-  UI.state.chatUnsub = onSnapshot(qy, (snap)=>{
-    UI.el.chatMsgs.innerHTML = "";
-    snap.forEach(d=>{
-      const m = d.data();
-      const div = document.createElement("div");
-      div.className = "msg" + (m.senderId===me ? " me": "");
-      const time = m.createdAt?.toDate ? m.createdAt.toDate().toLocaleString() : "";
-      div.innerHTML = `<div>${escapeHtml(m.text||"")}</div><div class="t">${escapeHtml(time)}</div>`;
-      UI.el.chatMsgs.appendChild(div);
+    await updateDoc(chatDocRef, {
+      [`unread.${me}`]: 0,
+      [`lastRead.${me}`]: serverTimestamp()
     });
-    UI.el.chatMsgs.scrollTop = UI.el.chatMsgs.scrollHeight;
+  }catch{}
+
+  // ✅ لا تعيد تشغيل loadInbox هون (بيسبب تأخير/تكرار listeners)
+  // لأن auth.js صار يشغله مرة واحدة تلقائياً.
+
+  // ✅ أوقف أي listeners قديمة
+  if (chatMetaUnsub) chatMetaUnsub();
+  if (chatMsgsUnsub) chatMsgsUnsub();
+
+  lastMsgsCache = [];
+  lastMetaCache = null;
+
+  // ✅ listener للـ Meta (حتى ✓✓ تتحدث لحالها لما الطرف الآخر يفتح الشات)
+  chatMetaUnsub = onSnapshot(chatDocRef, (snap)=>{
+    lastMetaCache = snap.data() || null;
+    // إذا عندنا رسائل مخزنة، أعد الرسم لتحديث ✓✓
+    if (lastMsgsCache.length){
+      renderMessages(lastMsgsCache, lastMetaCache);
+    }
+  });
+
+  // ✅ listener للرسائل
+  const msgsRef = collection(db, "chats", roomId, "messages");
+  const qy = query(msgsRef, orderBy("createdAt","asc"), limit(80));
+
+  chatMsgsUnsub = onSnapshot(qy, async (snap)=>{
+    const arr = [];
+    snap.forEach(d => arr.push({ id: d.id, ...(d.data()||{}) }));
+
+    lastMsgsCache = arr;
+    renderMessages(lastMsgsCache, lastMetaCache);
+
+    // ✅ أي رسالة جديدة من الطرف الآخر أثناء فتح الشات => اعتبرها مقروءة فوراً
+    // (حتى تتحول ✓✓ عنده بسرعة)
+    try{
+      const hasOther = arr.some(m => m.senderId === realOwnerId);
+      if (hasOther){
+        await updateDoc(chatDocRef, {
+          [`unread.${me}`]: 0,
+          [`lastRead.${me}`]: serverTimestamp()
+        });
+      }
+    }catch{}
   });
 }
 
 function closeChat(){
-  if (UI.state.chatUnsub) UI.state.chatUnsub();
-  UI.state.chatUnsub = null;
+  if (chatMetaUnsub) chatMetaUnsub();
+  if (chatMsgsUnsub) chatMsgsUnsub();
+  chatMetaUnsub = null;
+  chatMsgsUnsub = null;
+
   UI.hide(UI.el.chatBox);
   currentChat = { listingId:null, roomId:null, otherId:null, listingTitle:"" };
+  lastMsgsCache = [];
+  lastMetaCache = null;
 }
 
 async function sendMsg(){
@@ -155,6 +251,7 @@ async function sendMsg(){
   if (!currentChat.roomId) return;
 
   const me = auth.currentUser.uid;
+  const otherId = currentChat.otherId;
 
   const msgsRef = collection(db, "chats", currentChat.roomId, "messages");
   const chatDocRef = doc(db, "chats", currentChat.roomId);
@@ -169,8 +266,6 @@ async function sendMsg(){
 
   // ✅ حدّث الميتا + عدّاد غير مقروء للطرف الآخر (Transaction)
   try{
-    const otherId = currentChat.otherId;
-
     await runTransaction(db, async (tx) => {
       const snap = await tx.get(chatDocRef);
 
@@ -183,7 +278,8 @@ async function sendMsg(){
           participants: [me, otherId].sort(),
           updatedAt: serverTimestamp(),
           lastText: text.slice(0,120),
-          unread: { [me]: 0, [otherId]: 1 }
+          unread: { [me]: 0, [otherId]: 1 },
+          lastRead: { [me]: serverTimestamp() }
         }, { merge: true });
         return;
       }
@@ -192,7 +288,8 @@ async function sendMsg(){
         lastText: text.slice(0, 120),
         updatedAt: serverTimestamp(),
         [`unread.${otherId}`]: increment(1),
-        [`unread.${me}`]: 0
+        [`unread.${me}`]: 0,
+        [`lastRead.${me}`]: serverTimestamp()
       });
     });
   }catch{}
@@ -211,8 +308,6 @@ async function openInbox(){
 }
 
 function closeInbox(){
-  if (inboxUnsub) inboxUnsub();
-  inboxUnsub = null;
   UI.hide(UI.el.inboxPage);
 }
 
@@ -221,7 +316,7 @@ async function loadInbox(){
 
   const me = auth.currentUser.uid;
 
-  // إذا كانت عناصر الـ UI موجودة
+  // إذا كانت عناصر الـ UI موجودة (صفحة Inbox مفتوحة)
   if (UI.el?.inboxList){
     UI.el.inboxList.innerHTML = `<div class="muted small">جاري تحميل المحادثات...</div>`;
     UI.setInboxEmpty(false);
@@ -230,10 +325,11 @@ async function loadInbox(){
   const qy = query(
     collection(db, "chats"),
     where("participants", "array-contains", me),
-    limit(60)
+    limit(80)
   );
 
-  if (inboxUnsub) inboxUnsub();
+  // ✅ لا تعيد إنشاء listener لو هو شغال أصلاً (من auth.js)
+  if (inboxUnsub) return;
 
   inboxUnsub = onSnapshot(qy, (snap)=>{
     const rows = [];
@@ -257,7 +353,7 @@ async function loadInbox(){
       return tb - ta;
     });
 
-    // ✅ مجموع غير المقروء (للنقطة/العداد)
+    // ✅ مجموع غير المقروء (للـ badge فوق 💬)
     const totalUnread = rows.reduce((sum, r) => {
       const c = Number((r.unread && r.unread[me]) || 0);
       return sum + (isNaN(c) ? 0 : c);
@@ -299,7 +395,7 @@ function renderInbox(rows, me){
       <div class="inboxMain">
         <div class="inboxTitle">
           ${escapeHtml(title)}
-          ${unreadCount > 0 ? `<span class="badge">${unreadCount}</span>` : ``}
+          ${unreadCount > 0 ? `<span class="badge" style="margin-inline-start:8px">${unreadCount}</span>` : ``}
         </div>
         <div class="inboxLast">${last}</div>
       </div>
@@ -307,7 +403,6 @@ function renderInbox(rows, me){
     `;
 
     item.onclick = async () => {
-      // ✅ فتح المحادثة => تصفير unread للمستخدم الحالي داخل openChat
       await openChat(r.listingId, r.listingTitle, otherId);
     };
 
