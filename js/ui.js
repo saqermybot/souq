@@ -29,9 +29,9 @@ export const UI = {
     document.documentElement.setAttribute("data-theme", "dark");
 
     const ids = [
-      "authBar","qSearch","cityFilter","catFilter","btnToggleFilters","advancedFilters","minPrice","maxPrice","currencyFilter","sortFilter","typeFilter","yearFilter","estateKindFilter","roomsFilter","btnApply","btnReset","btnMore","listings","emptyState",
+      "authBar","qSearch","cityFilter","catFilter","btnApply","btnReset","btnMore","listings","emptyState",
 
-      "detailsPage","btnBack","btnShare","dTitle","dMeta","dPrice","dDesc","btnChat","btnDelete","gImg","gDots","gPrev","gNext",
+      "detailsPage","btnBack","btnShare","dTitle","dMeta","dPrice","dDesc","btnChat","btnDeleteListing","gImg","gDots","gPrev","gNext",
 
       "inboxPage","btnInboxBack","btnInboxRefresh","inboxList","inboxEmpty",
 
@@ -91,42 +91,11 @@ export const UI = {
       this.el.cityFilter.value="";
       this.el.catFilter.value="";
       this.el.qSearch.value="";
-      if (this.el.minPrice) this.el.minPrice.value="";
-      if (this.el.maxPrice) this.el.maxPrice.value="";
-      if (this.el.currencyFilter) this.el.currencyFilter.value="";
-      if (this.el.sortFilter) this.el.sortFilter.value="new";
-      if (this.el.typeFilter) this.el.typeFilter.value="";
-      if (this.el.yearFilter) this.el.yearFilter.value="";
-      if (this.el.estateKindFilter) this.el.estateKindFilter.value="";
-      if (this.el.roomsFilter) this.el.roomsFilter.value="0";
       this.state.filtersActive = false;
       this.actions.loadListings(true);
     };
 
     this.el.btnMore.onclick = () => this.actions.loadListings(false);
-
-    // ✅ فتح/إغلاق الفلاتر المتقدمة
-    const setFiltersOpen = (open) => {
-      const card = document.getElementById("searchCard");
-      if (!card) return;
-      card.classList.toggle("filtersOpen", !!open);
-      if (this.el.btnToggleFilters) this.el.btnToggleFilters.setAttribute("aria-expanded", open ? "true" : "false");
-      // نحفظ الاختيار
-      try{ localStorage.setItem("filtersOpen", open ? "1" : "0"); }catch{}
-    };
-
-    if (this.el.btnToggleFilters){
-      // استرجاع الحالة
-      let open = false;
-      try{ open = localStorage.getItem("filtersOpen") === "1"; }catch{}
-      setFiltersOpen(open);
-
-      this.el.btnToggleFilters.onclick = () => {
-        const card = document.getElementById("searchCard");
-        const isOpen = card?.classList.contains("filtersOpen");
-        setFiltersOpen(!isOpen);
-      };
-    }
 
     // keyword typing
     this.el.qSearch.addEventListener("input", debounce(() => {

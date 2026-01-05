@@ -9,11 +9,11 @@ import {
   getDoc,
   getDocs,
   doc,
+  deleteDoc,
   limit,
   orderBy,
   query,
-  startAfter,
-  deleteDoc
+  startAfter
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 /* =========================
@@ -84,71 +84,73 @@ function estateLine(data){
    - estateKind + rooms (عقارات)
 ========================= */
 
-
 function ensureFilterControls(){
-  // ✅ مراجع العناصر (موجودة بالـ HTML)
+  const catFilter = UI.el.catFilter;
+  if (!catFilter) return;
+
+  // إذا موجودين قبل لا نكرر
+  if (document.getElementById("typeFilter")) return;
+
+  const row = document.createElement("div");
+  row.className = "filtersRow";
+  row.innerHTML = `
+    <select id="typeFilter">
+      <option value="">كل الأنواع (بيع/إيجار)</option>
+      <option value="sale">بيع</option>
+      <option value="rent">إيجار</option>
+    </select>
+
+    <input id="yearFilter" type="number" min="1950" max="2035" placeholder="سنة (سيارات)" />
+
+    <select id="estateKindFilter" class="hidden">
+      <option value="">كل أنواع العقارات</option>
+      <option value="شقة">شقة</option>
+      <option value="محل">محل</option>
+      <option value="أرض">أرض</option>
+      <option value="بيت">بيت</option>
+    </select>
+
+    <input id="roomsFilter" class="hidden" type="number" min="0" max="20" placeholder="غرف (عقارات)" />
+  `;
+
+  // حطها تحت catFilter مباشرة
+  catFilter.parentElement?.insertBefore(row, catFilter.nextSibling);
+
+  // خزّنهم في UI.el لو حبيت
   UI.el.typeFilter = document.getElementById("typeFilter");
   UI.el.yearFilter = document.getElementById("yearFilter");
   UI.el.estateKindFilter = document.getElementById("estateKindFilter");
   UI.el.roomsFilter = document.getElementById("roomsFilter");
 
-  UI.el.minPrice = document.getElementById("minPrice");
-  UI.el.maxPrice = document.getElementById("maxPrice");
-  UI.el.currencyFilter = document.getElementById("currencyFilter");
-  UI.el.sortFilter = document.getElementById("sortFilter");
-
-  // إذا ما في عناصر (نسخة قديمة) → لا تعطل الموقع
-  if (!UI.el.catFilter) return;
-
-  // ✅ عبّي السنوات (آخر 35 سنة تقريباً)
-  if (UI.el.yearFilter && UI.el.yearFilter.options.length <= 1){
-    const nowY = new Date().getFullYear();
-    for (let y = nowY; y >= nowY - 35; y--){
-      const opt = document.createElement("option");
-      opt.value = String(y);
-      opt.textContent = String(y);
-      UI.el.yearFilter.appendChild(opt);
-    }
-  }
-
   const sync = () => {
     const cat = (UI.el.catFilter?.value || "").trim();
 
     // السنة فقط للسيارات
-    const showYear = (cat === "سيارات");
-    if (UI.el.yearFilter) UI.el.yearFilter.style.display = showYear ? "block" : "none";
-
-    // بيع/إيجار للسيارات + العقارات
-    const showType = (cat === "سيارات" || cat === "عقارات" || cat === "");
-    if (UI.el.typeFilter) UI.el.typeFilter.style.display = showType ? "block" : "none";
+    if (UI.el.yearFilter){
+      UI.el.yearFilter.style.display = (cat === "سيارات" || cat === "" ? "block" : "none");
+    }
 
     // العقارات: نوع + غرف
     const showEstate = (cat === "عقارات");
-    if (UI.el.estateKindFilter) UI.el.estateKindFilter.style.display = showEstate ? "block" : "none";
-    if (UI.el.roomsFilter) UI.el.roomsFilter.style.display = showEstate ? "block" : "none";
+    UI.el.estateKindFilter?.classList.toggle("hidden", !showEstate);
+    UI.el.roomsFilter?.classList.toggle("hidden", !showEstate);
   };
 
+  // أي تغيير على الفلاتر => إذا الفلاتر مفعّلة نحمّل فوراً
   const maybeReload = () => {
-    // إذا الفلاتر مطبّقة → أي تغيير يعيد التحميل فوراً
     if (UI.state.filtersActive) UI.actions.loadListings(true);
   };
 
   UI.el.catFilter?.addEventListener("change", () => { sync(); maybeReload(); });
-
-  // الفلاتر المتقدمة
   UI.el.typeFilter?.addEventListener("change", maybeReload);
-  UI.el.yearFilter?.addEventListener("change", maybeReload);
+  UI.el.yearFilter?.addEventListener("input", maybeReload);
   UI.el.estateKindFilter?.addEventListener("change", maybeReload);
-  UI.el.roomsFilter?.addEventListener("change", maybeReload);
-
-  UI.el.minPrice?.addEventListener("input", () => UI.state.filtersActive && maybeReload());
-  UI.el.maxPrice?.addEventListener("input", () => UI.state.filtersActive && maybeReload());
-  UI.el.currencyFilter?.addEventListener("change", maybeReload);
-  UI.el.sortFilter?.addEventListener("change", maybeReload);
+  UI.el.roomsFilter?.addEventListener("input", maybeReload);
 
   sync();
 }
 
+/* ========================= */
 
 export function initListings(){
   UI.actions.loadListings = loadListings;
@@ -176,6 +178,42 @@ export function initListings(){
     // ✅ إذا مو إلك → افتح الشات مع صاحب الإعلان
     UI.actions.openChat(l.id, l.title || "إعلان", ownerId);
   };
+
+  // ✅ زر حذف الإعلان (يظهر فقط للمالك)
+  if (UI.el.btnDeleteListing){
+    UI.el.btnDeleteListing.onclick = () => deleteCurrentListing();
+  }
+}
+
+async function deleteCurrentListing(){
+  try{
+    const l = UI.state.currentListing;
+    if (!l) return;
+
+    const me = auth.currentUser?.uid || "";
+    const ownerId = l.ownerId || "";
+
+    if (!me) return alert("يجب تسجيل الدخول أولاً");
+    if (!ownerId || ownerId !== me) return alert("لا يمكنك حذف هذا الإعلان");
+
+    const ok = confirm("هل أنت متأكد أنك تريد حذف الإعلان نهائياً؟");
+    if (!ok) return;
+
+    if (UI.el.btnDeleteListing) UI.el.btnDeleteListing.disabled = true;
+
+    await deleteDoc(doc(db, "listings", l.id));
+
+    // ✅ أغلق صفحة التفاصيل وحدث القائمة
+    UI.hideDetailsPage();
+    UI.state.currentListing = null;
+    await UI.actions.loadListings(true);
+
+    alert("تم حذف الإعلان ✅");
+  }catch(e){
+    alert(e?.message || "فشل حذف الإعلان");
+  }finally{
+    if (UI.el.btnDeleteListing) UI.el.btnDeleteListing.disabled = false;
+  }
 }
 
 /**
@@ -193,28 +231,6 @@ async function openDetails(id, data = null, fromHash = false){
 
     UI.state.currentListing = { id, ...data };
 
-    // ✅ زر الحذف يظهر فقط لصاحب الإعلان
-    const me = auth.currentUser?.uid || "";
-    const isMine = !!me && (data.ownerId === me);
-    if (UI.el.btnDelete){
-      UI.el.btnDelete.style.display = isMine ? "inline-flex" : "none";
-      UI.el.btnDelete.onclick = async () => {
-        if (!isMine) return;
-        const ok = confirm("أكيد بدك تحذف هذا الإعلان نهائياً؟");
-        if (!ok) return;
-        try{
-          await deleteDoc(doc(db, "listings", id));
-          alert("تم حذف الإعلان ✅");
-          UI.hide(UI.el.detailsPage);
-          // ارجع للقائمة
-          UI.actions.loadListings(true);
-        }catch(e){
-          alert(e?.message || "فشل حذف الإعلان");
-        }
-      };
-    }
-
-
     UI.showDetailsPage();
 
     UI.renderGallery(data.images || []);
@@ -222,6 +238,14 @@ async function openDetails(id, data = null, fromHash = false){
     UI.el.dMeta.textContent = `${data.city || ""} • ${data.category || ""}`;
     UI.el.dPrice.textContent = formatPrice(data.price, data.currency);
     UI.el.dDesc.textContent = data.description || "";
+
+    // ✅ إظهار زر الحذف فقط للمالك
+    const me = auth.currentUser?.uid || "";
+    const isOwner = !!(me && data.ownerId && me === data.ownerId);
+    if (UI.el.btnDeleteListing){
+      UI.el.btnDeleteListing.classList.toggle("hidden", !isOwner);
+      UI.el.btnDeleteListing.disabled = false;
+    }
 
     if (!fromHash){
       const newHash = `#listing=${encodeURIComponent(id)}`;
@@ -280,13 +304,6 @@ async function loadListings(reset = true){
   const estateKindVal = useFilters ? ((UI.el.estateKindFilter?.value || "").trim()) : "";
   const roomsVal = useFilters ? Number(UI.el.roomsFilter?.value || 0) : 0;
 
-  const minPriceVal = useFilters ? Number(UI.el.minPrice?.value || 0) : 0;
-  const maxPriceVal = useFilters ? Number(UI.el.maxPrice?.value || 0) : 0;
-  const currencyVal = useFilters ? ((UI.el.currencyFilter?.value || "").trim()) : "";
-  const sortVal = useFilters ? ((UI.el.sortFilter?.value || "new").trim()) : "new";
-
-  const rows = [];
-
   snap.forEach(ds=>{
     const data = ds.data();
 
@@ -297,18 +314,11 @@ async function loadListings(reset = true){
     if (cityVal && data.city !== cityVal) return;
     if (catVal && data.category !== catVal) return;
 
-    // ✅ فلترة عملة + سعر
-    if (currencyVal && (data.currency || "") !== currencyVal) return;
-
-    const pNum = Number(data.price || 0);
-    if (minPriceVal && pNum < minPriceVal) return;
-    if (maxPriceVal && pNum > maxPriceVal) return;
-
     // ✅ فلترة بيع/إيجار (للسيارات + العقارات فقط)
-    if (typeVal && (isCarsCategory(data) || isEstateCategory(data))){
-      const t = getTypeId(data);
-      if (t){
-        const tNorm = (t === "بيع" ? "sale" : t === "ايجار" ? "rent" : t);
+    if (typeVal){
+      const t = getTypeId(data); // ممكن يكون sale/rent أو عربي
+      const tNorm = (t === "بيع" ? "sale" : t === "إيجار" ? "rent" : t);
+      if (isCarsCategory(data) || isEstateCategory(data)){
         if (tNorm !== typeVal) return;
       }
     }
@@ -326,32 +336,21 @@ async function loadListings(reset = true){
         if (k !== estateKindVal) return;
       }
       if (roomsVal){
-        const r = getEstateRooms(data);
-        if (!r || Number(r) < roomsVal) return;
+        const rr = Number(data.rooms || data.bedrooms || 0);
+        if (rr !== roomsVal) return;
       }
     }
 
-    // ✅ كلمة البحث (دايماً شغالة)
-    const q = (UI.el.qSearch?.value || "").trim();
-    if (q){
-      const hay = `${data.title||""} ${data.description||""} ${data.city||""} ${data.category||""}`.toLowerCase();
-      if (!hay.includes(q.toLowerCase())) return;
+    // ✅ كلمة البحث (عنوان/وصف)
+    if (keyword){
+      const t = String(data.title || "").toLowerCase();
+      const d = String(data.description || "").toLowerCase();
+      if (!t.includes(keyword) && !d.includes(keyword)) return;
     }
 
-    rows.push({ id: ds.id, data });
-  });
+    const img = (data.images && data.images[0]) ? data.images[0] : "";
 
-  // ✅ ترتيب (السعر فقط إذا مختار عملة حتى ما نخرب المقارنة)
-  if (currencyVal && (sortVal === "priceAsc" || sortVal === "priceDesc")){
-    rows.sort((a,b)=>{
-      const pa = Number(a.data.price || 0);
-      const pb = Number(b.data.price || 0);
-      return sortVal === "priceAsc" ? (pa - pb) : (pb - pa);
-    });
-  }
-
-  rows.forEach(({id, data})=>{
-    const img = (data.images && data.images[0]) ? data.images[0] : "https://placehold.co/600x400?text=Souq+Syria";
+    // ✅ سطر ميتا صغير حسب الصنف
     const carMeta = isCarsCategory(data) ? carLine(data) : "";
     const estMeta = isEstateCategory(data) ? estateLine(data) : "";
     const extraMeta = carMeta || estMeta;
@@ -371,12 +370,15 @@ async function loadListings(reset = true){
     `;
 
     // ✅ فتح التفاصيل عند الضغط على الصورة أو كامل الكارد (بدون زر)
-    card.querySelector("img").onclick = () => openDetails(id, data);
-    card.onclick = () => openDetails(id, data);
+    card.querySelector("img").onclick = () => openDetails(ds.id, data);
+    card.onclick = (e) => {
+      // إذا ضغط على صورة رح يجي هون كمان، ما مشكلة
+      // بس إذا كان داخل الكارد عناصر تانية لاحقاً منمنعها هنا
+      openDetails(ds.id, data);
+    };
 
     UI.el.listings.appendChild(card);
   });
 
   UI.setEmptyState(UI.el.listings.children.length === 0);
-
 }
