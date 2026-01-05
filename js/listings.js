@@ -1,4 +1,4 @@
-// listings.js (Deluxe: يدعم typeFilter hidden + yearFrom/yearTo + عقارات + ميتا سطر + زر مراسلة يفتح Inbox إذا الإعلان إلك)
+// listings.js (Deluxe: typeFilter hidden + yearFrom/yearTo + عقارات + ميتا + مراسلة/Inbox)
 
 import { db, auth } from "./firebase.js";
 import { UI } from "./ui.js";
@@ -17,8 +17,10 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 /* =========================
-   ✅ Helpers (بيع/إيجار + سيارات + عقارات)
+   ✅ Helpers
 ========================= */
+
+function $id(id){ return document.getElementById(id); }
 
 function typeToAr(typeId){
   if (typeId === "sale") return "بيع";
@@ -28,7 +30,34 @@ function typeToAr(typeId){
   return "";
 }
 
+function normalizeTypeId(t){
+  if (t === "بيع") return "sale";
+  if (t === "إيجار") return "rent";
+  return (t || "").toString().trim();
+}
+
+function normalizeCat(v){
+  const s = (v || "").toString().trim().toLowerCase();
+  if (!s) return "";
+  if (s === "سيارات") return "cars";
+  if (s === "عقارات") return "realestate";
+  if (s === "إلكترونيات" || s === "الكترونيات") return "electronics";
+  return s; // cars/realestate/electronics/...
+}
+
+function getCatId(data){
+  // نخليها مرنة: categoryId (الأفضل) ثم categoryNameAr ثم category
+  const raw = data.categoryId || data.categoryNameAr || data.category || "";
+  return normalizeCat(raw);
+}
+
+function getTypeId(data){
+  return (data.typeId ?? data.car?.typeId ?? data.estate?.typeId ?? data.type ?? "").toString().trim();
+}
+
 // ---- Cars ----
+function isCarsCategory(data){ return getCatId(data) === "cars"; }
+
 function getCarModel(data){
   return (data.car?.model ?? data.carModel ?? data.model ?? "").toString().trim();
 }
@@ -39,32 +68,16 @@ function getCarYearNum(data){
   const y = Number(getCarYearRaw(data) || 0);
   return Number.isFinite(y) && y > 0 ? y : 0;
 }
-function getTypeId(data){
-  return (data.typeId ?? data.car?.typeId ?? data.estate?.typeId ?? data.type ?? "").toString().trim();
-}
-function normalizeTypeId(t){
-  // ندعم عربي/انجليزي
-  if (t === "بيع") return "sale";
-  if (t === "إيجار") return "rent";
-  return t; // sale/rent/...
-}
-function isCarsCategory(data){
-  const c = (data.categoryId || data.category || "").toString().trim().toLowerCase();
-  return c === "cars" || c === "سيارات";
-}
 function carLine(data){
   const type  = typeToAr(getTypeId(data));
   const model = getCarModel(data);
   const year  = getCarYearRaw(data);
-  const parts = [type, model, year].filter(Boolean);
-  return parts.join(" • ");
+  return [type, model, year].filter(Boolean).join(" • ");
 }
 
 // ---- Real Estate ----
-function isEstateCategory(data){
-  const c = (data.categoryId || data.category || "").toString().trim().toLowerCase();
-  return c === "realestate" || c === "عقارات";
-}
+function isEstateCategory(data){ return getCatId(data) === "realestate"; }
+
 function getEstateKind(data){
   return (data.estate?.kind ?? data.estateKind ?? data.kind ?? data.subType ?? "").toString().trim();
 }
@@ -72,59 +85,104 @@ function getRoomsNum(data){
   const v = (data.estate?.rooms ?? data.rooms ?? data.bedrooms ?? "").toString().trim();
   if (!v) return 0;
   const n = Number(v);
-  if (!Number.isFinite(n) || n <= 0) return 0;
-  return n;
+  return Number.isFinite(n) && n > 0 ? n : 0;
 }
 function estateLine(data){
   const type = typeToAr(getTypeId(data));
   const kind = getEstateKind(data);
   const rooms = getRoomsNum(data);
-
   const roomsTxt = rooms ? `${rooms} غرف` : "";
-  const parts = [type, kind, roomsTxt].filter(Boolean);
-  return parts.join(" • ");
+  return [type, kind, roomsTxt].filter(Boolean).join(" • ");
 }
 
 /* =========================
-   ✅ Read filters (DELUXE IDs)
-   - typeFilter (hidden) or legacy select
-   - yearFrom/yearTo (range) or legacy yearFilter
+   ✅ Filters (Deluxe)
 ========================= */
 
-function $id(id){ return document.getElementById(id); }
-
 function readTypeFilter(){
-  // الجديد: hidden input (typeFilter)
   const hidden = $id("typeFilter");
   if (hidden && typeof hidden.value === "string") return hidden.value.trim();
-
-  // القديم: select injected
-  const legacy = UI.el.typeFilter || $id("typeFilter");
-  if (legacy && typeof legacy.value === "string") return legacy.value.trim();
-
-  return "";
+  // fallback (لو في نسخة قديمة)
+  return (UI.el.typeFilter?.value || "").toString().trim();
 }
 
 function readYearRange(){
-  // الجديد
-  const yf = Number(($id("yearFrom")?.value || "").trim() || 0) || 0;
-  const yt = Number(($id("yearTo")?.value || "").trim() || 0) || 0;
+  const yf = Number(($id("yearFrom")?.value || "").toString().trim() || 0) || 0;
+  const yt = Number(($id("yearTo")?.value || "").toString().trim() || 0) || 0;
 
-  if (yf || yt) return { from: yf, to: yt };
-
-  // القديم: yearFilter (سنة واحدة)
-  const legacy = (UI.el.yearFilter || $id("yearFilter"))?.value || "";
-  const y = Number(String(legacy).trim() || 0) || 0;
-  if (y) return { from: y, to: y };
-
-  return { from: 0, to: 0 };
+  // لو المستخدم عكسهم: (من أكبر من إلى) منرتبهم
+  if (yf && yt && yf > yt) return { from: yt, to: yf };
+  return { from: yf, to: yt };
 }
 
-/* ========================= */
+function syncEstateFiltersVisibility(){
+  const wrap = $id("estateFilters");
+  if (!wrap) return;
+
+  const catVal = normalizeCat(UI.el.catFilter?.value || "");
+  wrap.classList.toggle("hidden", catVal !== "realestate");
+}
+
+function initTypeSegmented(){
+  const hidden = $id("typeFilter");
+  const btnAll  = $id("typeAll");
+  const btnSale = $id("typeSale");
+  const btnRent = $id("typeRent");
+
+  if (!hidden || !btnAll || !btnSale || !btnRent) return;
+
+  const allBtns = [btnAll, btnSale, btnRent];
+
+  const setActive = (val) => {
+    hidden.value = val; // "" | sale | rent
+    allBtns.forEach(b => b.classList.toggle("active", b.dataset.value === val));
+
+    // إذا الفلاتر مفعلة -> حمّل فوراً
+    if (UI.state.filtersActive) UI.actions.loadListings(true);
+  };
+
+  allBtns.forEach(b => {
+    b.addEventListener("click", () => setActive(b.dataset.value || ""));
+  });
+
+  // default
+  setActive(hidden.value || "");
+}
+
+function initDeluxeFilterBindings(){
+  // segmented type
+  initTypeSegmented();
+
+  // estate visibility
+  UI.el.catFilter?.addEventListener("change", () => {
+    syncEstateFiltersVisibility();
+    if (UI.state.filtersActive) UI.actions.loadListings(true);
+  });
+  syncEstateFiltersVisibility();
+
+  // year range
+  const yf = $id("yearFrom");
+  const yt = $id("yearTo");
+  yf?.addEventListener("input", () => { if (UI.state.filtersActive) UI.actions.loadListings(true); });
+  yt?.addEventListener("input", () => { if (UI.state.filtersActive) UI.actions.loadListings(true); });
+
+  // estate inputs
+  const ek = $id("estateKindFilter");
+  const rm = $id("roomsFilter");
+  ek?.addEventListener("change", () => { if (UI.state.filtersActive) UI.actions.loadListings(true); });
+  rm?.addEventListener("input", () => { if (UI.state.filtersActive) UI.actions.loadListings(true); });
+}
+
+/* =========================
+   ✅ INIT
+========================= */
 
 export function initListings(){
   UI.actions.loadListings = loadListings;
   UI.actions.openDetails = openDetails;
+
+  // ✅ ربط الفلاتر الديلوكس (بدون إنشاء عناصر)
+  initDeluxeFilterBindings();
 
   // ✅ زر مراسلة من صفحة التفاصيل
   UI.el.btnChat.onclick = () => {
@@ -132,25 +190,27 @@ export function initListings(){
     if (!l) return;
 
     const me = auth.currentUser?.uid || "";
-    const ownerId = l.ownerId || null;
+    const ownerId = l.ownerId || "";
 
-    // ✅ إذا الإعلان إلك → افتح Inbox (مفلتر على هذا الإعلان)
+    // إذا الإعلان إلك -> افتح Inbox
     if (me && ownerId && me === ownerId) {
-      if (typeof UI.actions.openInbox === "function") {
-        return UI.actions.openInbox(l.id);
-      }
+      if (typeof UI.actions.openInbox === "function") return UI.actions.openInbox(l.id);
       return alert("Inbox غير جاهز بعد.");
     }
 
-    // ✅ إذا مو إلك → افتح الشات مع صاحب الإعلان
+    // إذا مو إلك -> افتح الشات
     UI.actions.openChat(l.id, l.title || "إعلان", ownerId);
   };
 
-  // ✅ زر حذف الإعلان (يظهر فقط للمالك)
+  // ✅ زر حذف الإعلان
   if (UI.el.btnDeleteListing){
     UI.el.btnDeleteListing.onclick = () => deleteCurrentListing();
   }
 }
+
+/* =========================
+   ✅ Delete
+========================= */
 
 async function deleteCurrentListing(){
   try{
@@ -166,7 +226,7 @@ async function deleteCurrentListing(){
     const ok = confirm("هل أنت متأكد أنك تريد حذف الإعلان نهائياً؟");
     if (!ok) return;
 
-    if (UI.el.btnDeleteListing) UI.el.btnDeleteListing.disabled = true;
+    UI.el.btnDeleteListing.disabled = true;
 
     await deleteDoc(doc(db, "listings", l.id));
 
@@ -182,11 +242,10 @@ async function deleteCurrentListing(){
   }
 }
 
-/**
- * openDetails يدعم حالتين:
- * 1) openDetails(id, data) من الكارد (data موجود)
- * 2) openDetails(id, null, true) من رابط hash => يجلب الداتا من Firestore
- */
+/* =========================
+   ✅ Details
+========================= */
+
 async function openDetails(id, data = null, fromHash = false){
   try{
     if (!data){
@@ -196,27 +255,29 @@ async function openDetails(id, data = null, fromHash = false){
     }
 
     UI.state.currentListing = { id, ...data };
-
     UI.showDetailsPage();
 
     UI.renderGallery(data.images || []);
     UI.el.dTitle.textContent = data.title || "";
 
-    // ✅ الميتا: مدينة + صنف + (سطر إضافي للسيارات/عقارات إذا موجود)
-    const baseMeta = `${data.city || ""} • ${data.category || data.categoryNameAr || data.categoryId || ""}`.trim();
-    const extraMeta = isCarsCategory(data) ? carLine(data) : isEstateCategory(data) ? estateLine(data) : "";
+    const catTxt = (data.category || data.categoryNameAr || data.categoryId || "").toString().trim();
+    const baseMeta = `${data.city || ""}${(data.city && catTxt) ? " • " : ""}${catTxt}`.trim();
+
+    const extraMeta =
+      isCarsCategory(data) ? carLine(data) :
+      isEstateCategory(data) ? estateLine(data) :
+      "";
+
     UI.el.dMeta.textContent = extraMeta ? `${baseMeta} • ${extraMeta}` : baseMeta;
 
     UI.el.dPrice.textContent = formatPrice(data.price, data.currency);
     UI.el.dDesc.textContent = data.description || "";
 
-    // ✅ إظهار زر الحذف فقط للمالك
+    // زر الحذف فقط للمالك
     const me = auth.currentUser?.uid || "";
     const isOwner = !!(me && data.ownerId && me === data.ownerId);
-    if (UI.el.btnDeleteListing){
-      UI.el.btnDeleteListing.classList.toggle("hidden", !isOwner);
-      UI.el.btnDeleteListing.disabled = false;
-    }
+    UI.el.btnDeleteListing?.classList.toggle("hidden", !isOwner);
+    if (UI.el.btnDeleteListing) UI.el.btnDeleteListing.disabled = false;
 
     if (!fromHash){
       const newHash = `#listing=${encodeURIComponent(id)}`;
@@ -227,11 +288,10 @@ async function openDetails(id, data = null, fromHash = false){
   }
 }
 
-/**
- * ✅ بدون where() نهائياً => ما في Index
- * - نجيب آخر الإعلانات حسب createdAt
- * - نفلتر محلياً: isActive + keyword + (city/category/type/year range/estateKind/rooms بعد تطبيق)
- */
+/* =========================
+   ✅ Load listings (no where/index)
+========================= */
+
 async function loadListings(reset = true){
   if (reset){
     UI.el.listings.innerHTML = "";
@@ -239,19 +299,10 @@ async function loadListings(reset = true){
     UI.el.btnMore.disabled = false;
   }
 
-  let qy = query(
-    collection(db, "listings"),
-    orderBy("createdAt", "desc"),
-    limit(12)
-  );
+  let qy = query(collection(db, "listings"), orderBy("createdAt", "desc"), limit(12));
 
   if (UI.state.lastDoc){
-    qy = query(
-      collection(db, "listings"),
-      orderBy("createdAt", "desc"),
-      startAfter(UI.state.lastDoc),
-      limit(12)
-    );
+    qy = query(collection(db, "listings"), orderBy("createdAt", "desc"), startAfter(UI.state.lastDoc), limit(12));
   }
 
   const snap = await getDocs(qy);
@@ -262,52 +313,47 @@ async function loadListings(reset = true){
     if (!reset) UI.el.btnMore.disabled = true;
   }
 
-  // ✅ فلاتر محلية
   const keyword = (UI.el.qSearch.value || "").trim().toLowerCase();
   const useFilters = !!UI.state.filtersActive;
 
   const cityVal = useFilters ? (UI.el.cityFilter.value || "") : "";
-  const catVal  = useFilters ? (UI.el.catFilter.value || "") : "";
+  const catVal  = useFilters ? normalizeCat(UI.el.catFilter.value || "") : "";
 
-  const typeVal = useFilters ? readTypeFilter() : ""; // sale/rent
+  const typeVal = useFilters ? readTypeFilter() : ""; // "" | sale | rent
   const { from: yearFrom, to: yearTo } = useFilters ? readYearRange() : { from: 0, to: 0 };
 
-  const estateKindVal = useFilters ? ((UI.el.estateKindFilter?.value || "").trim()) : "";
-  const roomsVal = useFilters ? Number(UI.el.roomsFilter?.value || 0) : 0;
+  const estateKindVal = useFilters ? (($id("estateKindFilter")?.value || "").toString().trim()) : "";
+  const roomsVal = useFilters ? Number(($id("roomsFilter")?.value || "").toString().trim() || 0) : 0;
 
   snap.forEach(ds=>{
     const data = ds.data();
 
-    // ✅ فقط الفعّال
+    // فقط الفعّال
     if (data.isActive === false) return;
 
-    // ✅ فلترة مدينة/صنف فقط بعد "تطبيق"
+    // city/category فقط بعد Apply
     if (cityVal && data.city !== cityVal) return;
 
-    // catVal هو عربي (مثلاً "سيارات") عندك حالياً
     if (catVal){
-      const catData = (data.category || data.categoryNameAr || "").toString().trim();
-      if (catData !== catVal) return;
+      const docCat = getCatId(data);
+      if (docCat !== catVal) return;
     }
 
-    // ✅ فلترة بيع/إيجار (للسيارات + العقارات فقط)
+    // type (cars/estate فقط)
     if (typeVal){
       const t = normalizeTypeId(getTypeId(data));
-      if (isCarsCategory(data) || isEstateCategory(data)){
-        if (t !== typeVal) return;
-      }
+      if ((isCarsCategory(data) || isEstateCategory(data)) && t !== typeVal) return;
     }
 
-    // ✅ فلترة سيارات: سنة range
+    // car year range
     if ((yearFrom || yearTo) && isCarsCategory(data)){
       const y = getCarYearNum(data);
       if (!y) return;
-
       if (yearFrom && y < yearFrom) return;
       if (yearTo && y > yearTo) return;
     }
 
-    // ✅ فلترة عقارات: نوع + غرف (إذا عناصر legacy موجودة)
+    // estate filters
     if (isEstateCategory(data)){
       if (estateKindVal){
         const k = getEstateKind(data);
@@ -319,7 +365,7 @@ async function loadListings(reset = true){
       }
     }
 
-    // ✅ كلمة البحث (عنوان/وصف)
+    // keyword
     if (keyword){
       const t = String(data.title || "").toLowerCase();
       const d = String(data.description || "").toLowerCase();
@@ -328,10 +374,10 @@ async function loadListings(reset = true){
 
     const img = (data.images && data.images[0]) ? data.images[0] : "";
 
-    // ✅ سطر ميتا صغير حسب الصنف
-    const carMeta = isCarsCategory(data) ? carLine(data) : "";
-    const estMeta = isEstateCategory(data) ? estateLine(data) : "";
-    const extraMeta = carMeta || estMeta;
+    const extraMeta =
+      isCarsCategory(data) ? carLine(data) :
+      isEstateCategory(data) ? estateLine(data) :
+      "";
 
     const cityTxt = escapeHtml(data.city || "");
     const catTxt  = escapeHtml(data.category || data.categoryNameAr || data.categoryId || "");
@@ -350,7 +396,6 @@ async function loadListings(reset = true){
       </div>
     `;
 
-    // ✅ منع فتح التفاصيل مرتين (img + card)
     const imgEl = card.querySelector("img");
     if (imgEl){
       imgEl.onclick = (e) => { e.stopPropagation(); openDetails(ds.id, data); };
