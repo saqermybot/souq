@@ -43,7 +43,7 @@ function normalizeCat(v){
   if (s === "سيارات") return "cars";
   if (s === "عقارات") return "realestate";
   if (s === "إلكترونيات" || s === "الكترونيات") return "electronics";
-  return s; // cars/realestate/electronics/...
+  return s;
 }
 
 function getCatId(data){
@@ -124,27 +124,35 @@ function buildStoreUrl(uid){
 function normalizeWhatsapp(raw){
   let num = String(raw || "").trim().replace(/[^\d+]/g, "");
   num = num.replace(/^\+/, "");
-  if (num.startsWith("00")) num = num.slice(2); // ✅ الأهم لحالتك
+  if (num.startsWith("00")) num = num.slice(2);
   return num;
 }
 
 /* =========================
-   ✅ Profile cache (users/{uid})
+   ✅ Profile cache (users/{uid}) with TTL + force refresh
 ========================= */
 
-const _userCache = new Map();
+const _userCache = new Map(); // uid -> { data, ts }
+const USER_CACHE_TTL_MS = 2 * 60 * 1000; // 2 minutes
 
-async function getUserProfile(uid){
+async function getUserProfile(uid, opts = {}){
+  const force = !!opts.force;
   if (!uid) return null;
-  if (_userCache.has(uid)) return _userCache.get(uid);
+
+  const cached = _userCache.get(uid);
+  const now = Date.now();
+  const fresh = cached && (now - cached.ts) < USER_CACHE_TTL_MS;
+
+  if (!force && fresh) return cached.data;
 
   try{
     const snap = await getDoc(doc(db, "users", uid));
     const data = snap.exists() ? snap.data() : null;
-    _userCache.set(uid, data);
+    _userCache.set(uid, { data, ts: now });
     return data;
   }catch{
-    _userCache.set(uid, null);
+    // لو فشل، خلي الكاش null حتى ما نضل نجرب كل مرة
+    _userCache.set(uid, { data: null, ts: now });
     return null;
   }
 }
@@ -191,7 +199,7 @@ export function initListings(){
       if (!l) return;
 
       const me = auth.currentUser?.uid || "";
-      const ownerId = l.ownerId || "";
+      const ownerId = l.ownerId || l.uid || "";
 
       // إذا الإعلان إلك -> افتح Inbox
       if (me && ownerId && me === ownerId) {
@@ -228,7 +236,7 @@ async function deleteCurrentListing(){
     const ok = confirm("هل أنت متأكد أنك تريد حذف الإعلان نهائياً؟");
     if (!ok) return;
 
-    UI.el.btnDeleteListing.disabled = true;
+    if (UI.el.btnDeleteListing) UI.el.btnDeleteListing.disabled = true;
 
     await deleteDoc(doc(db, "listings", l.id));
 
@@ -262,7 +270,7 @@ async function openDetails(id, data = null, fromHash = false){
     UI.showDetailsPage();
 
     UI.renderGallery(data.images || []);
-    UI.el.dTitle.textContent = data.title || "";
+    UI.el.dTitle && (UI.el.dTitle.textContent = data.title || "");
 
     const catTxt = (data.category || data.categoryNameAr || data.categoryId || "").toString().trim();
     const baseMeta = `${data.city || ""}${(data.city && catTxt) ? " • " : ""}${catTxt}`.trim();
@@ -272,14 +280,22 @@ async function openDetails(id, data = null, fromHash = false){
       isEstateCategory(data) ? estateLine(data) :
       "";
 
-    UI.el.dMeta.textContent = extraMeta ? `${baseMeta} • ${extraMeta}` : baseMeta;
+    UI.el.dMeta && (UI.el.dMeta.textContent = extraMeta ? `${baseMeta} • ${extraMeta}` : baseMeta);
 
-    UI.el.dPrice.textContent = formatPrice(data.price, data.currency);
-    UI.el.dDesc.textContent = data.description || "";
+    UI.el.dPrice && (UI.el.dPrice.textContent = formatPrice(data.price, data.currency));
+    UI.el.dDesc && (UI.el.dDesc.textContent = data.description || "");
 
-    // 3) Seller + WhatsApp (read profile once)
+    // 3) Seller + WhatsApp (read profile, مع منع مشكلة الكاش)
     const ownerId = getSellerUid(data);
-    const prof = ownerId ? await getUserProfile(ownerId) : null;
+
+    // اقرأ من الكاش أولاً
+    let prof = ownerId ? await getUserProfile(ownerId) : null;
+
+    // ✅ إذا ما في واتساب (أو الكاش قديم) -> جرّب فورس تحديث مرة
+    const waTry = (prof?.whatsapp || "").toString().trim();
+    if (ownerId && !waTry){
+      prof = await getUserProfile(ownerId, { force: true });
+    }
 
     // Seller line
     if (UI.el.dSeller){
@@ -296,18 +312,17 @@ async function openDetails(id, data = null, fromHash = false){
 
     // WhatsApp button (جنب زر المراسلة)
     if (UI.el.btnWhatsapp){
-      // افتراضياً: مخفي + نص ثابت
       UI.el.btnWhatsapp.classList.add("hidden");
       UI.el.btnWhatsapp.removeAttribute("href");
-      UI.el.btnWhatsapp.textContent = "واتساب";
+      UI.el.btnWhatsapp.textContent = ""; // ✅ إذا مخفي لا تتركه فاضي-زر
 
       const waRaw = (prof?.whatsapp || "").toString().trim();
       const num = normalizeWhatsapp(waRaw);
 
-      // ✅ إذا الرقم موجود -> اظهر الزر
       if (ownerId && num){
         const msg = encodeURIComponent(`مرحبا، مهتم بالإعلان: ${data.title || ""}`);
         UI.el.btnWhatsapp.href = `https://wa.me/${num}?text=${msg}`;
+        UI.el.btnWhatsapp.textContent = "واتساب";
         UI.el.btnWhatsapp.classList.remove("hidden");
       }
     }
@@ -332,8 +347,7 @@ async function openDetails(id, data = null, fromHash = false){
 }
 
 /* =========================
-   ✅ Load listings (no where/index)
-   ✅ Sequence Guard لمنع السباق والتكرار
+   ✅ Load listings
 ========================= */
 
 let _loadSeq = 0;
@@ -341,10 +355,12 @@ let _loadSeq = 0;
 async function loadListings(reset = true){
   const mySeq = ++_loadSeq;
 
+  if (!UI.el.listings) return;
+
   if (reset){
     UI.el.listings.innerHTML = "";
     UI.state.lastDoc = null;
-    UI.el.btnMore.disabled = false;
+    if (UI.el.btnMore) UI.el.btnMore.disabled = false;
   }
 
   let qy = query(collection(db, "listings"), orderBy("createdAt", "desc"), limit(12));
@@ -360,28 +376,29 @@ async function loadListings(reset = true){
   if (snap.docs.length){
     UI.state.lastDoc = snap.docs[snap.docs.length - 1];
   }else{
-    if (!reset) UI.el.btnMore.disabled = true;
+    if (!reset && UI.el.btnMore) UI.el.btnMore.disabled = true;
   }
 
-  const keyword = (UI.el.qSearch.value || "").trim().toLowerCase();
+  const keyword = (UI.el.qSearch?.value || "").trim().toLowerCase();
   const useFilters = !!UI.state.filtersActive;
 
-  const cityVal = useFilters ? (UI.el.cityFilter.value || "") : "";
-  const catVal  = useFilters ? normalizeCat(UI.el.catFilter.value || "") : "";
+  const cityVal = useFilters ? (UI.el.cityFilter?.value || "") : "";
+  const catVal  = useFilters ? normalizeCat(UI.el.catFilter?.value || "") : "";
 
-  const typeVal = useFilters ? readTypeFilter() : ""; // "" | sale | rent
+  const typeVal = useFilters ? readTypeFilter() : "";
   const { from: yearFrom, to: yearTo } = useFilters ? readYearRange() : { from: 0, to: 0 };
 
   const estateKindVal = useFilters ? (($id("estateKindFilter")?.value || "").toString().trim()) : "";
   const roomsVal = useFilters ? Number(($id("roomsFilter")?.value || "").toString().trim() || 0) : 0;
 
+  const frag = document.createDocumentFragment();
+  let added = 0;
+
   snap.forEach(ds=>{
     const data = ds.data();
 
-    // فقط الفعّال
     if (data.isActive === false) return;
 
-    // city/category فقط بعد Apply
     if (cityVal && data.city !== cityVal) return;
 
     if (catVal){
@@ -389,13 +406,11 @@ async function loadListings(reset = true){
       if (docCat !== catVal) return;
     }
 
-    // type (cars/estate فقط)
     if (typeVal){
       const t = normalizeTypeId(getTypeId(data));
       if ((isCarsCategory(data) || isEstateCategory(data)) && t !== typeVal) return;
     }
 
-    // car year range
     if ((yearFrom || yearTo) && isCarsCategory(data)){
       const y = getCarYearNum(data);
       if (!y) return;
@@ -403,7 +418,6 @@ async function loadListings(reset = true){
       if (yearTo && y > yearTo) return;
     }
 
-    // estate filters
     if (isEstateCategory(data)){
       if (estateKindVal){
         const k = getEstateKind(data);
@@ -415,7 +429,6 @@ async function loadListings(reset = true){
       }
     }
 
-    // keyword
     if (keyword){
       const t = String(data.title || "").toLowerCase();
       const d = String(data.description || "").toLowerCase();
@@ -432,7 +445,6 @@ async function loadListings(reset = true){
     const cityTxt = escapeHtml(data.city || "");
     const catTxt  = escapeHtml(data.category || data.categoryNameAr || data.categoryId || "");
 
-    // seller line (سريع)
     const sellerUid = getSellerUid(data);
     const sellerName = escapeHtml(getSellerNameFallback(data));
     const sellerHtml = sellerUid
@@ -452,23 +464,23 @@ async function loadListings(reset = true){
       </div>
     `;
 
-    // فتح التفاصيل عند الضغط
     card.onclick = () => openDetails(ds.id, data);
 
-    // منع الكارد من التقاط ضغط رابط البائع
     const sellerLinkEl = card.querySelector(".sellerLink");
     if (sellerLinkEl){
       sellerLinkEl.addEventListener("click", (e) => e.stopPropagation());
     }
 
-    // ضغط على الصورة فقط يفتح التفاصيل
     const imgEl = card.querySelector("img");
     if (imgEl){
       imgEl.onclick = (e) => { e.stopPropagation(); openDetails(ds.id, data); };
     }
 
-    UI.el.listings.appendChild(card);
+    frag.appendChild(card);
+    added++;
   });
+
+  UI.el.listings.appendChild(frag);
 
   UI.setEmptyState(UI.el.listings.children.length === 0);
 }
