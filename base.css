@@ -233,25 +233,27 @@ button:disabled{ opacity:.6; cursor:not-allowed; }
 .muted{ color:var(--muted); }
 .small{ font-size:13px; }
 .hidden{ display:none !important; }
-/* ===== Seller name / link ===== */
-.sellerLine {
-  margin-top: 4px;
+/* ===== Seller name / link (FINAL) ===== */
+.sellerLine{
+  margin-top: 6px;
   font-size: 13px;
+  color: var(--muted);
+  opacity: .95;
 }
 
-.sellerLink {
-  color: #22c55e;              /* أخضر واضح */
+.sellerLink{
+  color: var(--accent);        /* ياخذ الأخضر من الثيم */
   text-decoration: none;
-  font-weight: 600;
+  font-weight: 800;
 }
 
-.sellerLink:hover {
-  color: #4ade80;              /* أخضر أفتح عند المرور */
+.sellerLink:hover{
   text-decoration: underline;
+  filter: brightness(1.15);
 }
 
 /* لو في اسم بدون رابط */
-.sellerName {
-  color: #a7f3d0;
-  font-weight: 500;
+.sellerName{
+  color: rgba(167,243,208,.95);
+  font-weight: 700;
 }
