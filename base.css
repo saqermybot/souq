@@ -1,66 +1,69 @@
 :root{
-  /* Light (احتياط) */
+  /* =========================
+     Light (احتياط)
+  ========================= */
   --bg: #f6f7f9;
   --card: #ffffff;
   --text: #0b1220;
   --muted: #5b667a;
   --border: rgba(15, 23, 42, 0.10);
 
-  /* ✅ هوية جديدة: أخضر + لمسة تركواز */
-  --brand: #16a34a;   /* أخضر */
-  --brand2: #06b6d4;  /* تركواز */
-  --accent: #22c55e;  /* أخضر فاتح */
+  /* الهوية */
+  --brand: #16a34a;
+  --brand2: #06b6d4;
+  --accent: #22c55e;
   --danger: #ef4444;
 
+  /* أزرار */
   --btn: #0b1220;
   --btnText: #ffffff;
-
-  /* ✅ زر secondary/soft صار أخضر لطيف */
   --soft: rgba(34, 197, 94, 0.10);
 
   --radius: 16px;
   --shadow: 0 10px 24px rgba(2, 6, 23, 0.06);
-
-  /* ✅ ring أخضر */
   --ring: 0 0 0 4px rgba(34, 197, 94, .18);
 
-  /* ✅ inputs */
   --inputBg: #ffffff;
   --inputBorder: rgba(15, 23, 42, 0.12);
 }
 
-/* ✅ Dark mode (أفتح شوي + فخم) */
+/* =========================
+   DARK MODE – متوازن + أخضر
+========================= */
 [data-theme="dark"]{
-  /* بدل 0b1220 خليناه أفتح شوية */
-  --bg: #0f172a;
-  --card: #111c33;
+  /* خلفية مو خانقة */
+  --bg: #0b1220;                 /* أغمق شوي من slate */
+  --card: rgba(17, 28, 46, .96); /* أزرق داكن أنيق */
 
-  --text: #e5e7eb;
-  --muted: #9aa7bd;
+  --text: #e8eefc;
+  --muted: rgba(196,210,232,.72);
 
-  /* حدود أنعم */
-  --border: rgba(255, 255, 255, 0.10);
+  --border: rgba(148,163,184,.16);
 
-  /* الأزرار الأساسية */
-  --btn: #e5e7eb;
-  --btnText: #0b1220;
+  /* الهوية */
+  --brand: #22c55e;
+  --brand2: #16a34a;
+  --accent: #22c55e;
+  --danger: #ef4444;
 
-  /* ✅ soft أخضر */
-  --soft: rgba(34, 197, 94, 0.14);
+  /* الأزرار */
+  --btn: rgba(34,197,94,.95);   /* الأخضر صار Primary */
+  --btnText: #07130c;
+  --soft: rgba(34,197,94,.16);
 
-  /* ✅ ظل أنعم */
-  --shadow: 0 10px 26px rgba(0,0,0,0.32);
+  /* Inputs */
+  --inputBg: rgba(255,255,255,.06);
+  --inputBorder: rgba(255,255,255,.14);
 
-  /* ✅ inputs أغمق شوي من card */
-  --inputBg: rgba(0,0,0,.22);
-  --inputBorder: rgba(255,255,255,.12);
-
-  /* ✅ ring أخضر */
-  --ring: 0 0 0 4px rgba(34, 197, 94, .18);
+  /* ظل وفوكس */
+  --shadow: 0 14px 30px rgba(0,0,0,.45);
+  --ring: 0 0 0 4px rgba(34,197,94,.25);
 }
 
+/* =========================
+   Global
+========================= */
 *{ box-sizing:border-box; }
-
 html, body{ height:100%; }
 
 body{
@@ -88,46 +91,13 @@ body{
 
 h2,h3{ margin:6px 0 10px; }
 
-.row{
-  display:flex;
-  gap:10px;
-  align-items:center;
-}
-
-.grid{
-  display:grid;
-  grid-template-columns:1fr 1fr;
-  gap:10px;
-}
-@media(max-width:520px){
-  .grid{ grid-template-columns:1fr; }
-}
-
-.sectionHead{
-  display:flex;
-  justify-content:space-between;
-  align-items:center;
-  gap:10px;
-}
-
-/* ✅ دعم عام لهيكل الصفحات */
-.pageInner{
-  max-width: 860px;
-  margin: 0 auto;
-}
-.pageHead{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  margin-bottom:10px;
-}
-
-/* Inputs */
+/* =========================
+   Inputs
+========================= */
 input, textarea, select{
   width:100%;
   border:1px solid var(--inputBorder);
-  padding:12px 12px;
+  padding:12px;
   border-radius:12px;
   font-size:16px;
   background: var(--inputBg);
@@ -140,7 +110,7 @@ textarea{ resize:vertical; }
 input::placeholder,
 textarea::placeholder{
   color: var(--muted);
-  opacity: .85;
+  opacity:.85;
 }
 
 input:focus, textarea:focus, select:focus{
@@ -148,7 +118,9 @@ input:focus, textarea:focus, select:focus{
   box-shadow: var(--ring);
 }
 
-/* Buttons */
+/* =========================
+   Buttons
+========================= */
 button{
   border:0;
   border-radius:12px;
@@ -157,16 +129,15 @@ button{
   cursor:pointer;
   background:var(--btn);
   color:var(--btnText);
-  transition: transform .06s ease, box-shadow .2s ease, background .2s ease;
+  transition: background .2s ease, transform .06s ease, box-shadow .2s ease;
 }
 
 button:active{ transform: scale(.98); }
 
-/* ✅ زر secondary صار أخضر ناعم */
 button.secondary{
   background: var(--soft);
   color: var(--text);
-  border: 1px solid rgba(34,197,94,.22);
+  border:1px solid rgba(34,197,94,.28);
 }
 
 button.ghost{
@@ -175,21 +146,15 @@ button.ghost{
   border:1px solid var(--border);
 }
 
-/* Danger button */
 button.danger{
   background: var(--danger);
-  color: #fff;
+  color:#fff;
 }
 
 button.full{ width:100%; }
 button:disabled{ opacity:.6; cursor:not-allowed; }
 
-.actions{
-  justify-content:flex-start;
-  gap:10px;
-  flex-wrap:wrap;
-}
-
+/* Helpers */
 .muted{ color:var(--muted); }
 .small{ font-size:13px; }
 .hidden{ display:none !important; }
