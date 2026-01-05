@@ -435,7 +435,14 @@
   cursor:pointer;
 }
 .menuItem:hover{ background: rgba(148,163,184,.12); }
-.menuItem.danger{ color: var(--danger); }
+.menuItem.danger{
+  background: var(--danger);
+  color:#fff;
+  border:0;
+}
+.menuItem.danger:hover{
+  filter: brightness(.95);
+}
 
 /* =========================
    INBOX LIST
