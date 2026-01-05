@@ -7,7 +7,7 @@ import {
   addDoc,
   collection,
   limit,
-  limitToLast,   // ✅ جديد
+  limitToLast,
   onSnapshot,
   orderBy,
   query,
@@ -22,6 +22,9 @@ import {
   writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
+/* =========================
+   ✅ INIT
+========================= */
 export function initChat(){
   UI.actions.openChat = openChat;
   UI.actions.closeChat = closeChat;
@@ -30,9 +33,29 @@ export function initChat(){
   UI.actions.closeInbox = closeInbox;
   UI.actions.loadInbox = loadInbox;
 
-  UI.el.btnSend.onclick = sendMsg;
+  // ✅ لا تربط مرة واحدة على UI.el لأنه ممكن يتغير بالـ DOM
+  bindChatControls();
 }
 
+/* =========================
+   ✅ DOM REBIND (حل تعليق iOS/DOM re-render)
+========================= */
+function bindChatControls(){
+  // عدّل IDs إذا عندك مختلفة
+  const btn = document.getElementById("btnSend");
+  const input = document.getElementById("chatInput");
+
+  // خزّن المراجع الحالية
+  if (btn) UI.el.btnSend = btn;
+  if (input) UI.el.chatInput = input;
+
+  // اربط الحدث (مع إزالة القديم تلقائياً لأننا نكتب onclick)
+  if (btn) btn.onclick = sendMsg;
+}
+
+/* =========================
+   Helpers
+========================= */
 function chatRoomId(listingId, a, b){
   return `listing_${listingId}_${[a,b].sort().join("_")}`;
 }
@@ -83,6 +106,10 @@ function statusIconForMessage(m, me, otherId, isPending){
   return `<span class="st">✓</span>`;
 }
 
+/* =========================
+   ✅ CHAT
+========================= */
+
 /**
  * openChat(listingId, listingTitle, ownerId?)
  */
@@ -91,6 +118,10 @@ async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
 
   UI.resetOverlays();
   UI.show(UI.el.chatBox);
+
+  // ✅ أهم سطر: بعد الفتح اربط العناصر من جديد (لأن DOM ممكن اتغير)
+  bindChatControls();
+
   UI.el.chatTitle.textContent = `محادثة: ${listingTitle}`;
 
   const me = auth.currentUser.uid;
@@ -126,17 +157,14 @@ async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
 
   const msgsRef = collection(db, "chats", roomId, "messages");
 
-  // ✅ عرض آخر 60
+  // ✅ آخر 60 رسالة
   const qy = query(msgsRef, orderBy("createdAt","asc"), limitToLast(60));
 
   if (UI.state.chatUnsub) UI.state.chatUnsub();
 
-  // ✅ التعديلين المهمين ضد تعليق iOS:
-  // 1) includeMetadataChanges: true
-  // 2) serverTimestamps: "estimate"
   UI.state.chatUnsub = onSnapshot(
     qy,
-    { includeMetadataChanges: true },
+    { includeMetadataChanges: true }, // ✅ مهم لـ iOS
     async (snap)=>{
       UI.el.chatMsgs.innerHTML = "";
 
@@ -144,7 +172,7 @@ async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
       let needCommit = false;
 
       snap.forEach(d=>{
-        // ✅ أهم سطر: لا تترك createdAt null
+        // ✅ مهم: لا تترك createdAt null أثناء pending
         const m = d.data({ serverTimestamps: "estimate" }) || {};
         const isPending = d.metadata?.hasPendingWrites;
 
@@ -200,8 +228,16 @@ function closeChat(){
 async function sendMsg(){
   try{ requireAuth(); }catch{ return; }
 
-  const input = UI.el.chatInput;
-  const btn = UI.el.btnSend;
+  // ✅ خذ العناصر من DOM الحالي (مش من UI.el القديم)
+  bindChatControls();
+
+  const input = UI.el.chatInput || document.getElementById("chatInput");
+  const btn = UI.el.btnSend || document.getElementById("btnSend");
+
+  if (!input || !btn){
+    console.warn("chat controls not found");
+    return alert("مشكلة بالواجهة: حقل الشات أو زر الإرسال غير موجود.");
+  }
 
   const text = (input.value || "").trim();
   if (!text) return;
