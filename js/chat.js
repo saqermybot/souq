@@ -6,7 +6,7 @@ import { Notify } from "./notify.js";
 import {
   addDoc,
   collection,
-  limit,
+  limitToLast,   // ✅ أضفها
   onSnapshot,
   orderBy,
   query,
@@ -20,7 +20,6 @@ import {
   increment,
   writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
-
 export function initChat(){
   UI.actions.openChat = openChat;
   UI.actions.closeChat = closeChat;
