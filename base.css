@@ -18,6 +18,10 @@
   --shadow: 0 10px 24px rgba(2, 6, 23, 0.06);
 
   --ring: 0 0 0 4px rgba(37, 99, 235, .18);
+
+  /* ✅ جديد: خلفية وحدود الإدخال (للستايل الديلوكس) */
+  --inputBg: #ffffff;
+  --inputBorder: rgba(15, 23, 42, 0.12);
 }
 
 /* Dark mode */
@@ -33,9 +37,17 @@
 
   --soft: rgba(6, 182, 212, 0.10);
   --shadow: 0 10px 24px rgba(0,0,0,0.35);
+
+  /* ✅ جديد: inputs بالدارك أغمق شوي من card */
+  --inputBg: rgba(0,0,0,.18);
+  --inputBorder: rgba(255,255,255,.12);
 }
 
-*{box-sizing:border-box}
+*{ box-sizing:border-box; }
+
+html, body{
+  height: 100%;
+}
 
 body{
   margin:0;
@@ -60,16 +72,22 @@ body{
   margin-bottom:12px;
 }
 
-h2,h3{margin:6px 0 10px}
+h2,h3{ margin:6px 0 10px; }
 
-.row{display:flex; gap:10px; align-items:center}
+.row{
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
 
 .grid{
   display:grid;
   grid-template-columns:1fr 1fr;
   gap:10px;
 }
-@media(max-width:520px){ .grid{grid-template-columns:1fr} }
+@media(max-width:520px){
+  .grid{ grid-template-columns:1fr; }
+}
 
 .sectionHead{
   display:flex;
@@ -78,18 +96,39 @@ h2,h3{margin:6px 0 10px}
   gap:10px;
 }
 
+/* ✅ دعم عام لهيكل الصفحات (حتى لو موجود بcomponents) */
+.pageInner{
+  max-width: 860px;
+  margin: 0 auto;
+}
+.pageHead{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:10px;
+}
+
 /* Inputs */
 input, textarea, select{
   width:100%;
-  border:1px solid var(--border);
+  border:1px solid var(--inputBorder);
   padding:12px 12px;
   border-radius:12px;
   font-size:16px;
-  background:var(--card);
+  background: var(--inputBg);
   color: var(--text);
   outline:none;
 }
-textarea{resize:vertical}
+
+textarea{ resize:vertical; }
+
+/* ✅ تحسين صغير لتناسق placeholder بالدارك */
+input::placeholder,
+textarea::placeholder{
+  color: var(--muted);
+  opacity: .85;
+}
 
 input:focus, textarea:focus, select:focus{
   border-color: rgba(37,99,235,.45);
@@ -107,6 +146,7 @@ button{
   color:var(--btnText);
   transition: transform .06s ease, box-shadow .2s ease, background .2s ease;
 }
+
 button:active{ transform: scale(.98); }
 
 button.secondary{
@@ -114,6 +154,7 @@ button.secondary{
   color: var(--text);
   border: 1px solid rgba(37,99,235,.18);
 }
+
 button.ghost{
   background:transparent;
   color: var(--text);
@@ -125,11 +166,16 @@ button.danger{
   background: var(--danger);
   color: #fff;
 }
-button.full{width:100%}
-button:disabled{opacity:.6; cursor:not-allowed}
 
-.actions{justify-content:flex-start; gap:10px; flex-wrap:wrap}
+button.full{ width:100%; }
+button:disabled{ opacity:.6; cursor:not-allowed; }
 
-.muted{color:var(--muted)}
-.small{font-size:13px}
-.hidden{display:none !important}
+.actions{
+  justify-content:flex-start;
+  gap:10px;
+  flex-wrap:wrap;
+}
+
+.muted{ color:var(--muted); }
+.small{ font-size:13px; }
+.hidden{ display:none !important; }
