@@ -625,6 +625,69 @@ button.sm{
   height:44px;
   border-radius:14px;
 }
+/* =========================
+   ✅ SEGMENTED (بيع/إيجار) - Marktplaats like
+========================= */
+.segWrap{
+  display:flex;
+  width:100%;
+  border-radius:14px;
+  padding:4px;
+  background: rgba(255,255,255,.06);
+  border: 1px solid rgba(255,255,255,.10);
+  gap:6px;
+}
+
+.segBtn{
+  flex:1;
+  height:42px;
+  border-radius:12px;
+  border:0;
+  background: transparent;
+  color: var(--text);
+  font-weight:900;
+  font-size:14px;
+  cursor:pointer;
+  transition: transform .06s ease, background .2s ease, box-shadow .2s ease;
+}
+
+.segBtn:active{ transform: scale(.99); }
+
+/* ✅ زر فعّال */
+.segBtn.active{
+  background: rgba(34,197,94,.18); /* أخضر لطيف */
+  border: 1px solid rgba(34,197,94,.30);
+  box-shadow: 0 8px 18px rgba(0,0,0,.18);
+}
+
+/* =========================
+   ✅ YEAR RANGE (من/إلى)
+========================= */
+.range2{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:10px;
+}
+
+@media (max-width:520px){
+  .range2{ grid-template-columns: 1fr 1fr; } /* ضلهم جنب بعض */
+}
+
+/* =========================
+   ✅ تحسين dropdown arrow بالموبايل (اختياري)
+========================= */
+select{
+  appearance: none;
+  background-image:
+    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
+    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
+  background-position:
+    calc(16px) calc(50% + 2px),
+    calc(10px) calc(50% + 2px);
+  background-size:6px 6px, 6px 6px;
+  background-repeat:no-repeat;
+  padding-left:34px; /* لأن السهم يسار في RTL */
+}
 
 /* على الشاشات الصغيرة: خلي الحقول عمود واحد
    ✅ لكن الأزرار تبقى 2 جنب بعض */
