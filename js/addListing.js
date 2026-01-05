@@ -29,6 +29,20 @@ function getCategoryId(){
   return (UI.el.aCat?.value || "").toString().trim();
 }
 
+// ✅ NEW: safe seller name (for store/profile page)
+function getSafeSellerName() {
+  const u = auth.currentUser;
+  if (!u) return "مستخدم";
+
+  const dn = (u.displayName || "").trim();
+  if (dn) return dn;
+
+  const em = (u.email || "").trim();
+  if (em && em.includes("@")) return em.split("@")[0];
+
+  return "مستخدم";
+}
+
 /* =========================
    ✅ INIT
 ========================= */
@@ -354,6 +368,10 @@ async function publish() {
 
     const expiresAt = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000);
 
+    // ✅ NEW: seller fields (safe, does not break old code)
+    const sellerName = getSafeSellerName();
+    const sellerEmail = (auth.currentUser?.email || "").trim() || null;
+
     await addDoc(collection(db, "listings"), {
       title,
       description,
@@ -368,7 +386,15 @@ async function publish() {
       ...extra,
 
       images: urls,
+
+      // ✅ NEW: for store/profile + easy filtering
+      sellerName,
+      sellerEmail,
+      uid: auth.currentUser.uid,
+
+      // ✅ keep old field as-is
       ownerId: auth.currentUser.uid,
+
       isActive: true,
       createdAt: serverTimestamp(),
       expiresAt
