@@ -5,23 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Souq Syria</title>
 
-  <!-- ✅ Cache busting (حتى على iOS) -->
-  <link rel="stylesheet" href="./base.css?v=20260105_01">
-  <link rel="stylesheet" href="./components.css?v=20260105_01">
+  <!-- ✅ Cache busting -->
+  <link rel="stylesheet" href="./base.css">
+  <link rel="stylesheet" href="./components.css">
 
   <!-- ✅ تثبيت الدارك مود -->
   <script>
+    // نجبر الدارك دائماً (حتى قبل تحميل css)
     document.documentElement.setAttribute("data-theme", "dark");
-  </script>
-
-  <!-- ✅ (اختياري) Debug: يطبع أخطاء JS بالموبايل بالكونسول -->
-  <script>
-    window.addEventListener("error", function(e){
-      console.warn("JS error:", e && e.message, e && e.error);
-    });
-    window.addEventListener("unhandledrejection", function(e){
-      console.warn("Promise rejection:", e && e.reason);
-    });
   </script>
 </head>
 <body>
@@ -37,11 +28,8 @@
   <main class="container">
 
     <!-- SEARCH + FILTERS -->
-    <section class="card searchCard" id="searchCard">
-      <div class="row searchRow">
-        <button id="btnToggleFilters" class="ghost filterToggle" aria-expanded="false" title="إظهار/إخفاء الفلاتر">
-          ☰
-        </button>
+    <section class="card searchCard">
+      <div class="row">
         <input id="qSearch" placeholder="بحث عن إعلان..." />
       </div>
 
@@ -50,66 +38,13 @@
         <select id="catFilter"></select>
       </div>
 
-      <div id="advancedFilters" class="advancedFilters" style="margin-top:10px">
-        <div class="grid">
-          <input id="minPrice" type="number" inputmode="numeric" placeholder="السعر من" />
-          <input id="maxPrice" type="number" inputmode="numeric" placeholder="السعر إلى" />
-        </div>
-
-        <div class="grid" style="margin-top:10px">
-          <select id="currencyFilter">
-            <option value="">العملة (الكل)</option>
-            <option value="SYP">SYP</option>
-            <option value="USD">USD</option>
-            <option value="EUR">EUR</option>
-          </select>
-
-          <select id="sortFilter">
-            <option value="new">الأحدث</option>
-            <option value="priceAsc">السعر ↑</option>
-            <option value="priceDesc">السعر ↓</option>
-          </select>
-        </div>
-
-        <div class="grid" style="margin-top:10px">
-          <select id="typeFilter">
-            <option value="">بيع/إيجار (الكل)</option>
-            <option value="sale">بيع</option>
-            <option value="rent">إيجار</option>
-          </select>
-
-          <select id="yearFilter">
-            <option value="">سنة الصنع (الكل)</option>
-          </select>
-        </div>
-
-        <div class="grid" style="margin-top:10px">
-          <select id="estateKindFilter">
-            <option value="">نوع العقار (الكل)</option>
-            <option value="house">منزل</option>
-            <option value="apartment">شقة</option>
-            <option value="land">أرض</option>
-            <option value="shop">محل</option>
-          </select>
-
-          <select id="roomsFilter">
-            <option value="0">عدد الغرف (الكل)</option>
-            <option value="1">1+</option>
-            <option value="2">2+</option>
-            <option value="3">3+</option>
-            <option value="4">4+</option>
-            <option value="5">5+</option>
-          </select>
-        </div>
-      </div>
-
       <div class="row actions" style="margin-top:10px">
         <button id="btnApply" class="secondary">تطبيق</button>
         <button id="btnReset" class="ghost">مسح</button>
       </div>
 
       <div class="muted small" style="margin-top:8px">
-        ملاحظة: الفلاتر المتقدمة تُفعَّل فقط عند الضغط على "تطبيق". البحث النصي يعمل مباشرة.
+        ملاحظة: الموقع يعرض كل الإعلانات تلقائياً، الفلاتر تُفعَّل فقط عند الضغط على "تطبيق".
       </div>
     </section>
 
@@ -127,7 +62,7 @@
       </div>
     </section>
 
-    <!-- DETAILS PAGE -->
+    <!-- DETAILS PAGE (Full Page) -->
     <section id="detailsPage" class="page hidden">
       <div class="pageInner card">
         <div class="pageHead">
@@ -150,12 +85,13 @@
 
         <div class="row actions">
           <button id="btnChat">مراسلة</button>
-          <button id="btnDelete" class="danger" style="display:none">حذف الإعلان</button>
+          <!-- يظهر فقط لصاحب الإعلان -->
+          <button id="btnDeleteListing" class="danger hidden">حذف الإعلان</button>
         </div>
       </div>
     </section>
 
-    <!-- INBOX PAGE -->
+    <!-- ✅ INBOX PAGE (رسائل) -->
     <section id="inboxPage" class="page hidden">
       <div class="pageInner card">
         <div class="pageHead">
@@ -218,15 +154,12 @@
           <h3 id="chatTitle" style="margin:0">محادثة</h3>
         </div>
 
-        <div id="chatMsgs" class="chatmsgs" aria-live="polite"></div>
+        <div id="chatMsgs" class="chatmsgs"></div>
 
         <div class="row">
-          <input id="chatInput" placeholder="اكتب رسالة..." autocomplete="off" />
-          <button id="btnSend" type="button">إرسال</button>
+          <input id="chatInput" placeholder="اكتب رسالة..." />
+          <button id="btnSend">إرسال</button>
         </div>
-
-        <!-- ✅ Debug صغير: يثبت إن الزر عم يشتغل (بتقدر تشيله لاحقاً) -->
-        <div id="chatDebug" class="muted small" style="margin-top:6px;display:none"></div>
 
         <p class="muted small">المحادثات تُحذف تلقائيًا لاحقاً (ميزة قادمة).</p>
       </div>
@@ -260,7 +193,7 @@
     </div>
   </div>
 
-  <!-- IMAGE MODAL -->
+  <!-- IMAGE MODAL (Fullscreen) -->
   <div id="imgModal" class="imgModal hidden">
     <div class="imgTop">
       <div id="imgCounter" class="imgCounter"></div>
@@ -273,6 +206,6 @@
   </div>
 
   <!-- ✅ Cache busting -->
-  <script type="module" src="./app.js?v=chatfix_final_02"></script>
+  <script type="module" src="./app.js?v=20260104_01"></script>
 </body>
 </html>

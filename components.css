@@ -538,33 +538,3 @@
   .inboxTitle{ font-size:14px; }
   .inboxLast{ font-size:12px; }
 }
-
-/* =========================
-   ADVANCED FILTERS (Slide)
-========================= */
-.searchRow{ gap:10px; align-items:center; }
-.filterToggle{
-  width:44px;
-  min-width:44px;
-  padding:10px 0;
-}
-
-.advancedFilters{
-  max-height: 0;
-  overflow: hidden;
-  opacity: 0;
-  transition: max-height .25s ease, opacity .2s ease;
-}
-
-.searchCard.filtersOpen .advancedFilters{
-  max-height: 520px;
-  opacity: 1;
-}
-
-/* Danger button */
-button.danger{
-  background: var(--danger);
-  color: #fff;
-  border: 1px solid rgba(0,0,0,.12);
-}
-button.danger:hover{ filter: brightness(0.95); }
