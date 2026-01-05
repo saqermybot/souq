@@ -7,7 +7,6 @@ import {
   addDoc,
   collection,
   limit,
-  limitToLast,
   onSnapshot,
   orderBy,
   query,
@@ -22,9 +21,6 @@ import {
   writeBatch
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
-/* =========================
-   ✅ INIT
-========================= */
 export function initChat(){
   UI.actions.openChat = openChat;
   UI.actions.closeChat = closeChat;
@@ -33,29 +29,9 @@ export function initChat(){
   UI.actions.closeInbox = closeInbox;
   UI.actions.loadInbox = loadInbox;
 
-  // ✅ لا تربط مرة واحدة على UI.el لأنه ممكن يتغير بالـ DOM
-  bindChatControls();
+  UI.el.btnSend.onclick = sendMsg;
 }
 
-/* =========================
-   ✅ DOM REBIND (حل تعليق iOS/DOM re-render)
-========================= */
-function bindChatControls(){
-  // عدّل IDs إذا عندك مختلفة
-  const btn = document.getElementById("btnSend");
-  const input = document.getElementById("chatInput");
-
-  // خزّن المراجع الحالية
-  if (btn) UI.el.btnSend = btn;
-  if (input) UI.el.chatInput = input;
-
-  // اربط الحدث (مع إزالة القديم تلقائياً لأننا نكتب onclick)
-  if (btn) btn.onclick = sendMsg;
-}
-
-/* =========================
-   Helpers
-========================= */
 function chatRoomId(listingId, a, b){
   return `listing_${listingId}_${[a,b].sort().join("_")}`;
 }
@@ -65,6 +41,37 @@ let inboxUnsub = null;
 
 // ====== Notifications (sound + browser notif while page open) ======
 let lastTotalUnread = 0;
+
+function playBeep(){
+  try{
+    const AudioCtx = window.AudioContext || window.webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    const o = ctx.createOscillator();
+    const g = ctx.createGain();
+    o.connect(g); g.connect(ctx.destination);
+    o.type = "sine";
+    o.frequency.value = 880;
+    g.gain.value = 0.05;
+    o.start();
+    setTimeout(() => { o.stop(); ctx.close(); }, 120);
+  }catch{}
+}
+
+function notifyBrowser(title, body){
+  try{
+    if (!("Notification" in window)) return;
+    if (Notification.permission === "default") {
+      // Ø§Ø·ÙØ¨ ÙØ±Ø© ÙØ§Ø­Ø¯Ø© (ÙÙÙÙ Ø£ÙÙ Ø±Ø³Ø§ÙØ© Ø¬Ø¯ÙØ¯Ø©)
+      Notification.requestPermission().then(()=>{});
+      return;
+    }
+    if (Notification.permission !== "granted") return;
+
+    // Ø¥Ø´Ø¹Ø§Ø± Ø¨Ø³ÙØ·
+    new Notification(title, { body });
+  }catch{}
+}
 
 async function resolveOwnerId(listingId){
   const o1 = UI.state.currentListing?.ownerId;
@@ -78,12 +85,14 @@ async function resolveOwnerId(listingId){
 }
 
 /* =========================
-   ✅ TOP INDICATORS (Dot/Badge)
+   â TOP INDICATORS (Dot/Badge)
 ========================= */
 function setInboxIndicator(totalUnread){
+  // Dot (ÙÙ ÙÙØ¬ÙØ¯)
   const dot = document.getElementById("inboxDot");
   if (dot) dot.classList.toggle("hidden", !(totalUnread > 0));
 
+  // Badge (ÙÙ ÙÙØ¬ÙØ¯)
   const badge = document.getElementById("inboxBadge");
   if (badge){
     badge.textContent = totalUnread > 99 ? "99+" : String(totalUnread);
@@ -97,43 +106,38 @@ function hasMapKey(obj, key){
 }
 
 function statusIconForMessage(m, me, otherId, isPending){
+  // ÙÙØ· ÙØ±Ø³Ø§Ø¦ÙÙ
   if (m.senderId !== me) return "";
-  if (isPending) return "⏳";
+
+  if (isPending) return "â³";          // ÙØ³Ù ÙØ§ Ø§ÙØ­ÙØ¸Øª
   const readBy = m.readBy || {};
   const deliveredTo = m.deliveredTo || {};
-  if (hasMapKey(readBy, otherId)) return `<span class="st read">✓✓</span>`;
-  if (hasMapKey(deliveredTo, otherId)) return `<span class="st">✓✓</span>`;
-  return `<span class="st">✓</span>`;
-}
 
-/* =========================
-   ✅ CHAT
-========================= */
+  if (hasMapKey(readBy, otherId)) return `<span class="st read">ââ</span>`;
+  if (hasMapKey(deliveredTo, otherId)) return `<span class="st">ââ</span>`;
+  return `<span class="st">â</span>`;
+}
 
 /**
  * openChat(listingId, listingTitle, ownerId?)
  */
-async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
+async function openChat(listingId, listingTitle = "Ø¥Ø¹ÙØ§Ù", ownerId = null){
   try{ requireAuth(); }catch{ return; }
 
   UI.resetOverlays();
   UI.show(UI.el.chatBox);
-
-  // ✅ أهم سطر: بعد الفتح اربط العناصر من جديد (لأن DOM ممكن اتغير)
-  bindChatControls();
-
-  UI.el.chatTitle.textContent = `محادثة: ${listingTitle}`;
+  UI.el.chatTitle.textContent = `ÙØ­Ø§Ø¯Ø«Ø©: ${listingTitle}`;
 
   const me = auth.currentUser.uid;
   const realOwnerId = ownerId || await resolveOwnerId(listingId);
 
   if (!realOwnerId){
-    UI.el.chatMsgs.innerHTML = `<div class="muted">تعذر تحديد صاحب الإعلان. جرّب فتح الإعلان ثم اضغط مراسلة.</div>`;
+    UI.el.chatMsgs.innerHTML = `<div class="muted">ØªØ¹Ø°Ø± ØªØ­Ø¯ÙØ¯ ØµØ§Ø­Ø¨ Ø§ÙØ¥Ø¹ÙØ§Ù. Ø¬Ø±ÙØ¨ ÙØªØ­ Ø§ÙØ¥Ø¹ÙØ§Ù Ø«Ù Ø§Ø¶ØºØ· ÙØ±Ø§Ø³ÙØ©.</div>`;
     return;
   }
 
   if (realOwnerId === me){
-    UI.el.chatMsgs.innerHTML = `<div class="muted">لا يمكن مراسلة نفسك.</div>`;
+    UI.el.chatMsgs.innerHTML = `<div class="muted">ÙØ§ ÙÙÙÙ ÙØ±Ø§Ø³ÙØ© ÙÙØ³Ù.</div>`;
     return;
   }
 
@@ -142,6 +146,7 @@ async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
 
   const chatDocRef = doc(db, "chats", roomId);
 
+  // â ØªØ£ÙØ¯ ÙØ¬ÙØ¯ Ø§ÙÙÙØªØ§ + unread Ø£Ø³Ø§Ø³ÙØ§Ù
   await setDoc(chatDocRef, {
     listingId,
     listingTitle,
@@ -153,69 +158,73 @@ async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
     unread: { [me]: 0, [realOwnerId]: 0 }
   }, { merge: true });
 
-  try{ await updateDoc(chatDocRef, { [`unread.${me}`]: 0 }); }catch{}
+  // â ÙØªØ­ Ø§ÙØ´Ø§Øª = Ø§Ø¹ØªØ¨Ø±ÙØ§ ÙÙØ±ÙØ¡Ø© Ø¨Ø§ÙÙØ­Ø§Ø¯Ø«Ø© (unread meta)
+  try{
+    await updateDoc(chatDocRef, { [`unread.${me}`]: 0 });
+  }catch{}
 
   const msgsRef = collection(db, "chats", roomId, "messages");
-
-  // ✅ آخر 60 رسالة
-  const qy = query(msgsRef, orderBy("createdAt","asc"), limitToLast(60));
+  const qy = query(msgsRef, orderBy("createdAt","asc"), limit(60));
 
   if (UI.state.chatUnsub) UI.state.chatUnsub();
 
-  UI.state.chatUnsub = onSnapshot(
-    qy,
-    { includeMetadataChanges: true }, // ✅ مهم لـ iOS
-    async (snap)=>{
-      UI.el.chatMsgs.innerHTML = "";
+  UI.state.chatUnsub = onSnapshot(qy, async (snap)=>{
+    UI.el.chatMsgs.innerHTML = "";
 
-      const b = writeBatch(db);
-      let needCommit = false;
+    // â Ø¨Ø¹Ø¯ ÙØ§ ÙÙØµÙ ÙÙÙ snapshot: Ø¹ÙÙÙ Ø±Ø³Ø§Ø¦Ù Ø§ÙØ·Ø±Ù Ø§ÙØ«Ø§ÙÙ ÙØµÙØª/Ø§ÙÙØ±Ø£Øª
+    // - Delivered: Ø£Ù Ø±Ø³Ø§ÙØ© ÙÙ Ø¥ÙÙ ÙÙÙ ÙØªØ¹ÙÙÙØ© deliveredTo[me]
+    // - Read: Ø¨ÙØ§ Ø£ÙÙ Ø¯Ø§Ø®Ù Ø§ÙØ´Ø§Øª Ø§ÙØ¢Ù => Ø¹ÙÙÙ readBy[me]
+    const b = writeBatch(db);
+    let needCommit = false;
 
-      snap.forEach(d=>{
-        // ✅ مهم: لا تترك createdAt null أثناء pending
-        const m = d.data({ serverTimestamps: "estimate" }) || {};
-        const isPending = d.metadata?.hasPendingWrites;
+    snap.forEach(d=>{
+      const m = d.data() || {};
+      const isPending = d.metadata?.hasPendingWrites;
 
-        const div = document.createElement("div");
-        div.className = "msg" + (m.senderId===me ? " me": "");
-        const time = m.createdAt?.toDate ? m.createdAt.toDate().toLocaleString() : "…";
-        const st = statusIconForMessage(m, me, realOwnerId, !!isPending);
+      // Render
+      const div = document.createElement("div");
+      div.className = "msg" + (m.senderId===me ? " me": "");
+      const time = m.createdAt?.toDate ? m.createdAt.toDate().toLocaleString() : "";
+      const st = statusIconForMessage(m, me, realOwnerId, !!isPending);
 
-        div.innerHTML = `
-          <div>${escapeHtml(m.text||"")}</div>
-          <div class="t">${escapeHtml(time)} ${st}</div>
-        `;
-        UI.el.chatMsgs.appendChild(div);
+      div.innerHTML = `
+        <div>${escapeHtml(m.text||"")}</div>
+        <div class="t">
+          ${escapeHtml(time)}
+          ${st}
+        </div>
+      `;
+      UI.el.chatMsgs.appendChild(div);
 
-        // mark delivery/read
-        if (m.senderId && m.senderId !== me){
-          const deliveredTo = m.deliveredTo || {};
-          const readBy = m.readBy || {};
-          const msgRef = doc(db, "chats", roomId, "messages", d.id);
+      // Mark delivery/read for incoming messages
+      if (m.senderId && m.senderId !== me){
+        const deliveredTo = m.deliveredTo || {};
+        const readBy = m.readBy || {};
 
-          if (!deliveredTo[me]){
-            b.set(msgRef, { deliveredTo: { [me]: serverTimestamp() } }, { merge: true });
-            needCommit = true;
-          }
-          if (!readBy[me]){
-            b.set(msgRef, { readBy: { [me]: serverTimestamp() } }, { merge: true });
-            needCommit = true;
-          }
+        const msgRef = doc(db, "chats", roomId, "messages", d.id);
+
+        if (!deliveredTo[me]){
+          b.set(msgRef, { deliveredTo: { [me]: serverTimestamp() } }, { merge: true });
+          needCommit = true;
         }
-      });
 
-      UI.el.chatMsgs.scrollTop = UI.el.chatMsgs.scrollHeight;
-
-      if (needCommit){
-        try{ await b.commit(); }catch{}
+        // Ø¥Ø°Ø§ Ø£ÙØ§ ÙØ§ØªØ­ Ø§ÙØ´Ø§Øª => read
+        if (!readBy[me]){
+          b.set(msgRef, { readBy: { [me]: serverTimestamp() } }, { merge: true });
+          needCommit = true;
+        }
       }
+    });
 
-      try{ await updateDoc(chatDocRef, { [`unread.${me}`]: 0 }); }catch{}
-    },
-    (err)=>{
-      console.warn("chat snapshot error:", err);
+    UI.el.chatMsgs.scrollTop = UI.el.chatMsgs.scrollHeight;
+
+    if (needCommit){
+      try{ await b.commit(); }catch{}
     }
-  );
+
+    // Ø¨Ø¹Ø¯ Ø§ÙÙØ±Ø§Ø¡Ø©Ø ØµÙÙØ± unread Ø¹ÙÙ ÙØ³ØªÙÙ Ø§ÙÙÙØªØ§ ÙØ±Ø© Ø«Ø§ÙÙØ© (Ø§Ø­ØªÙØ§Ø·)
+    try{ await updateDoc(chatDocRef, { [`unread.${me}`]: 0 }); }catch{}
+  });
 }
 
 function closeChat(){
@@ -228,18 +237,7 @@ function closeChat(){
 async function sendMsg(){
   try{ requireAuth(); }catch{ return; }
 
-  // ✅ خذ العناصر من DOM الحالي (مش من UI.el القديم)
-  bindChatControls();
-
-  const input = UI.el.chatInput || document.getElementById("chatInput");
-  const btn = UI.el.btnSend || document.getElementById("btnSend");
-
-  if (!input || !btn){
-    console.warn("chat controls not found");
-    return alert("مشكلة بالواجهة: حقل الشات أو زر الإرسال غير موجود.");
-  }
-
-  const text = (input.value || "").trim();
+  const text = UI.el.chatInput.value.trim();
   if (!text) return;
   if (!currentChat.roomId) return;
 
@@ -249,56 +247,49 @@ async function sendMsg(){
   const msgsRef = collection(db, "chats", currentChat.roomId, "messages");
   const chatDocRef = doc(db, "chats", currentChat.roomId);
 
-  btn.disabled = true;
+  // â Ø£Ø±Ø³Ù Ø§ÙØ±Ø³Ø§ÙØ© (ÙØ¸ÙØ± â³ ØªÙÙØ§Ø¦ÙØ§Ù Ø¨Ø³Ø¨Ø¨ hasPendingWrites)
+  await addDoc(msgsRef, {
+    text,
+    senderId: me,
+    createdAt: serverTimestamp(),
+    deliveredTo: {}, // ÙØ§Ø­ÙØ§Ù Ø¨ÙØ­Ø· deliveredTo[other]
+    readBy: {},      // ÙØ§Ø­ÙØ§Ù Ø¨ÙØ­Ø· readBy[other]
+    expiresAt: new Date(Date.now() + 7*24*3600*1000)
+  });
 
+  // â Ø­Ø¯ÙØ« Ø§ÙÙÙØªØ§ + Ø¹Ø¯ÙØ§Ø¯ ØºÙØ± ÙÙØ±ÙØ¡ ÙÙØ·Ø±Ù Ø§ÙØ¢Ø®Ø±
   try{
-    await addDoc(msgsRef, {
-      text,
-      senderId: me,
-      createdAt: serverTimestamp(),
-      deliveredTo: {},
-      readBy: {},
-      expiresAt: new Date(Date.now() + 7*24*3600*1000)
-    });
+    await runTransaction(db, async (tx) => {
+      const snap = await tx.get(chatDocRef);
 
-    try{
-      await runTransaction(db, async (tx) => {
-        const snap = await tx.get(chatDocRef);
-
-        if (!snap.exists()){
-          tx.set(chatDocRef, {
-            listingId: currentChat.listingId,
-            listingTitle: currentChat.listingTitle,
-            buyerId: me,
-            sellerId: otherId,
-            participants: [me, otherId].sort(),
-            updatedAt: serverTimestamp(),
-            lastText: text.slice(0,120),
-            unread: { [me]: 0, [otherId]: 1 }
-          }, { merge: true });
-          return;
-        }
-
-        tx.update(chatDocRef, {
-          lastText: text.slice(0, 120),
+      if (!snap.exists()){
+        tx.set(chatDocRef, {
+          listingId: currentChat.listingId,
+          listingTitle: currentChat.listingTitle,
+          buyerId: me,
+          sellerId: otherId,
+          participants: [me, otherId].sort(),
           updatedAt: serverTimestamp(),
-          [`unread.${otherId}`]: increment(1),
-          [`unread.${me}`]: 0
-        });
-      });
-    }catch{}
+          lastText: text.slice(0,120),
+          unread: { [me]: 0, [otherId]: 1 }
+        }, { merge: true });
+        return;
+      }
 
-    input.value = "";
-  }catch(err){
-    console.warn("sendMsg failed:", err);
-    alert("تعذر إرسال الرسالة. تأكد من الإنترنت / صلاحيات Firestore.");
-  }finally{
-    btn.disabled = false;
-  }
+      tx.update(chatDocRef, {
+        lastText: text.slice(0, 120),
+        updatedAt: serverTimestamp(),
+        [`unread.${otherId}`]: increment(1),
+        [`unread.${me}`]: 0
+      });
+    });
+  }catch{}
+
+  UI.el.chatInput.value = "";
 }
 
 /* =========================
-   ✅ INBOX
+   â INBOX
 ========================= */
 
 async function openInbox(){
@@ -319,7 +310,7 @@ async function loadInbox(){
   const me = auth.currentUser.uid;
 
   if (UI.el?.inboxList){
-    UI.el.inboxList.innerHTML = `<div class="muted small">جاري تحميل المحادثات...</div>`;
+    UI.el.inboxList.innerHTML = `<div class="muted small">Ø¬Ø§Ø±Ù ØªØ­ÙÙÙ Ø§ÙÙØ­Ø§Ø¯Ø«Ø§Øª...</div>`;
     UI.setInboxEmpty(false);
   }
 
@@ -331,6 +322,7 @@ async function loadInbox(){
 
   if (inboxUnsub) inboxUnsub();
 
+  // â ÙØ§Ø¯ ÙÙ Ø§ÙÙÙØ§Ù Ø§ÙØµØ­ (ÙØ¨Ù onSnapshot)
   let lastTotalUnread = 0;
   let lastNotifyAt = 0;
 
@@ -341,7 +333,7 @@ async function loadInbox(){
       rows.push({
         id: d.id,
         listingId: data.listingId || "",
-        listingTitle: data.listingTitle || "إعلان",
+        listingTitle: data.listingTitle || "Ø¥Ø¹ÙØ§Ù",
         participants: data.participants || [],
         lastText: data.lastText || "",
         updatedAt: data.updatedAt || null,
@@ -362,19 +354,23 @@ async function loadInbox(){
 
     setInboxIndicator(totalUnread);
 
+    // â Ø¥Ø´Ø¹Ø§Ø± Ø§ÙÙØªØµÙØ­ Ø¹ÙØ¯ Ø²ÙØ§Ø¯Ø© ØºÙØ± Ø§ÙÙÙØ±ÙØ¡
     const now = Date.now();
     const increased = totalUnread > lastTotalUnread;
 
     if (increased && (now - lastNotifyAt) > 1200) {
       lastNotifyAt = now;
+
       const inboxOpen = UI.el?.inboxPage && !UI.el.inboxPage.classList.contains("hidden");
       const shouldNotify = document.hidden || !inboxOpen;
 
       if (shouldNotify) {
+        // Ø¥Ø°Ø§ ÙØ§ Ø¨Ø¯Ù "Ø²Ø±" ÙÙÙØ Ø¨Ø³ Ø§Ø³ØªØ¯Ø¹Ù ensurePermission ÙØ±Ø© Ø¨Ù app.js
+        // Notify.show Ø±Ø­ ÙØ´ØªØºÙ ÙÙØ· Ø¥Ø°Ø§ permission = granted
         try{
           Notify.show({
-            title: "رسالة جديدة 💬",
-            body: `عندك ${totalUnread} رسالة غير مقروءة`,
+            title: "Ø±Ø³Ø§ÙØ© Ø¬Ø¯ÙØ¯Ø© ð¬",
+            body: `Ø¹ÙØ¯Ù ${totalUnread} Ø±Ø³Ø§ÙØ© ØºÙØ± ÙÙØ±ÙØ¡Ø©`,
             tag: "inbox"
           });
         }catch{}
@@ -384,6 +380,11 @@ async function loadInbox(){
     lastTotalUnread = totalUnread;
 
     if (UI.el?.inboxList) renderInbox(rows, me);
+
+  }, (err)=>{
+    if (UI.el?.inboxList){
+      UI.el.inboxList.innerHTML = `<div class="muted small">ÙØ´Ù ØªØ­ÙÙÙ Ø§ÙÙ Inbox: ${escapeHtml(err?.message||"")}</div>`;
+    }
   });
 }
 
@@ -398,8 +399,8 @@ function renderInbox(rows, me){
 
   rows.forEach(r=>{
     const otherId = (r.participants || []).find(x => x !== me) || "";
-    const title = r.listingTitle || "محادثة";
-    const last = r.lastText ? escapeHtml(r.lastText) : `<span class="muted small">لا توجد رسائل بعد</span>`;
+    const title = r.listingTitle || "ÙØ­Ø§Ø¯Ø«Ø©";
+    const last = r.lastText ? escapeHtml(r.lastText) : `<span class="muted small">ÙØ§ ØªÙØ¬Ø¯ Ø±Ø³Ø§Ø¦Ù Ø¨Ø¹Ø¯</span>`;
     const unreadCount = Number((r.unread && r.unread[me]) || 0);
     const t = r.updatedAt?.toDate ? r.updatedAt.toDate().toLocaleString() : "";
 
