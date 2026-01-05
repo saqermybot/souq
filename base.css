@@ -1,53 +1,67 @@
 :root{
+  /* Light (احتياط) */
   --bg: #f6f7f9;
   --card: #ffffff;
   --text: #0b1220;
   --muted: #5b667a;
   --border: rgba(15, 23, 42, 0.10);
 
-  --brand: #2563eb;
-  --brand2: #06b6d4;
-  --accent: #22c55e;
+  /* ✅ هوية جديدة: أخضر + لمسة تركواز */
+  --brand: #16a34a;   /* أخضر */
+  --brand2: #06b6d4;  /* تركواز */
+  --accent: #22c55e;  /* أخضر فاتح */
   --danger: #ef4444;
 
   --btn: #0b1220;
   --btnText: #ffffff;
-  --soft: rgba(37, 99, 235, 0.08);
+
+  /* ✅ زر secondary/soft صار أخضر لطيف */
+  --soft: rgba(34, 197, 94, 0.10);
 
   --radius: 16px;
   --shadow: 0 10px 24px rgba(2, 6, 23, 0.06);
 
-  --ring: 0 0 0 4px rgba(37, 99, 235, .18);
+  /* ✅ ring أخضر */
+  --ring: 0 0 0 4px rgba(34, 197, 94, .18);
 
-  /* ✅ جديد: خلفية وحدود الإدخال (للستايل الديلوكس) */
+  /* ✅ inputs */
   --inputBg: #ffffff;
   --inputBorder: rgba(15, 23, 42, 0.12);
 }
 
-/* Dark mode */
+/* ✅ Dark mode (أفتح شوي + فخم) */
 [data-theme="dark"]{
-  --bg: #0b1220;
-  --card: #0f172a;
-  --text: #e5e7eb;
-  --muted: #94a3b8;
-  --border: rgba(148, 163, 184, 0.18);
+  /* بدل 0b1220 خليناه أفتح شوية */
+  --bg: #0f172a;
+  --card: #111c33;
 
+  --text: #e5e7eb;
+  --muted: #9aa7bd;
+
+  /* حدود أنعم */
+  --border: rgba(255, 255, 255, 0.10);
+
+  /* الأزرار الأساسية */
   --btn: #e5e7eb;
   --btnText: #0b1220;
 
-  --soft: rgba(6, 182, 212, 0.10);
-  --shadow: 0 10px 24px rgba(0,0,0,0.35);
+  /* ✅ soft أخضر */
+  --soft: rgba(34, 197, 94, 0.14);
 
-  /* ✅ جديد: inputs بالدارك أغمق شوي من card */
-  --inputBg: rgba(0,0,0,.18);
+  /* ✅ ظل أنعم */
+  --shadow: 0 10px 26px rgba(0,0,0,0.32);
+
+  /* ✅ inputs أغمق شوي من card */
+  --inputBg: rgba(0,0,0,.22);
   --inputBorder: rgba(255,255,255,.12);
+
+  /* ✅ ring أخضر */
+  --ring: 0 0 0 4px rgba(34, 197, 94, .18);
 }
 
 *{ box-sizing:border-box; }
 
-html, body{
-  height: 100%;
-}
+html, body{ height:100%; }
 
 body{
   margin:0;
@@ -96,7 +110,7 @@ h2,h3{ margin:6px 0 10px; }
   gap:10px;
 }
 
-/* ✅ دعم عام لهيكل الصفحات (حتى لو موجود بcomponents) */
+/* ✅ دعم عام لهيكل الصفحات */
 .pageInner{
   max-width: 860px;
   margin: 0 auto;
@@ -123,7 +137,6 @@ input, textarea, select{
 
 textarea{ resize:vertical; }
 
-/* ✅ تحسين صغير لتناسق placeholder بالدارك */
 input::placeholder,
 textarea::placeholder{
   color: var(--muted);
@@ -131,7 +144,7 @@ textarea::placeholder{
 }
 
 input:focus, textarea:focus, select:focus{
-  border-color: rgba(37,99,235,.45);
+  border-color: rgba(34,197,94,.55);
   box-shadow: var(--ring);
 }
 
@@ -149,10 +162,11 @@ button{
 
 button:active{ transform: scale(.98); }
 
+/* ✅ زر secondary صار أخضر ناعم */
 button.secondary{
   background: var(--soft);
   color: var(--text);
-  border: 1px solid rgba(37,99,235,.18);
+  border: 1px solid rgba(34,197,94,.22);
 }
 
 button.ghost{
@@ -161,7 +175,7 @@ button.ghost{
   border:1px solid var(--border);
 }
 
-/* Danger button (حذف/تحذير) */
+/* Danger button */
 button.danger{
   background: var(--danger);
   color: #fff;
