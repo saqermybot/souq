@@ -5,13 +5,10 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Souq Syria</title>
 
-  <!-- ✅ Cache busting -->
   <link rel="stylesheet" href="./base.css">
   <link rel="stylesheet" href="./components.css">
 
-  <!-- ✅ تثبيت الدارك مود -->
   <script>
-    // نجبر الدارك دائماً (حتى قبل تحميل css)
     document.documentElement.setAttribute("data-theme", "dark");
   </script>
 </head>
@@ -27,36 +24,50 @@
 
   <main class="container">
 
-    <!-- SEARCH + FILTERS -->
-<section class="card searchCard deluxeFilters">
+    <!-- SEARCH + FILTERS (DELUXE) -->
+    <section class="card searchCard deluxeFilters">
+      <div class="formGrid">
 
-  <div class="formGrid">
-    <div class="field span2">
-      <label class="flabel">عن ماذا تبحث؟</label>
-      <input id="qSearch" placeholder="بحث عن إعلان..." />
-    </div>
+        <div class="field span2">
+          <label class="flabel">عن ماذا تبحث؟</label>
+          <input id="qSearch" placeholder="بحث عن إعلان..." />
+        </div>
 
-    <div class="field">
-      <label class="flabel">المدينة</label>
-      <select id="cityFilter"></select>
-    </div>
+        <div class="field">
+          <label class="flabel">المدينة</label>
+          <select id="cityFilter"></select>
+        </div>
 
-    <div class="field">
-      <label class="flabel">القسم</label>
-      <select id="catFilter"></select>
-    </div>
+        <div class="field">
+          <label class="flabel">القسم</label>
+          <select id="catFilter"></select>
+        </div>
 
-    <div class="field span2 actionsRow">
-      <button id="btnApply" class="secondary">تطبيق</button>
-      <button id="btnReset" class="ghost">مسح</button>
-    </div>
+        <div class="field span2 actionsRow">
+          <button id="btnApply" class="secondary">تطبيق</button>
+          <button id="btnReset" class="ghost">مسح</button>
+        </div>
 
-    <div class="muted small span2" style="margin-top:2px">
-      ملاحظة: الموقع يعرض كل الإعلانات تلقائياً، الفلاتر تُفعَّل فقط عند الضغط على "تطبيق".
-    </div>
-  </div>
+        <div class="muted small span2" style="margin-top:2px">
+          ملاحظة: الموقع يعرض كل الإعلانات تلقائياً، الفلاتر تُفعَّل فقط عند الضغط على "تطبيق".
+        </div>
 
-</section>
+      </div>
+    </section>
+
+    <!-- LISTINGS (رجعناه مثل ما كان) -->
+    <section class="card">
+      <div class="sectionHead">
+        <h3>الإعلانات</h3>
+        <button id="btnMore" class="secondary">تحميل المزيد</button>
+      </div>
+
+      <div id="listings" class="cardsGrid"></div>
+
+      <div id="emptyState" class="muted small" style="display:none;margin-top:10px">
+        لا يوجد نتائج حالياً
+      </div>
+    </section>
 
     <!-- DETAILS PAGE (Full Page) -->
     <section id="detailsPage" class="page hidden">
@@ -81,13 +92,12 @@
 
         <div class="row actions">
           <button id="btnChat">مراسلة</button>
-          <!-- يظهر فقط لصاحب الإعلان -->
           <button id="btnDeleteListing" class="danger hidden">حذف الإعلان</button>
         </div>
       </div>
     </section>
 
-    <!-- ✅ INBOX PAGE (رسائل) -->
+    <!-- INBOX PAGE -->
     <section id="inboxPage" class="page hidden">
       <div class="pageInner card">
         <div class="pageHead">
@@ -201,7 +211,6 @@
     <button id="imgNext" class="imgNav">›</button>
   </div>
 
-  <!-- ✅ Cache busting -->
   <script type="module" src="./app.js?v=20260104_01"></script>
 </body>
 </html>
