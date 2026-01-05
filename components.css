@@ -612,9 +612,7 @@ button.sm{
   border-radius:14px;
 }
 
-/*ص Segmented /* =========================/* =========================
-   ✅ SEGMENTED (بيع/إيجار) - واضح وثابت
-========================= */
+
 .segWrap{
   display:flex;
   width:100%;
