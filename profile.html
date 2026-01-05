@@ -1,0 +1,84 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>الملف الشخصي • Souq Syria</title>
+
+  <link rel="stylesheet" href="./base.css">
+  <link rel="stylesheet" href="./components.css">
+
+  <script>
+    document.documentElement.setAttribute("data-theme", "dark");
+  </script>
+</head>
+<body>
+
+  <header class="topbar">
+    <div class="brand">
+      <span class="dot"></span>
+      Souq Syria
+    </div>
+
+    <div class="authbar" style="gap:10px">
+      <a class="ghost" href="./index.html">الرجوع للسوق</a>
+    </div>
+  </header>
+
+  <main class="container">
+    <section class="deluxeFilters" style="margin-top:12px">
+      <div class="filterHead">
+        <div class="filterTitle">الملف الشخصي</div>
+        <div id="pStatus" class="muted small"></div>
+      </div>
+
+      <div class="formGrid">
+        <div class="field span2" style="display:flex; align-items:center; gap:10px;">
+          <div id="pAvatar" class="inboxAvatar" style="width:64px;height:64px;border-radius:18px; font-size:20px;">U</div>
+          <div style="min-width:0">
+            <div id="pEmail" class="muted small" style="margin-bottom:6px; word-break:break-all;"></div>
+            <div class="muted small">عدّل معلوماتك لتظهر كتاجر/بائع للناس.</div>
+          </div>
+        </div>
+
+        <div class="field span2">
+          <label class="flabel">اسم العرض (يظهر للناس)</label>
+          <input id="displayName" placeholder="مثال: أبو أحمد - سيارات دمشق" />
+        </div>
+
+        <div class="field span2">
+          <label class="flabel">رابط صورة البروفايل (اختياري)</label>
+          <input id="photoURL" placeholder="https://..." />
+          <div class="muted small">إذا تركته فارغ، نستخدم صورة Google/الحرف.</div>
+        </div>
+
+        <div class="field">
+          <label class="flabel">المدينة (اختياري)</label>
+          <input id="city" placeholder="مثال: دمشق" />
+        </div>
+
+        <div class="field">
+          <label class="flabel">واتساب (اختياري)</label>
+          <input id="whatsapp" placeholder="مثال: +9639xxxxxxxx" />
+        </div>
+
+        <div class="field span2">
+          <label class="flabel">نبذة قصيرة (اختياري)</label>
+          <textarea id="bio" rows="3" placeholder="مثال: تجارة سيارات مستعملة - توصيل داخل سوريا"></textarea>
+        </div>
+
+        <div class="field span2 actionsGrid">
+          <button id="btnSave" class="primary">حفظ</button>
+          <button id="btnMyStore" class="secondary">إعلاناتي</button>
+        </div>
+
+        <div class="field span2">
+          <button id="btnLogout" class="danger" style="width:100%; height:44px; border-radius:14px;">خروج</button>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <script type="module" src="./js/profile.js?v=1"></script>
+</body>
+</html>
