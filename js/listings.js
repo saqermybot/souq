@@ -1,4 +1,5 @@
 // listings.js (Deluxe: typeFilter hidden + yearFrom/yearTo + عقارات + ميتا + مراسلة/Inbox)
+// ✅ مهم: ربط الفلاتر صار حصراً في ui.js لمنع التكرار (listeners duplicated)
 
 import { db, auth } from "./firebase.js";
 import { UI } from "./ui.js";
@@ -96,12 +97,14 @@ function estateLine(data){
 }
 
 /* =========================
-   ✅ Filters (Deluxe)
+   ✅ Filters (قراءة فقط - الربط في ui.js)
 ========================= */
 
 function readTypeFilter(){
+  // hidden input in HTML
   const hidden = $id("typeFilter");
   if (hidden && typeof hidden.value === "string") return hidden.value.trim();
+
   // fallback (لو في نسخة قديمة)
   return (UI.el.typeFilter?.value || "").toString().trim();
 }
@@ -110,67 +113,8 @@ function readYearRange(){
   const yf = Number(($id("yearFrom")?.value || "").toString().trim() || 0) || 0;
   const yt = Number(($id("yearTo")?.value || "").toString().trim() || 0) || 0;
 
-  // لو المستخدم عكسهم: (من أكبر من إلى) منرتبهم
   if (yf && yt && yf > yt) return { from: yt, to: yf };
   return { from: yf, to: yt };
-}
-
-function syncEstateFiltersVisibility(){
-  const wrap = $id("estateFilters");
-  if (!wrap) return;
-
-  const catVal = normalizeCat(UI.el.catFilter?.value || "");
-  wrap.classList.toggle("hidden", catVal !== "realestate");
-}
-
-function initTypeSegmented(){
-  const hidden = $id("typeFilter");
-  const btnAll  = $id("typeAll");
-  const btnSale = $id("typeSale");
-  const btnRent = $id("typeRent");
-
-  if (!hidden || !btnAll || !btnSale || !btnRent) return;
-
-  const allBtns = [btnAll, btnSale, btnRent];
-
-  const setActive = (val) => {
-    hidden.value = val; // "" | sale | rent
-    allBtns.forEach(b => b.classList.toggle("active", b.dataset.value === val));
-
-    // إذا الفلاتر مفعلة -> حمّل فوراً
-    if (UI.state.filtersActive) UI.actions.loadListings(true);
-  };
-
-  allBtns.forEach(b => {
-    b.addEventListener("click", () => setActive(b.dataset.value || ""));
-  });
-
-  // default
-  setActive(hidden.value || "");
-}
-
-function initDeluxeFilterBindings(){
-  // segmented type
-  initTypeSegmented();
-
-  // estate visibility
-  UI.el.catFilter?.addEventListener("change", () => {
-    syncEstateFiltersVisibility();
-    if (UI.state.filtersActive) UI.actions.loadListings(true);
-  });
-  syncEstateFiltersVisibility();
-
-  // year range
-  const yf = $id("yearFrom");
-  const yt = $id("yearTo");
-  yf?.addEventListener("input", () => { if (UI.state.filtersActive) UI.actions.loadListings(true); });
-  yt?.addEventListener("input", () => { if (UI.state.filtersActive) UI.actions.loadListings(true); });
-
-  // estate inputs
-  const ek = $id("estateKindFilter");
-  const rm = $id("roomsFilter");
-  ek?.addEventListener("change", () => { if (UI.state.filtersActive) UI.actions.loadListings(true); });
-  rm?.addEventListener("input", () => { if (UI.state.filtersActive) UI.actions.loadListings(true); });
 }
 
 /* =========================
@@ -181,8 +125,7 @@ export function initListings(){
   UI.actions.loadListings = loadListings;
   UI.actions.openDetails = openDetails;
 
-  // ✅ ربط الفلاتر الديلوكس (بدون إنشاء عناصر)
-  initDeluxeFilterBindings();
+  // ✅ ممنوع نربط فلاتر هنا (لأن ui.js بيربطها) => منع تكرار و double load
 
   // ✅ زر مراسلة من صفحة التفاصيل
   UI.el.btnChat.onclick = () => {
@@ -290,9 +233,14 @@ async function openDetails(id, data = null, fromHash = false){
 
 /* =========================
    ✅ Load listings (no where/index)
+   ✅ Sequence Guard لمنع السباق والتكرار
 ========================= */
 
+let _loadSeq = 0;
+
 async function loadListings(reset = true){
+  const mySeq = ++_loadSeq;
+
   if (reset){
     UI.el.listings.innerHTML = "";
     UI.state.lastDoc = null;
@@ -306,6 +254,9 @@ async function loadListings(reset = true){
   }
 
   const snap = await getDocs(qy);
+
+  // ✅ لو صار طلب أحدث أثناء انتظار هذا الطلب
+  if (mySeq !== _loadSeq) return;
 
   if (snap.docs.length){
     UI.state.lastDoc = snap.docs[snap.docs.length - 1];
