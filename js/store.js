@@ -4,6 +4,8 @@ import { escapeHtml, formatPrice } from "./utils.js";
 import {
   collection,
   getDocs,
+  getDoc,
+  doc,
   limit,
   orderBy,
   query,
@@ -28,7 +30,13 @@ const sellerUid = getParam("u").trim();
 let lastDoc = null;
 let loading = false;
 let totalShown = 0;
+
+// fallback cache (بدون index)
 let usingFallback = false;
+let fallbackDocs = [];
+let fallbackPos = 0;
+
+const seenIds = new Set();
 
 function showEmpty(show){
   emptyBox.classList.toggle("hidden", !show);
@@ -43,7 +51,6 @@ function setCount(n){
 }
 
 function tsToMillis(v){
-  // Firestore Timestamp or Date or number
   try{
     if (!v) return 0;
     if (typeof v === "number") return v;
@@ -55,6 +62,40 @@ function tsToMillis(v){
     return 0;
   }
 }
+
+/* =========================
+   ✅ Seller Profile (users/{uid})
+========================= */
+
+async function loadSellerProfile(uid){
+  try{
+    const snap = await getDoc(doc(db, "users", uid));
+    if (!snap.exists()) return null;
+    return snap.data();
+  }catch(e){
+    console.warn("loadSellerProfile failed", e);
+    return null;
+  }
+}
+
+function renderSellerHeader(profile){
+  const name = (profile?.displayName || "").toString().trim();
+  const city = (profile?.city || "").toString().trim();
+  const whatsapp = (profile?.whatsapp || "").toString().trim();
+
+  sellerTitle.textContent = name ? `إعلانات ${name}` : "إعلانات البائع";
+
+  const parts = [];
+  if (city) parts.push(city);
+  if (whatsapp) parts.push(`واتساب: ${whatsapp}`);
+  parts.push(`ID: ${sellerUid.slice(0, 8)}...`);
+
+  sellerSub.textContent = parts.join(" • ");
+}
+
+/* =========================
+   ✅ Cards
+========================= */
 
 function cardHtml(id, data){
   const img = (data.images && data.images[0]) ? data.images[0] : "";
@@ -78,6 +119,9 @@ function cardHtml(id, data){
 }
 
 function appendCard(id, data){
+  if (seenIds.has(id)) return;
+  seenIds.add(id);
+
   const wrap = document.createElement("div");
   wrap.innerHTML = cardHtml(id, data);
   const card = wrap.firstElementChild;
@@ -89,6 +133,10 @@ function appendCard(id, data){
 
   grid.appendChild(card);
 }
+
+/* =========================
+   ✅ Queries
+========================= */
 
 async function queryWithIndex(pageSize){
   let qy = query(
@@ -111,15 +159,34 @@ async function queryWithIndex(pageSize){
   return await getDocs(qy);
 }
 
-async function queryFallbackAll(limitCount){
+async function loadFallbackCache(){
   // بدون orderBy لتجنب الـ index
   const qy = query(
     collection(db, "listings"),
     where("ownerId", "==", sellerUid),
-    limit(limitCount)
+    limit(200)
   );
-  return await getDocs(qy);
+
+  const snap = await getDocs(qy);
+
+  // ترتيب محلي
+  fallbackDocs = snap.docs
+    .map(d => ({ id: d.id, data: d.data() }))
+    .filter(x => x.data?.isActive !== false)
+    .sort((a,b) => tsToMillis(b.data?.createdAt) - tsToMillis(a.data?.createdAt));
+
+  fallbackPos = 0;
 }
+
+function takeFallbackPage(pageSize){
+  const slice = fallbackDocs.slice(fallbackPos, fallbackPos + pageSize);
+  fallbackPos += slice.length;
+  return slice;
+}
+
+/* =========================
+   ✅ Load
+========================= */
 
 async function loadMore(reset=false){
   if (!sellerUid) {
@@ -140,95 +207,96 @@ async function loadMore(reset=false){
     lastDoc = null;
     totalShown = 0;
     usingFallback = false;
+    fallbackDocs = [];
+    fallbackPos = 0;
+    seenIds.clear();
     setCount(0);
     showEmpty(false);
+    btnMore.style.display = "inline-flex";
   }
 
   setHint("جاري تحميل الإعلانات...");
 
   try{
-    let snap;
-
-    if (!usingFallback){
-      // ✅ حاول الاستعلام السريع (يتطلب index)
-      snap = await queryWithIndex(12);
-    } else {
-      // fallback: حمّل كتلة أكبر مرة وحدة (بدون pagination حقيقي)
-      snap = await queryFallbackAll(80);
+    // ✅ هيدر البائع: مرة واحدة فقط عند أول تحميل
+    if (reset){
+      const profile = await loadSellerProfile(sellerUid);
+      renderSellerHeader(profile);
     }
 
-    // لو فاضي
-    if (snap.empty){
-      if (totalShown === 0){
-        sellerTitle.textContent = "إعلانات البائع";
-        sellerSub.textContent = `ID: ${sellerUid.slice(0, 8)}...`;
+    if (!usingFallback){
+      // ✅ الاستعلام السريع (يتطلب index)
+      const snap = await queryWithIndex(12);
+
+      if (snap.empty){
+        showEmpty(true);
+        btnMore.style.display = "none";
+        setHint("");
+        return;
       }
-      showEmpty(true);
-      btnMore.style.display = "none";
-      setHint("");
-      return;
-    }
 
-    // اسم البائع من أول إعلان
-    if (totalShown === 0){
-      const first = snap.docs[0]?.data?.();
-      const name = (first?.sellerName || "").toString().trim();
-      sellerTitle.textContent = name ? `إعلانات ${name}` : "إعلانات البائع";
-      sellerSub.textContent = `ID: ${sellerUid.slice(0, 8)}...`;
-    }
-
-    let docs = snap.docs;
-
-    // لو fallback: رتّب محلياً حسب createdAt
-    if (usingFallback){
-      docs = [...docs].sort((a,b) => {
-        const ta = tsToMillis(a.data()?.createdAt);
-        const tb = tsToMillis(b.data()?.createdAt);
-        return tb - ta;
+      let added = 0;
+      snap.docs.forEach(ds=>{
+        const data = ds.data();
+        if (data.isActive === false) return;
+        appendCard(ds.id, data);
+        added++;
       });
-    }
 
-    let added = 0;
+      totalShown += added;
+      setCount(totalShown);
 
-    docs.forEach(ds=>{
-      const data = ds.data();
-      if (data.isActive === false) return;
-      // لو reset=false وبالـ fallback، ممكن تتكرر (لأننا نجيب كلهم مرة وحدة)
-      // لتبسيط الأمور: نعرض فقط أول مرة
-      if (usingFallback && totalShown > 0) return;
-
-      appendCard(ds.id, data);
-      added++;
-    });
-
-    totalShown += added;
-    setCount(totalShown);
-
-    showEmpty(grid.children.length === 0);
-
-    if (!usingFallback){
       lastDoc = snap.docs[snap.docs.length - 1];
+
+      showEmpty(grid.children.length === 0);
 
       if (snap.docs.length < 12){
         btnMore.style.display = "none";
       } else {
         btnMore.style.display = "inline-flex";
       }
+
       setHint("");
-    } else {
-      btnMore.style.display = "none";
-      setHint(""); // fallback يعرض دفعة واحدة
+      return;
     }
+
+    // ✅ Fallback mode (بدون index)
+    if (!fallbackDocs.length){
+      await loadFallbackCache();
+    }
+
+    if (!fallbackDocs.length){
+      showEmpty(true);
+      btnMore.style.display = "none";
+      setHint("");
+      return;
+    }
+
+    const page = takeFallbackPage(12);
+    page.forEach(x => appendCard(x.id, x.data));
+
+    totalShown = grid.children.length;
+    setCount(totalShown);
+
+    showEmpty(totalShown === 0);
+
+    if (fallbackPos >= fallbackDocs.length){
+      btnMore.style.display = "none";
+    } else {
+      btnMore.style.display = "inline-flex";
+    }
+
+    setHint("");
 
   }catch(e){
     console.error(e);
 
-    // ✅ لو المشكلة Index
-    const msg = String(e?.message || "");
-    if (msg.toLowerCase().includes("index") || msg.toLowerCase().includes("failed-precondition")){
+    const msg = String(e?.message || "").toLowerCase();
+
+    // ✅ لو المشكلة Index => فعل fallback
+    if (msg.includes("index") || msg.includes("failed-precondition")){
       usingFallback = true;
       setHint("تم تفعيل وضع التوافق. (يفضل إنشاء Index في Firebase لسرعة أفضل)");
-      // جرّب مباشرة fallback
       loading = false;
       btnMore.disabled = false;
       return loadMore(true);
