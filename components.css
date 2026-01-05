@@ -696,3 +696,19 @@ select{
   .span2{ grid-column: 1; }
   .actionsGrid{ grid-template-columns: 1fr 1fr; } /* ✅ مهم */
 }
+/* ✅ filtersRow legacy support (لو ملف listings.js القديم لسا عم يحقن عناصر) */
+.filtersRow{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
+  gap:10px;
+  margin-top:10px;
+}
+
+.filtersRow input,
+.filtersRow select{
+  border-radius:14px;
+}
+
+@media (max-width:520px){
+  .filtersRow{ grid-template-columns: 1fr; }
+}
