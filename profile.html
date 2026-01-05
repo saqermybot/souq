@@ -21,7 +21,8 @@
     </div>
 
     <div class="authbar" style="gap:10px">
-      <a class="ghost" href="./index.html">الرجوع للسوق</a>
+      <!-- ✅ خليها زر واضح -->
+      <a href="./index.html" class="ghostLink" aria-label="الرجوع للسوق">الرجوع للسوق</a>
     </div>
   </header>
 
@@ -59,7 +60,7 @@
 
         <div class="field">
           <label class="flabel">واتساب (اختياري)</label>
-          <input id="whatsapp" placeholder="مثال: +9639xxxxxxxx" />
+          <input id="whatsapp" placeholder="مثال: +9639xxxxxxxx أو 0031xxxxxxxx" inputmode="tel" />
         </div>
 
         <div class="field span2">
@@ -68,17 +69,36 @@
         </div>
 
         <div class="field span2 actionsGrid">
-          <button id="btnSave" class="primary">حفظ</button>
-          <button id="btnMyStore" class="secondary">إعلاناتي</button>
+          <!-- ✅ مهم: type=button -->
+          <button id="btnSave" class="primary" type="button">حفظ</button>
+          <button id="btnMyStore" class="secondary" type="button">إعلاناتي</button>
         </div>
 
         <div class="field span2">
-          <button id="btnLogout" class="danger" style="width:100%; height:44px; border-radius:14px;">خروج</button>
+          <button id="btnLogout" class="danger" type="button" style="width:100%; height:44px; border-radius:14px;">خروج</button>
         </div>
       </div>
     </section>
   </main>
 
-  <script type="module" src="./js/profile.js?v=1"></script>
+  <script type="module" src="./js/profile.js?v=2"></script>
+
+  <!-- ✅ ستايل خفيف للرابط ليطلع مثل زر -->
+  <style>
+    .ghostLink{
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      padding:10px 14px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      color:var(--text);
+      text-decoration:none;
+      background:transparent;
+      font-size:16px;
+      white-space:nowrap;
+    }
+    .ghostLink:active{ transform: scale(.98); }
+  </style>
 </body>
 </html>
