@@ -1,4 +1,4 @@
-// listings.js (تعديل: فلاتر سيارات/عقارات + سطر ميتا صغير + زر مراسلة يفتح Inbox إذا الإعلان إلك)
+// listings.js (Deluxe: يدعم typeFilter hidden + yearFrom/yearTo + عقارات + ميتا سطر + زر مراسلة يفتح Inbox إذا الإعلان إلك)
 
 import { db, auth } from "./firebase.js";
 import { UI } from "./ui.js";
@@ -30,13 +30,23 @@ function typeToAr(typeId){
 
 // ---- Cars ----
 function getCarModel(data){
-  return (data.car?.model ?? data.model ?? "").toString().trim();
+  return (data.car?.model ?? data.carModel ?? data.model ?? "").toString().trim();
 }
-function getCarYear(data){
-  return (data.car?.year ?? data.year ?? "").toString().trim();
+function getCarYearRaw(data){
+  return (data.car?.year ?? data.carYear ?? data.year ?? "").toString().trim();
+}
+function getCarYearNum(data){
+  const y = Number(getCarYearRaw(data) || 0);
+  return Number.isFinite(y) && y > 0 ? y : 0;
 }
 function getTypeId(data){
-  return (data.typeId ?? data.car?.typeId ?? data.type ?? "").toString().trim();
+  return (data.typeId ?? data.car?.typeId ?? data.estate?.typeId ?? data.type ?? "").toString().trim();
+}
+function normalizeTypeId(t){
+  // ندعم عربي/انجليزي
+  if (t === "بيع") return "sale";
+  if (t === "إيجار") return "rent";
+  return t; // sale/rent/...
 }
 function isCarsCategory(data){
   const c = (data.categoryId || data.category || "").toString().trim().toLowerCase();
@@ -45,7 +55,7 @@ function isCarsCategory(data){
 function carLine(data){
   const type  = typeToAr(getTypeId(data));
   const model = getCarModel(data);
-  const year  = getCarYear(data);
+  const year  = getCarYearRaw(data);
   const parts = [type, model, year].filter(Boolean);
   return parts.join(" • ");
 }
@@ -56,21 +66,19 @@ function isEstateCategory(data){
   return c === "realestate" || c === "عقارات";
 }
 function getEstateKind(data){
-  // ندعم أكثر من اسم
-  return (data.estateKind ?? data.kind ?? data.subType ?? "").toString().trim();
+  return (data.estate?.kind ?? data.estateKind ?? data.kind ?? data.subType ?? "").toString().trim();
 }
-function getRooms(data){
-  const v = (data.rooms ?? data.bedrooms ?? "").toString().trim();
-  // لو كانت 0 أو فاضية
-  if (!v) return "";
+function getRoomsNum(data){
+  const v = (data.estate?.rooms ?? data.rooms ?? data.bedrooms ?? "").toString().trim();
+  if (!v) return 0;
   const n = Number(v);
-  if (Number.isNaN(n) || n <= 0) return "";
-  return String(n);
+  if (!Number.isFinite(n) || n <= 0) return 0;
+  return n;
 }
 function estateLine(data){
   const type = typeToAr(getTypeId(data));
   const kind = getEstateKind(data);
-  const rooms = getRooms(data);
+  const rooms = getRoomsNum(data);
 
   const roomsTxt = rooms ? `${rooms} غرف` : "";
   const parts = [type, kind, roomsTxt].filter(Boolean);
@@ -78,76 +86,38 @@ function estateLine(data){
 }
 
 /* =========================
-   ✅ Filters UI (إنشاء الفلاتر تلقائياً تحت catFilter)
-   - type: بيع/إيجار
-   - year: سنة (سيارات)
-   - estateKind + rooms (عقارات)
+   ✅ Read filters (DELUXE IDs)
+   - typeFilter (hidden) or legacy select
+   - yearFrom/yearTo (range) or legacy yearFilter
 ========================= */
 
-function ensureFilterControls(){
-  const catFilter = UI.el.catFilter;
-  if (!catFilter) return;
+function $id(id){ return document.getElementById(id); }
 
-  // إذا موجودين قبل لا نكرر
-  if (document.getElementById("typeFilter")) return;
+function readTypeFilter(){
+  // الجديد: hidden input (typeFilter)
+  const hidden = $id("typeFilter");
+  if (hidden && typeof hidden.value === "string") return hidden.value.trim();
 
-  const row = document.createElement("div");
-  row.className = "filtersRow";
-  row.innerHTML = `
-    <select id="typeFilter">
-      <option value="">كل الأنواع (بيع/إيجار)</option>
-      <option value="sale">بيع</option>
-      <option value="rent">إيجار</option>
-    </select>
+  // القديم: select injected
+  const legacy = UI.el.typeFilter || $id("typeFilter");
+  if (legacy && typeof legacy.value === "string") return legacy.value.trim();
 
-    <input id="yearFilter" type="number" min="1950" max="2035" placeholder="سنة (سيارات)" />
+  return "";
+}
 
-    <select id="estateKindFilter" class="hidden">
-      <option value="">كل أنواع العقارات</option>
-      <option value="شقة">شقة</option>
-      <option value="محل">محل</option>
-      <option value="أرض">أرض</option>
-      <option value="بيت">بيت</option>
-    </select>
+function readYearRange(){
+  // الجديد
+  const yf = Number(($id("yearFrom")?.value || "").trim() || 0) || 0;
+  const yt = Number(($id("yearTo")?.value || "").trim() || 0) || 0;
 
-    <input id="roomsFilter" class="hidden" type="number" min="0" max="20" placeholder="غرف (عقارات)" />
-  `;
+  if (yf || yt) return { from: yf, to: yt };
 
-  // حطها تحت catFilter مباشرة
-  catFilter.parentElement?.insertBefore(row, catFilter.nextSibling);
+  // القديم: yearFilter (سنة واحدة)
+  const legacy = (UI.el.yearFilter || $id("yearFilter"))?.value || "";
+  const y = Number(String(legacy).trim() || 0) || 0;
+  if (y) return { from: y, to: y };
 
-  // خزّنهم في UI.el لو حبيت
-  UI.el.typeFilter = document.getElementById("typeFilter");
-  UI.el.yearFilter = document.getElementById("yearFilter");
-  UI.el.estateKindFilter = document.getElementById("estateKindFilter");
-  UI.el.roomsFilter = document.getElementById("roomsFilter");
-
-  const sync = () => {
-    const cat = (UI.el.catFilter?.value || "").trim();
-
-    // السنة فقط للسيارات
-    if (UI.el.yearFilter){
-      UI.el.yearFilter.style.display = (cat === "سيارات" || cat === "" ? "block" : "none");
-    }
-
-    // العقارات: نوع + غرف
-    const showEstate = (cat === "عقارات");
-    UI.el.estateKindFilter?.classList.toggle("hidden", !showEstate);
-    UI.el.roomsFilter?.classList.toggle("hidden", !showEstate);
-  };
-
-  // أي تغيير على الفلاتر => إذا الفلاتر مفعّلة نحمّل فوراً
-  const maybeReload = () => {
-    if (UI.state.filtersActive) UI.actions.loadListings(true);
-  };
-
-  UI.el.catFilter?.addEventListener("change", () => { sync(); maybeReload(); });
-  UI.el.typeFilter?.addEventListener("change", maybeReload);
-  UI.el.yearFilter?.addEventListener("input", maybeReload);
-  UI.el.estateKindFilter?.addEventListener("change", maybeReload);
-  UI.el.roomsFilter?.addEventListener("input", maybeReload);
-
-  sync();
+  return { from: 0, to: 0 };
 }
 
 /* ========================= */
@@ -155,9 +125,6 @@ function ensureFilterControls(){
 export function initListings(){
   UI.actions.loadListings = loadListings;
   UI.actions.openDetails = openDetails;
-
-  // ✅ حضّر فلاتر إضافية (بيع/إيجار/سنة/عقارات)
-  ensureFilterControls();
 
   // ✅ زر مراسلة من صفحة التفاصيل
   UI.el.btnChat.onclick = () => {
@@ -203,7 +170,6 @@ async function deleteCurrentListing(){
 
     await deleteDoc(doc(db, "listings", l.id));
 
-    // ✅ أغلق صفحة التفاصيل وحدث القائمة
     UI.hideDetailsPage();
     UI.state.currentListing = null;
     await UI.actions.loadListings(true);
@@ -235,7 +201,12 @@ async function openDetails(id, data = null, fromHash = false){
 
     UI.renderGallery(data.images || []);
     UI.el.dTitle.textContent = data.title || "";
-    UI.el.dMeta.textContent = `${data.city || ""} • ${data.category || ""}`;
+
+    // ✅ الميتا: مدينة + صنف + (سطر إضافي للسيارات/عقارات إذا موجود)
+    const baseMeta = `${data.city || ""} • ${data.category || data.categoryNameAr || data.categoryId || ""}`.trim();
+    const extraMeta = isCarsCategory(data) ? carLine(data) : isEstateCategory(data) ? estateLine(data) : "";
+    UI.el.dMeta.textContent = extraMeta ? `${baseMeta} • ${extraMeta}` : baseMeta;
+
     UI.el.dPrice.textContent = formatPrice(data.price, data.currency);
     UI.el.dDesc.textContent = data.description || "";
 
@@ -259,7 +230,7 @@ async function openDetails(id, data = null, fromHash = false){
 /**
  * ✅ بدون where() نهائياً => ما في Index
  * - نجيب آخر الإعلانات حسب createdAt
- * - نفلتر محلياً: isActive + keyword + (city/category/type/year/estateKind/rooms بعد تطبيق)
+ * - نفلتر محلياً: isActive + keyword + (city/category/type/year range/estateKind/rooms بعد تطبيق)
  */
 async function loadListings(reset = true){
   if (reset){
@@ -298,8 +269,8 @@ async function loadListings(reset = true){
   const cityVal = useFilters ? (UI.el.cityFilter.value || "") : "";
   const catVal  = useFilters ? (UI.el.catFilter.value || "") : "";
 
-  const typeVal = useFilters ? ((UI.el.typeFilter?.value || "").trim()) : "";     // sale / rent
-  const yearVal = useFilters ? ((UI.el.yearFilter?.value || "").toString().trim()) : ""; // سيارات
+  const typeVal = useFilters ? readTypeFilter() : ""; // sale/rent
+  const { from: yearFrom, to: yearTo } = useFilters ? readYearRange() : { from: 0, to: 0 };
 
   const estateKindVal = useFilters ? ((UI.el.estateKindFilter?.value || "").trim()) : "";
   const roomsVal = useFilters ? Number(UI.el.roomsFilter?.value || 0) : 0;
@@ -312,31 +283,38 @@ async function loadListings(reset = true){
 
     // ✅ فلترة مدينة/صنف فقط بعد "تطبيق"
     if (cityVal && data.city !== cityVal) return;
-    if (catVal && data.category !== catVal) return;
+
+    // catVal هو عربي (مثلاً "سيارات") عندك حالياً
+    if (catVal){
+      const catData = (data.category || data.categoryNameAr || "").toString().trim();
+      if (catData !== catVal) return;
+    }
 
     // ✅ فلترة بيع/إيجار (للسيارات + العقارات فقط)
     if (typeVal){
-      const t = getTypeId(data); // ممكن يكون sale/rent أو عربي
-      const tNorm = (t === "بيع" ? "sale" : t === "إيجار" ? "rent" : t);
+      const t = normalizeTypeId(getTypeId(data));
       if (isCarsCategory(data) || isEstateCategory(data)){
-        if (tNorm !== typeVal) return;
+        if (t !== typeVal) return;
       }
     }
 
-    // ✅ فلترة سيارات: سنة
-    if (yearVal && isCarsCategory(data)){
-      const y = getCarYear(data);
-      if (String(y) !== String(yearVal)) return;
+    // ✅ فلترة سيارات: سنة range
+    if ((yearFrom || yearTo) && isCarsCategory(data)){
+      const y = getCarYearNum(data);
+      if (!y) return;
+
+      if (yearFrom && y < yearFrom) return;
+      if (yearTo && y > yearTo) return;
     }
 
-    // ✅ فلترة عقارات: نوع + غرف
+    // ✅ فلترة عقارات: نوع + غرف (إذا عناصر legacy موجودة)
     if (isEstateCategory(data)){
       if (estateKindVal){
         const k = getEstateKind(data);
         if (k !== estateKindVal) return;
       }
       if (roomsVal){
-        const rr = Number(data.rooms || data.bedrooms || 0);
+        const rr = getRoomsNum(data);
         if (rr !== roomsVal) return;
       }
     }
@@ -355,6 +333,9 @@ async function loadListings(reset = true){
     const estMeta = isEstateCategory(data) ? estateLine(data) : "";
     const extraMeta = carMeta || estMeta;
 
+    const cityTxt = escapeHtml(data.city || "");
+    const catTxt  = escapeHtml(data.category || data.categoryNameAr || data.categoryId || "");
+
     const card = document.createElement("div");
     card.className = "cardItem";
     card.innerHTML = `
@@ -364,18 +345,17 @@ async function loadListings(reset = true){
 
         ${extraMeta ? `<div class="carMeta">${escapeHtml(extraMeta)}</div>` : ``}
 
-        <div class="m">${escapeHtml(data.city||"")} • ${escapeHtml(data.category||"")}</div>
+        <div class="m">${cityTxt}${(cityTxt && catTxt) ? " • " : ""}${catTxt}</div>
         <div class="pr">${escapeHtml(formatPrice(data.price, data.currency))}</div>
       </div>
     `;
 
-    // ✅ فتح التفاصيل عند الضغط على الصورة أو كامل الكارد (بدون زر)
-    card.querySelector("img").onclick = () => openDetails(ds.id, data);
-    card.onclick = (e) => {
-      // إذا ضغط على صورة رح يجي هون كمان، ما مشكلة
-      // بس إذا كان داخل الكارد عناصر تانية لاحقاً منمنعها هنا
-      openDetails(ds.id, data);
-    };
+    // ✅ منع فتح التفاصيل مرتين (img + card)
+    const imgEl = card.querySelector("img");
+    if (imgEl){
+      imgEl.onclick = (e) => { e.stopPropagation(); openDetails(ds.id, data); };
+    }
+    card.onclick = () => openDetails(ds.id, data);
 
     UI.el.listings.appendChild(card);
   });
