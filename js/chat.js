@@ -163,7 +163,7 @@ async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
   }catch{}
 
   const msgsRef = collection(db, "chats", roomId, "messages");
-  const qy = query(msgsRef, orderBy("createdAt","asc"), limit(60));
+  const qy = query(msgsRef, orderBy("createdAt","asc"), limitToLast(60));
 
   if (UI.state.chatUnsub) UI.state.chatUnsub();
 
