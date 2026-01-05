@@ -718,16 +718,6 @@ button.sm{
   .span2{ grid-column: 1; }
   .actionsGrid{ grid-template-columns: 1fr 1fr !important; }
 }
-/* Seller (listing owner) */
-.sellerLine{
-  margin-top:6px;
-  font-size:13px;
-  opacity:.9;
-}
-
-.sellerLink{
-  text-decoration: underline;
-}
 
 /* legacy filtersRow */
 .filtersRow{
