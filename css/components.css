@@ -82,6 +82,138 @@
   background:#ef4444;
   box-shadow: 0 0 0 2px rgba(17,17,17,.55);
 }
+/* Topbar */
+.topbar{
+  position:sticky; top:0; z-index:50;
+  background:linear-gradient(180deg, rgba(17,26,51,.92), rgba(17,26,51,.75));
+  backdrop-filter: blur(10px);
+  border-bottom:1px solid var(--border);
+  padding:12px;
+  display:flex; align-items:center; justify-content:space-between;
+}
+.brand{display:flex;align-items:center;gap:10px;font-weight:900;letter-spacing:.2px}
+.dot{width:10px;height:10px;border-radius:99px;background:var(--brand);display:inline-block}
+
+/* Cards / sections */
+.card{
+  background:linear-gradient(180deg, rgba(17,26,51,.95), rgba(15,23,48,.95));
+  border:1px solid var(--border);
+  border-radius:var(--radius);
+  box-shadow:var(--shadow);
+  padding:12px;
+  margin-top:12px;
+}
+.sectionHead{
+  display:flex;align-items:center;justify-content:space-between;
+  margin-bottom:10px;
+}
+.sectionHead h3{margin:0;font-size:18px}
+
+/* Layout helpers */
+.row{display:flex;gap:10px;align-items:center}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.actions{justify-content:flex-end}
+
+/* Buttons */
+button{
+  background:rgba(255,255,255,.06);
+  border:1px solid var(--border);
+  color:var(--text);
+  padding:10px 14px;
+  border-radius:14px;
+  font-weight:800;
+  transition:.15s transform, .15s opacity;
+}
+button:active{transform:scale(.98)}
+button.full{width:100%}
+
+button.secondary{
+  background:rgba(10,132,255,.16);
+  border-color:rgba(10,132,255,.35);
+}
+button.ghost{
+  background:transparent;
+}
+button.danger{
+  background:rgba(255,59,48,.14);
+  border-color:rgba(255,59,48,.35);
+}
+
+/* Filter Drawer */
+.filterDrawer{
+  position:relative;
+  margin-top:8px;
+}
+.filterHandle{
+  background:rgba(255,255,255,.05);
+  border:1px solid var(--border);
+  border-radius:18px;
+  padding:10px 12px;
+  display:flex; flex-direction:column; align-items:center; gap:6px;
+  margin-bottom:10px;
+}
+.handleBar{width:56px;height:5px;border-radius:99px;background:rgba(233,237,247,.25)}
+.handleText{font-weight:900;color:rgba(233,237,247,.9)}
+.searchCard{padding:12px}
+
+/* Listings grid */
+.cardsGrid{display:grid;grid-template-columns:1fr;gap:12px;margin-top:10px}
+@media (min-width:700px){ .cardsGrid{grid-template-columns:1fr 1fr} }
+
+/* Pages (details / add / chat / inbox) */
+.page{
+  position:fixed; inset:0;
+  background:rgba(0,0,0,.45);
+  z-index:200;
+  display:flex; align-items:flex-start; justify-content:center;
+  padding:14px;
+  overflow:auto;
+}
+.pageInner{width:min(900px,100%); margin-top:18px}
+.pageHead{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:10px}
+
+/* Gallery */
+.gallery{position:relative;border-radius:18px;overflow:hidden;border:1px solid var(--border);margin-bottom:10px}
+.gimg{width:100%;height:240px;object-fit:cover;display:block}
+.gbtn{
+  position:absolute; top:50%; transform:translateY(-50%);
+  width:42px;height:42px;border-radius:99px;
+  background:rgba(0,0,0,.35);
+  border:1px solid rgba(255,255,255,.18);
+}
+#gPrev{left:10px} #gNext{right:10px}
+.dots{display:flex;gap:6px;justify-content:center;margin:8px 0}
+.dots span{width:7px;height:7px;border-radius:99px;background:rgba(233,237,247,.25)}
+.dots span.active{background:var(--brand)}
+.price{font-size:20px;font-weight:900;color:var(--brand);margin:8px 0}
+
+/* Modals */
+.modal,.imgModal{
+  position:fixed; inset:0; z-index:400;
+  background:rgba(0,0,0,.55);
+  display:flex; align-items:center; justify-content:center;
+  padding:14px;
+}
+.modalCard{
+  width:min(520px,100%);
+  background:linear-gradient(180deg, rgba(17,26,51,.96), rgba(15,23,48,.96));
+  border:1px solid var(--border);
+  border-radius:20px;
+  box-shadow:var(--shadow);
+  padding:14px;
+}
+.modalHead{display:flex;justify-content:space-between;align-items:center;margin-bottom:10px}
+
+/* Full image modal */
+.imgTop{position:absolute;top:14px;left:14px;right:14px;display:flex;justify-content:space-between;align-items:center}
+.imgFull{max-width:100%;max-height:78vh;border-radius:18px;border:1px solid var(--border)}
+.imgNav{
+  position:absolute; top:50%; transform:translateY(-50%);
+  width:44px;height:44px;border-radius:99px;
+  background:rgba(0,0,0,.35);
+  border:1px solid rgba(255,255,255,.18);
+}
+#imgPrev{left:14px} #imgNext{right:14px}
 
 /* =========================
    LISTINGS GRID + CARD
