@@ -1,5 +1,4 @@
-// listings.js (Deluxe: typeFilter hidden + yearFrom/yearTo + عقارات + ميتا + مراسلة/Inbox + WhatsApp)
-// ✅ مهم: ربط الفلاتر صار حصراً في ui.js لمنع التكرار (listeners duplicated)
+// listings.js (Deluxe: typeFilter hidden + yearFrom/yearTo + عقارات + ميتا + مراسلة/Inbox + WhatsApp + Report)
 
 import { db, auth } from "./firebase.js";
 import { UI } from "./ui.js";
@@ -7,6 +6,7 @@ import { escapeHtml, formatPrice } from "./utils.js";
 
 import {
   collection,
+  addDoc,
   getDoc,
   getDocs,
   doc,
@@ -14,7 +14,8 @@ import {
   limit,
   orderBy,
   query,
-  startAfter
+  startAfter,
+  serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 /* =========================
@@ -88,11 +89,11 @@ function getRoomsNum(data){
   return Number.isFinite(n) && n > 0 ? n : 0;
 }
 function estateLine(data){
-  const type = typeToAr(getTypeId(data));
+  const urlType = typeToAr(getTypeId(data));
   const kind = getEstateKind(data);
   const rooms = getRoomsNum(data);
   const roomsTxt = rooms ? `${rooms} غرف` : "";
-  return [type, kind, roomsTxt].filter(Boolean).join(" • ");
+  return [urlType, kind, roomsTxt].filter(Boolean).join(" • ");
 }
 
 // ---- Seller helpers ----
@@ -151,7 +152,6 @@ async function getUserProfile(uid, opts = {}){
     _userCache.set(uid, { data, ts: now });
     return data;
   }catch{
-    // لو فشل، خلي الكاش null حتى ما نضل نجرب كل مرة
     _userCache.set(uid, { data: null, ts: now });
     return null;
   }
@@ -291,7 +291,7 @@ async function openDetails(id, data = null, fromHash = false){
     // اقرأ من الكاش أولاً
     let prof = ownerId ? await getUserProfile(ownerId) : null;
 
-    // ✅ إذا ما في واتساب (أو الكاش قديم) -> جرّب فورس تحديث مرة
+    // ✅ إذا ما في واتساب -> جرّب فورس تحديث مرة
     const waTry = (prof?.whatsapp || "").toString().trim();
     if (ownerId && !waTry){
       prof = await getUserProfile(ownerId, { force: true });
@@ -310,20 +310,75 @@ async function openDetails(id, data = null, fromHash = false){
       }
     }
 
-    // WhatsApp button (جنب زر المراسلة)
-    if (UI.el.btnWhatsapp){
-      UI.el.btnWhatsapp.classList.add("hidden");
-      UI.el.btnWhatsapp.removeAttribute("href");
-      UI.el.btnWhatsapp.textContent = ""; // ✅ إذا مخفي لا تتركه فاضي-زر
+    // ==== WhatsApp + Report ====
+    const waBtn = UI.el.btnWhatsapp || $id("btnWhatsapp");
+    const reportBtn = UI.el.btnReportWhatsapp || $id("btnReportWhatsapp");
 
-      const waRaw = (prof?.whatsapp || "").toString().trim();
-      const num = normalizeWhatsapp(waRaw);
+    const waRaw = (prof?.whatsapp || "").toString().trim();
+    const waNum = normalizeWhatsapp(waRaw);
 
-      if (ownerId && num){
-        const msg = encodeURIComponent(`مرحبا، مهتم بالإعلان: ${data.title || ""}`);
-        UI.el.btnWhatsapp.href = `https://wa.me/${num}?text=${msg}`;
-        UI.el.btnWhatsapp.textContent = "واتساب";
-        UI.el.btnWhatsapp.classList.remove("hidden");
+    // رابط الإعلان + ID
+    const listingUrl = location.href.split("#")[0] + `#listing=${encodeURIComponent(id)}`;
+
+    if (waBtn){
+      waBtn.classList.add("hidden");
+      waBtn.removeAttribute("href");
+      waBtn.textContent = "";
+
+      if (ownerId && waNum){
+        const msg = encodeURIComponent(
+`مرحباً 👋
+أنا مهتم بالإعلان:
+
+📌 ${data.title || ""}
+🆔 رقم الإعلان: ${id}
+
+رابط الإعلان:
+${listingUrl}
+
+⚠️ تنبيه:
+إذا لم تكن أنت صاحب هذا الإعلان أو وصلتك الرسالة بالخطأ، يرجى تجاهلها.
+للمراسلة الرسمية استخدم زر "مراسلة" داخل الموقع.`
+        );
+
+        waBtn.href = `https://wa.me/${waNum}?text=${msg}`;
+        waBtn.textContent = "واتساب";
+        waBtn.classList.remove("hidden");
+      }
+    }
+
+    // زر الإبلاغ (إن كان موجود بالـ HTML)
+    if (reportBtn){
+      reportBtn.classList.add("hidden");
+
+      if (ownerId && waNum){
+        reportBtn.classList.remove("hidden");
+
+        reportBtn.onclick = async () => {
+          const ok = confirm("هل تريد الإبلاغ أن رقم واتساب هذا غير صحيح أو يسبب إزعاج؟");
+          if (!ok) return;
+
+          reportBtn.disabled = true;
+
+          try{
+            await addDoc(collection(db, "reports"), {
+              type: "wrong_whatsapp",
+              listingId: id,
+              listingTitle: (data.title || "").toString().trim(),
+              listingOwnerId: ownerId,
+              whatsapp: waNum,
+              reporterUid: auth.currentUser?.uid || null,
+              reporterEmail: auth.currentUser?.email || null,
+              createdAt: serverTimestamp()
+            });
+
+            alert("تم إرسال البلاغ ✅ شكراً لمساعدتك");
+          }catch(e){
+            alert(e?.message || "فشل إرسال البلاغ");
+          }finally{
+            reportBtn.disabled = false;
+          }
+        };
       }
     }
 
@@ -370,7 +425,6 @@ async function loadListings(reset = true){
 
   const snap = await getDocs(qy);
 
-  // ✅ لو صار طلب أحدث أثناء انتظار هذا الطلب
   if (mySeq !== _loadSeq) return;
 
   if (snap.docs.length){
@@ -392,7 +446,6 @@ async function loadListings(reset = true){
   const roomsVal = useFilters ? Number(($id("roomsFilter")?.value || "").toString().trim() || 0) : 0;
 
   const frag = document.createDocumentFragment();
-  let added = 0;
 
   snap.forEach(ds=>{
     const data = ds.data();
@@ -477,10 +530,8 @@ async function loadListings(reset = true){
     }
 
     frag.appendChild(card);
-    added++;
   });
 
   UI.el.listings.appendChild(frag);
-
   UI.setEmptyState(UI.el.listings.children.length === 0);
 }
