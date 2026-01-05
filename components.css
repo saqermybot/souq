@@ -7,7 +7,18 @@
   position:sticky;
   top:0;
   z-index:5;
-  background: linear-gradient(90deg, #111 0%, #111 40%, rgba(37,99,235,.20) 100%);
+
+  /* ✅ دارك أفتح + لمسة أخضر */
+  background: linear-gradient(
+    90deg,
+    rgba(15,23,42,.92) 0%,
+    rgba(15,23,42,.92) 45%,
+    rgba(34,197,94,.18) 100%
+  );
+
+  /* ✅ فخامة (اختياري) */
+  backdrop-filter: blur(10px);
+
   color:#fff;
   padding:12px 14px;
   display:flex;
