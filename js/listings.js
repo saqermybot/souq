@@ -16,7 +16,34 @@ import {
   query,
   startAfter
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+// ✅ cache للبروفايلات حتى ما نكرر reads
+const _userCache = new Map();
 
+async function getUserProfile(uid){
+  if (!uid) return null;
+  if (_userCache.has(uid)) return _userCache.get(uid);
+
+  try{
+    const snap = await getDoc(doc(db, "users", uid));
+    const data = snap.exists() ? snap.data() : null;
+    _userCache.set(uid, data);
+    return data;
+  }catch{
+    _userCache.set(uid, null);
+    return null;
+  }
+}
+
+function pickBestSellerName(listingData, profile){
+  // أولوية: بروفايل -> sellerName داخل الإعلان -> fallback
+  const pName = (profile?.displayName || "").toString().trim();
+  if (pName) return pName;
+
+  const lName = (listingData?.sellerName || "").toString().trim();
+  if (lName) return lName;
+
+  return getSellerName(listingData); // دالتك الموجودة
+}
 /* =========================
    ✅ Helpers
 ========================= */
