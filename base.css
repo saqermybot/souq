@@ -233,3 +233,25 @@ button:disabled{ opacity:.6; cursor:not-allowed; }
 .muted{ color:var(--muted); }
 .small{ font-size:13px; }
 .hidden{ display:none !important; }
+/* ===== Seller name / link ===== */
+.sellerLine {
+  margin-top: 4px;
+  font-size: 13px;
+}
+
+.sellerLink {
+  color: #22c55e;              /* أخضر واضح */
+  text-decoration: none;
+  font-weight: 600;
+}
+
+.sellerLink:hover {
+  color: #4ade80;              /* أخضر أفتح عند المرور */
+  text-decoration: underline;
+}
+
+/* لو في اسم بدون رابط */
+.sellerName {
+  color: #a7f3d0;
+  font-weight: 500;
+}
