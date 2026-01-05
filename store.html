@@ -11,21 +11,44 @@
       margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
       background:#0b0f16; color:#fff;
     }
+
+    .hidden{ display:none !important; }
+
     .wrap{ max-width: 900px; margin: 0 auto; padding: 14px 12px 60px; }
     .top{
       display:flex; gap:10px; align-items:center; justify-content:space-between;
       padding:10px 12px; border:1px solid rgba(255,255,255,.08);
       background: rgba(255,255,255,.03); border-radius:14px;
     }
-    .titleBox{ display:flex; flex-direction:column; gap:4px; }
+    .titleBox{ display:flex; flex-direction:column; gap:6px; min-width:0; }
     .h1{ font-size:16px; font-weight:800; }
-    .sub{ font-size:12px; opacity:.8 }
+
+    .sub{
+      font-size:12px;
+      opacity:.85;
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      align-items:center;
+      min-width:0;
+    }
+
+    .sub .sep{ opacity:.55; }
+
     .btn{
       border:1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.05);
       color:#fff; padding:8px 10px; border-radius:12px; cursor:pointer;
       font-size:13px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;
+      white-space:nowrap;
     }
     .btn:active{ transform: translateY(1px); }
+
+    .btn.sm{
+      padding:6px 8px;
+      font-size:12px;
+      border-radius:10px;
+      opacity:.92;
+    }
 
     .grid{
       display:grid; gap:10px; margin-top:12px;
@@ -63,6 +86,24 @@
       background: rgba(255,255,255,.04);
       opacity:.9;
     }
+
+    /* WhatsApp masked line */
+    .waLine{
+      display:inline-flex;
+      align-items:center;
+      gap:8px;
+      padding:4px 8px;
+      border-radius:999px;
+      border:1px solid rgba(255,255,255,.10);
+      background: rgba(255,255,255,.03);
+      max-width:100%;
+    }
+    .waLabel{ opacity:.9; }
+    .waMasked{
+      font-weight:900;
+      letter-spacing:.2px;
+      opacity:.95;
+    }
   </style>
 </head>
 
@@ -71,7 +112,22 @@
     <div class="top">
       <div class="titleBox">
         <div class="h1" id="sellerTitle">إعلانات البائع</div>
-        <div class="sub" id="sellerSub">...</div>
+
+        <!-- ✅ هنا صار عندك عناصر جاهزة:
+             - sellerMeta: (مدينة/دولة/وصف)
+             - sellerWhatsWrap: سطر واتساب "مموّه" فقط
+             - sellerWhatsMasked: النص المموّه نفسه
+             - btnRevealWhats: زر اختياري لإظهار الرقم (تحكمه من store.js)
+        -->
+        <div class="sub" id="sellerSub">
+          <span id="sellerMeta">...</span>
+
+          <span id="sellerWhatsWrap" class="waLine hidden" title="رقم مخفي للحماية">
+            <span class="waLabel">واتساب:</span>
+            <span id="sellerWhatsMasked" class="waMasked">••••</span>
+            <button id="btnRevealWhats" class="btn sm hidden" type="button">إظهار</button>
+          </span>
+        </div>
       </div>
 
       <div class="row">
@@ -85,7 +141,7 @@
     <div class="empty hidden" id="emptyBox">لا يوجد إعلانات لهذا البائع حالياً.</div>
 
     <div class="foot">
-      <button class="btn" id="btnMore" style="display:none">تحميل المزيد</button>
+      <button class="btn" id="btnMore" style="display:none" type="button">تحميل المزيد</button>
     </div>
     <div class="hint" id="hint"></div>
   </div>
