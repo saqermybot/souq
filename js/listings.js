@@ -1,4 +1,4 @@
-// listings.js (Deluxe: typeFilter hidden + yearFrom/yearTo + عقارات + ميتا + مراسلة/Inbox)
+// listings.js (Deluxe: typeFilter hidden + yearFrom/yearTo + عقارات + ميتا + مراسلة/Inbox + WhatsApp)
 // ✅ مهم: ربط الفلاتر صار حصراً في ui.js لمنع التكرار (listeners duplicated)
 
 import { db, auth } from "./firebase.js";
@@ -114,6 +114,14 @@ function buildStoreUrl(uid){
   return `store.html?u=${encodeURIComponent(uid)}`;
 }
 
+function normalizeWhatsapp(raw){
+  // يسمح بالأرقام و +
+  let num = String(raw || "").trim().replace(/[^\d+]/g, "");
+  // wa.me لازم رقم بدون +
+  num = num.replace(/^\+/, "");
+  return num;
+}
+
 /* =========================
    ✅ Profile cache (users/{uid})
 ========================= */
@@ -171,22 +179,24 @@ export function initListings(){
   UI.actions.openDetails = openDetails;
 
   // ✅ زر مراسلة من صفحة التفاصيل
-  UI.el.btnChat.onclick = () => {
-    const l = UI.state.currentListing;
-    if (!l) return;
+  if (UI.el.btnChat){
+    UI.el.btnChat.onclick = () => {
+      const l = UI.state.currentListing;
+      if (!l) return;
 
-    const me = auth.currentUser?.uid || "";
-    const ownerId = l.ownerId || "";
+      const me = auth.currentUser?.uid || "";
+      const ownerId = l.ownerId || "";
 
-    // إذا الإعلان إلك -> افتح Inbox
-    if (me && ownerId && me === ownerId) {
-      if (typeof UI.actions.openInbox === "function") return UI.actions.openInbox(l.id);
-      return alert("Inbox غير جاهز بعد.");
-    }
+      // إذا الإعلان إلك -> افتح Inbox
+      if (me && ownerId && me === ownerId) {
+        if (typeof UI.actions.openInbox === "function") return UI.actions.openInbox(l.id);
+        return alert("Inbox غير جاهز بعد.");
+      }
 
-    // إذا مو إلك -> افتح الشات
-    UI.actions.openChat(l.id, l.title || "إعلان", ownerId);
-  };
+      // إذا مو إلك -> افتح الشات
+      UI.actions.openChat(l.id, l.title || "إعلان", ownerId);
+    };
+  }
 
   // ✅ زر حذف الإعلان
   if (UI.el.btnDeleteListing){
@@ -261,55 +271,47 @@ async function openDetails(id, data = null, fromHash = false){
     UI.el.dPrice.textContent = formatPrice(data.price, data.currency);
     UI.el.dDesc.textContent = data.description || "";
 
-    // 3) Seller name + link (users/{ownerId})
+    // 3) Seller + WhatsApp (read profile once)
     const ownerId = getSellerUid(data);
+    const prof = ownerId ? await getUserProfile(ownerId) : null;
 
+    // Seller line
     if (UI.el.dSeller){
       if (!ownerId){
         UI.el.dSeller.classList.add("hidden");
         UI.el.dSeller.innerHTML = "";
       } else {
-        const prof = await getUserProfile(ownerId);
         const sellerName = escapeHtml(pickBestSellerName(data, prof));
-        UI.el.dSeller.innerHTML = `البائع: <a class="sellerLink" href="${buildStoreUrl(ownerId)}">${sellerName}</a>`;
+        UI.el.dSeller.innerHTML =
+          `البائع: <a class="sellerLink" href="${buildStoreUrl(ownerId)}">${sellerName}</a>`;
         UI.el.dSeller.classList.remove("hidden");
       }
     }
 
-    // 4) WhatsApp button (from users/{ownerId}.whatsapp)
+    // WhatsApp button (جنب زر المراسلة)
     if (UI.el.btnWhatsapp){
-      // اخفيه افتراضياً
       UI.el.btnWhatsapp.classList.add("hidden");
       UI.el.btnWhatsapp.removeAttribute("href");
 
-      if (ownerId){
-        const prof = await getUserProfile(ownerId);
-        const waRaw = (prof?.whatsapp || "").toString().trim();
+      const waRaw = (prof?.whatsapp || "").toString().trim();
+      const num = normalizeWhatsapp(waRaw);
 
-        if (waRaw){
-          // شيل أي رموز/فراغات (يسمح بالأرقام و +)
-          let num = waRaw.replace(/[^\d+]/g, "");
-
-          // wa.me لازم رقم بدون +
-          num = num.replace(/^\+/, "");
-
-          // (اختياري) إذا بدك تحويل 09xxxx -> 9639xxxx (سوريا فقط) فعّل السطرين:
-          // if (num.startsWith("09")) num = "963" + num.slice(1);
-
-          UI.el.btnWhatsapp.href = `https://wa.me/${num}`;
-          UI.el.btnWhatsapp.classList.remove("hidden");
-        }
+      if (ownerId && num){
+        // رسالة جاهزة اختيارية
+        const msg = encodeURIComponent(`مرحبا، مهتم بالإعلان: ${data.title || ""}`);
+        UI.el.btnWhatsapp.href = `https://wa.me/${num}?text=${msg}`;
+        UI.el.btnWhatsapp.classList.remove("hidden");
       }
     }
 
-    // 5) Delete button only for owner
+    // 4) Delete button only for owner
     const me = auth.currentUser?.uid || "";
     const isOwner = !!(me && ownerId && me === ownerId);
 
     UI.el.btnDeleteListing?.classList.toggle("hidden", !isOwner);
     if (UI.el.btnDeleteListing) UI.el.btnDeleteListing.disabled = false;
 
-    // 6) Update hash
+    // 5) Update hash
     if (!fromHash){
       const newHash = `#listing=${encodeURIComponent(id)}`;
       if (location.hash !== newHash) history.replaceState(null, "", newHash);
@@ -317,21 +319,6 @@ async function openDetails(id, data = null, fromHash = false){
 
   }catch(e){
     console.error(e);
-    alert(e?.message || "فشل فتح الإعلان");
-  }
-}
-
-    // زر الحذف فقط للمالك
-    const me = auth.currentUser?.uid || "";
-    const isOwner = !!(me && data.ownerId && me === data.ownerId);
-    UI.el.btnDeleteListing?.classList.toggle("hidden", !isOwner);
-    if (UI.el.btnDeleteListing) UI.el.btnDeleteListing.disabled = false;
-
-    if (!fromHash){
-      const newHash = `#listing=${encodeURIComponent(id)}`;
-      if (location.hash !== newHash) history.replaceState(null, "", newHash);
-    }
-  }catch(e){
     alert(e?.message || "فشل فتح الإعلان");
   }
 }
@@ -437,7 +424,7 @@ async function loadListings(reset = true){
     const cityTxt = escapeHtml(data.city || "");
     const catTxt  = escapeHtml(data.category || data.categoryNameAr || data.categoryId || "");
 
-    // seller line (سريع: يعتمد على sellerName داخل الإعلان إن وجد)
+    // seller line (سريع)
     const sellerUid = getSellerUid(data);
     const sellerName = escapeHtml(getSellerNameFallback(data));
     const sellerHtml = sellerUid
