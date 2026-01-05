@@ -25,6 +25,9 @@
 
   --inputBg: #ffffff;
   --inputBorder: rgba(15, 23, 42, 0.12);
+
+  /* ✅ روابط */
+  --link: var(--accent);
 }
 
 /* =========================
@@ -53,6 +56,8 @@
 
   --shadow: 0 14px 30px rgba(0,0,0,.45);
   --ring: 0 0 0 4px rgba(34,197,94,.25);
+
+  --link: #4ade80; /* ✅ أوضح شوي بالدراك */
 }
 
 /* =========================
@@ -67,6 +72,13 @@ body{
   background:var(--bg);
   color:var(--text);
 }
+
+/* ✅ links base */
+a{
+  color: var(--link);
+  text-decoration: none;
+}
+a:hover{ text-decoration: underline; }
 
 /* =========================
    Layout
@@ -107,9 +119,26 @@ h2,h3{ margin:6px 0 10px; }
   gap:10px;
   margin-bottom:10px;
 }
-.userMenuWrap{
-  position: relative;
+
+/* ✅ row/actions (مهم لصف أزرار التفاصيل + الشات + غيره) */
+.row{
+  display:flex;
+  align-items:center;
+  gap:10px;
 }
+.row.actions{
+  margin-top: 12px;
+  flex-wrap: wrap;
+}
+.row.actions > *{
+  flex: 1 1 auto;
+  min-width: 140px;
+}
+
+/* =========================
+   User menu
+========================= */
+.userMenuWrap{ position: relative; }
 
 .userMenu{
   position: absolute;
@@ -135,13 +164,9 @@ h2,h3{ margin:6px 0 10px; }
   cursor:pointer;
 }
 
-.userMenu button:hover{
-  background: rgba(255,255,255,.08);
-}
+.userMenu button:hover{ background: rgba(255,255,255,.08); }
 
-.userMenu .danger{
-  color:#ff6b6b;
-}
+.userMenu .danger{ color:#ff6b6b; }
 
 .userMenu hr{
   border:0;
@@ -149,7 +174,6 @@ h2,h3{ margin:6px 0 10px; }
   background: rgba(255,255,255,.12);
   margin:6px 0;
 }
-
 
 /* =========================
    Inputs
@@ -178,7 +202,7 @@ input:focus, textarea:focus, select:focus{
   box-shadow: var(--ring);
 }
 
-/* ✅ سهم select RTL-safe (عام لكل الموقع) */
+/* ✅ سهم select RTL-safe */
 select{
   appearance: none;
   background-image:
@@ -195,7 +219,8 @@ select{
 /* =========================
    Buttons
 ========================= */
-button{
+button,
+a.btn{
   border:0;
   border-radius:12px;
   padding:10px 14px;
@@ -204,35 +229,67 @@ button{
   background:var(--btn);
   color:var(--btnText);
   transition: background .2s ease, transform .06s ease, box-shadow .2s ease;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  line-height:1;
+  user-select:none;
 }
 
-button:active{ transform: scale(.98); }
+button:active,
+a.btn:active{ transform: scale(.98); }
 
-button.secondary{
+button.secondary,
+a.btn.secondary{
   background: var(--soft);
   color: var(--text);
   border:1px solid rgba(34,197,94,.28);
 }
 
-button.ghost{
+button.ghost,
+a.btn.ghost{
   background:transparent;
   color: var(--text);
   border:1px solid var(--border);
 }
 
-button.danger{
+button.danger,
+a.btn.danger{
   background: var(--danger);
   color:#fff;
 }
 
-button.full{ width:100%; }
+button.full,
+a.btn.full{ width:100%; }
+
 button:disabled{ opacity:.6; cursor:not-allowed; }
+
+/* ✅ خلي أي <a class="secondary"> يتصرف كزر تلقائياً (حل زر الواتساب) */
+a.secondary,
+a.ghost,
+a.danger{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+  border-radius:12px;
+  padding:10px 14px;
+  font-size:16px;
+  line-height:1;
+}
+a.secondary{ background: var(--soft); border:1px solid rgba(34,197,94,.28); color: var(--text); }
+a.ghost{ background: transparent; border:1px solid var(--border); color: var(--text); }
+a.danger{ background: var(--danger); border:0; color:#fff; }
 
 /* Helpers */
 .muted{ color:var(--muted); }
 .small{ font-size:13px; }
 .hidden{ display:none !important; }
-/* ===== Seller name / link (FINAL) ===== */
+
+/* =========================
+   Seller name / link (FINAL)
+========================= */
 .sellerLine{
   margin-top: 6px;
   font-size: 13px;
@@ -241,17 +298,16 @@ button:disabled{ opacity:.6; cursor:not-allowed; }
 }
 
 .sellerLink{
-  color: var(--accent);        /* ياخذ الأخضر من الثيم */
+  color: var(--link);
   text-decoration: none;
-  font-weight: 800;
+  font-weight: 900;
 }
 
 .sellerLink:hover{
   text-decoration: underline;
-  filter: brightness(1.15);
+  filter: brightness(1.12);
 }
 
-/* لو في اسم بدون رابط */
 .sellerName{
   color: rgba(167,243,208,.95);
   font-weight: 700;
