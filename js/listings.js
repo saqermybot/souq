@@ -16,34 +16,7 @@ import {
   query,
   startAfter
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
-// ✅ cache للبروفايلات حتى ما نكرر reads
-const _userCache = new Map();
 
-async function getUserProfile(uid){
-  if (!uid) return null;
-  if (_userCache.has(uid)) return _userCache.get(uid);
-
-  try{
-    const snap = await getDoc(doc(db, "users", uid));
-    const data = snap.exists() ? snap.data() : null;
-    _userCache.set(uid, data);
-    return data;
-  }catch{
-    _userCache.set(uid, null);
-    return null;
-  }
-}
-
-function pickBestSellerName(listingData, profile){
-  // أولوية: بروفايل -> sellerName داخل الإعلان -> fallback
-  const pName = (profile?.displayName || "").toString().trim();
-  if (pName) return pName;
-
-  const lName = (listingData?.sellerName || "").toString().trim();
-  if (lName) return lName;
-
-  return getSellerName(listingData); // دالتك الموجودة
-}
 /* =========================
    ✅ Helpers
 ========================= */
@@ -74,7 +47,6 @@ function normalizeCat(v){
 }
 
 function getCatId(data){
-  // نخليها مرنة: categoryId (الأفضل) ثم categoryNameAr ثم category
   const raw = data.categoryId || data.categoryNameAr || data.category || "";
   return normalizeCat(raw);
 }
@@ -123,20 +95,19 @@ function estateLine(data){
   return [type, kind, roomsTxt].filter(Boolean).join(" • ");
 }
 
-// ✅ NEW: seller display helpers
-function getSellerName(data){
-  const n = (data?.sellerName || "").toString().trim();
+// ---- Seller helpers ----
+function getSellerNameFallback(listingData){
+  const n = (listingData?.sellerName || "").toString().trim();
   if (n) return n;
 
-  const em = (data?.sellerEmail || "").toString().trim();
+  const em = (listingData?.sellerEmail || "").toString().trim();
   if (em && em.includes("@")) return em.split("@")[0];
 
-  // fallback بسيط
   return "صاحب الإعلان";
 }
 
-function getSellerUid(data){
-  return (data?.ownerId || data?.uid || "").toString().trim();
+function getSellerUid(listingData){
+  return (listingData?.ownerId || listingData?.uid || "").toString().trim();
 }
 
 function buildStoreUrl(uid){
@@ -144,22 +115,49 @@ function buildStoreUrl(uid){
 }
 
 /* =========================
+   ✅ Profile cache (users/{uid})
+========================= */
+
+const _userCache = new Map();
+
+async function getUserProfile(uid){
+  if (!uid) return null;
+  if (_userCache.has(uid)) return _userCache.get(uid);
+
+  try{
+    const snap = await getDoc(doc(db, "users", uid));
+    const data = snap.exists() ? snap.data() : null;
+    _userCache.set(uid, data);
+    return data;
+  }catch{
+    _userCache.set(uid, null);
+    return null;
+  }
+}
+
+function pickBestSellerName(listingData, profile){
+  const pName = (profile?.displayName || "").toString().trim();
+  if (pName) return pName;
+
+  const lName = (listingData?.sellerName || "").toString().trim();
+  if (lName) return lName;
+
+  return getSellerNameFallback(listingData);
+}
+
+/* =========================
    ✅ Filters (قراءة فقط - الربط في ui.js)
 ========================= */
 
 function readTypeFilter(){
-  // hidden input in HTML
   const hidden = $id("typeFilter");
   if (hidden && typeof hidden.value === "string") return hidden.value.trim();
-
-  // fallback (لو في نسخة قديمة)
   return (UI.el.typeFilter?.value || "").toString().trim();
 }
 
 function readYearRange(){
   const yf = Number(($id("yearFrom")?.value || "").toString().trim() || 0) || 0;
   const yt = Number(($id("yearTo")?.value || "").toString().trim() || 0) || 0;
-
   if (yf && yt && yf > yt) return { from: yt, to: yf };
   return { from: yf, to: yt };
 }
@@ -171,8 +169,6 @@ function readYearRange(){
 export function initListings(){
   UI.actions.loadListings = loadListings;
   UI.actions.openDetails = openDetails;
-
-  // ✅ ممنوع نربط فلاتر هنا (لأن ui.js بيربطها) => منع تكرار و double load
 
   // ✅ زر مراسلة من صفحة التفاصيل
   UI.el.btnChat.onclick = () => {
@@ -263,6 +259,19 @@ async function openDetails(id, data = null, fromHash = false){
     UI.el.dPrice.textContent = formatPrice(data.price, data.currency);
     UI.el.dDesc.textContent = data.description || "";
 
+    // ✅ Seller name in Details (من users/{ownerId} + رابط)
+    if (UI.el.dSeller){
+      const ownerId = getSellerUid(data);
+      if (!ownerId){
+        UI.el.dSeller.classList.add("hidden");
+      } else {
+        const prof = await getUserProfile(ownerId);
+        const sellerName = escapeHtml(pickBestSellerName(data, prof));
+        UI.el.dSeller.innerHTML = `البائع: <a class="sellerLink" href="${buildStoreUrl(ownerId)}">${sellerName}</a>`;
+        UI.el.dSeller.classList.remove("hidden");
+      }
+    }
+
     // زر الحذف فقط للمالك
     const me = auth.currentUser?.uid || "";
     const isOwner = !!(me && data.ownerId && me === data.ownerId);
@@ -295,7 +304,6 @@ async function loadListings(reset = true){
   }
 
   let qy = query(collection(db, "listings"), orderBy("createdAt", "desc"), limit(12));
-
   if (UI.state.lastDoc){
     qy = query(collection(db, "listings"), orderBy("createdAt", "desc"), startAfter(UI.state.lastDoc), limit(12));
   }
@@ -380,9 +388,9 @@ async function loadListings(reset = true){
     const cityTxt = escapeHtml(data.city || "");
     const catTxt  = escapeHtml(data.category || data.categoryNameAr || data.categoryId || "");
 
-    // ✅ NEW: seller link
+    // seller line (سريع: يعتمد على sellerName داخل الإعلان إن وجد)
     const sellerUid = getSellerUid(data);
-    const sellerName = escapeHtml(getSellerName(data));
+    const sellerName = escapeHtml(getSellerNameFallback(data));
     const sellerHtml = sellerUid
       ? `<div class="sellerLine">البائع: <a class="sellerLink" href="${buildStoreUrl(sellerUid)}">${sellerName}</a></div>`
       : `<div class="sellerLine">البائع: <span class="sellerName">${sellerName}</span></div>`;
@@ -393,32 +401,27 @@ async function loadListings(reset = true){
       <img src="${img}" alt="" />
       <div class="p">
         <div class="t">${escapeHtml(data.title || "بدون عنوان")}</div>
-
         ${extraMeta ? `<div class="carMeta">${escapeHtml(extraMeta)}</div>` : ``}
-
         <div class="m">${cityTxt}${(cityTxt && catTxt) ? " • " : ""}${catTxt}</div>
-
         ${sellerHtml}
-
         <div class="pr">${escapeHtml(formatPrice(data.price, data.currency))}</div>
       </div>
     `;
 
+    // فتح التفاصيل عند الضغط
+    card.onclick = () => openDetails(ds.id, data);
+
+    // منع الكارد من التقاط ضغط رابط البائع
+    const sellerLinkEl = card.querySelector(".sellerLink");
+    if (sellerLinkEl){
+      sellerLinkEl.addEventListener("click", (e) => e.stopPropagation());
+    }
+
+    // ضغط على الصورة فقط يفتح التفاصيل
     const imgEl = card.querySelector("img");
     if (imgEl){
       imgEl.onclick = (e) => { e.stopPropagation(); openDetails(ds.id, data); };
     }
-
-    // ✅ prevent card click when clicking seller link
-    const sellerLinkEl = card.querySelector(".sellerLink");
-    if (sellerLinkEl){
-      sellerLinkEl.addEventListener("click", (e) => {
-        e.stopPropagation();
-        // اترك المتصفح يفتح الرابط طبيعي
-      });
-    }
-
-    card.onclick = () => openDetails(ds.id, data);
 
     UI.el.listings.appendChild(card);
   });
