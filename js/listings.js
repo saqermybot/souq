@@ -96,6 +96,26 @@ function estateLine(data){
   return [type, kind, roomsTxt].filter(Boolean).join(" • ");
 }
 
+// ✅ NEW: seller display helpers
+function getSellerName(data){
+  const n = (data?.sellerName || "").toString().trim();
+  if (n) return n;
+
+  const em = (data?.sellerEmail || "").toString().trim();
+  if (em && em.includes("@")) return em.split("@")[0];
+
+  // fallback بسيط
+  return "صاحب الإعلان";
+}
+
+function getSellerUid(data){
+  return (data?.ownerId || data?.uid || "").toString().trim();
+}
+
+function buildStoreUrl(uid){
+  return `store.html?u=${encodeURIComponent(uid)}`;
+}
+
 /* =========================
    ✅ Filters (قراءة فقط - الربط في ui.js)
 ========================= */
@@ -333,6 +353,13 @@ async function loadListings(reset = true){
     const cityTxt = escapeHtml(data.city || "");
     const catTxt  = escapeHtml(data.category || data.categoryNameAr || data.categoryId || "");
 
+    // ✅ NEW: seller link
+    const sellerUid = getSellerUid(data);
+    const sellerName = escapeHtml(getSellerName(data));
+    const sellerHtml = sellerUid
+      ? `<div class="sellerLine">البائع: <a class="sellerLink" href="${buildStoreUrl(sellerUid)}">${sellerName}</a></div>`
+      : `<div class="sellerLine">البائع: <span class="sellerName">${sellerName}</span></div>`;
+
     const card = document.createElement("div");
     card.className = "cardItem";
     card.innerHTML = `
@@ -343,6 +370,9 @@ async function loadListings(reset = true){
         ${extraMeta ? `<div class="carMeta">${escapeHtml(extraMeta)}</div>` : ``}
 
         <div class="m">${cityTxt}${(cityTxt && catTxt) ? " • " : ""}${catTxt}</div>
+
+        ${sellerHtml}
+
         <div class="pr">${escapeHtml(formatPrice(data.price, data.currency))}</div>
       </div>
     `;
@@ -351,6 +381,16 @@ async function loadListings(reset = true){
     if (imgEl){
       imgEl.onclick = (e) => { e.stopPropagation(); openDetails(ds.id, data); };
     }
+
+    // ✅ prevent card click when clicking seller link
+    const sellerLinkEl = card.querySelector(".sellerLink");
+    if (sellerLinkEl){
+      sellerLinkEl.addEventListener("click", (e) => {
+        e.stopPropagation();
+        // اترك المتصفح يفتح الرابط طبيعي
+      });
+    }
+
     card.onclick = () => openDetails(ds.id, data);
 
     UI.el.listings.appendChild(card);
