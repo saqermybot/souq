@@ -1,5 +1,3 @@
-.hidden{ display:none !important; }
-
 /* =========================
    TOPBAR + AUTHBAR
 ========================= */
@@ -8,7 +6,6 @@
   top:0;
   z-index:5;
 
-  /* ✅ دارك أفتح + لمسة أخضر */
   background: linear-gradient(
     90deg,
     rgba(15,23,42,.92) 0%,
@@ -16,7 +13,6 @@
     rgba(34,197,94,.18) 100%
   );
 
-  /* ✅ فخامة + دعم Safari/iOS */
   -webkit-backdrop-filter: blur(10px);
   backdrop-filter: blur(10px);
 
@@ -28,22 +24,19 @@
   border-bottom: 1px solid rgba(255,255,255,.08);
 }
 
-/* ✅ شعار */
+/* شعار */
 .brand{ font-weight:900; letter-spacing:.2px; }
 .brand::after{
   content:"";
   display:inline-block;
   width:10px;height:10px;
   border-radius:999px;
-
-  /* ✅ RTL-safe: بدل margin-right (أحياناً يتصرف غلط) */
   margin-inline-start:8px;
-
   background: linear-gradient(135deg, var(--brand), var(--brand2));
   vertical-align:middle;
 }
 
-/* مهم: menu absolute يحتاج parent relative */
+/* authbar */
 .authbar{
   display:flex;
   gap:8px;
@@ -52,10 +45,10 @@
   position:relative;
 }
 
-/* مسافة لطيفة تحت الهيدر */
+/* مسافة تحت الهيدر */
 .searchCard{ margin-top:12px; }
 
-/* زر أيقونة بالهيدر */
+/* زر أيقونة */
 .iconBtn{
   width:44px;
   height:44px;
@@ -67,14 +60,14 @@
   align-items:center;
   justify-content:center;
   font-size:18px;
-  position:relative; /* ✅ مهم للـ badge/dot */
+  position:relative;
 }
 
-/* ✅ Badge فوق زر الرسائل 💬 (أحمر) */
+/* Badge inbox */
 #inboxBadge{
   position:absolute;
   top:6px;
-  inset-inline-start:6px; /* RTL-safe */
+  inset-inline-start:6px;
   min-width:18px;
   height:18px;
   padding:0 6px;
@@ -89,7 +82,6 @@
   border:2px solid rgba(0,0,0,.35);
 }
 
-/* ✅ نقطة إشعار (اختياري) */
 .inboxDot{
   position:absolute;
   top:8px;
@@ -163,8 +155,6 @@
   border-radius: 999px;
   background: rgba(34,197,94,.12);
 }
-
-.cardItem button, .cardItem a{ cursor:pointer; }
 
 @media(max-width:520px){
   .cardsGrid{ gap:8px; }
@@ -380,7 +370,7 @@
 }
 
 /* =========================
-   PAGES
+   PAGES (overlay pages)
 ========================= */
 .page{
   position:fixed;
@@ -389,18 +379,6 @@
   background:var(--bg);
   padding:12px;
   overflow:auto;
-}
-
-.pageInner{
-  max-width: 860px;
-  margin: 0 auto;
-}
-.pageHead{
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:10px;
-  margin-bottom:10px;
 }
 
 /* =========================
@@ -456,7 +434,6 @@
   border-radius:10px;
   cursor:pointer;
 }
-
 .menuItem:hover{ background: rgba(148,163,184,.12); }
 .menuItem.danger{ color: var(--danger); }
 
@@ -512,10 +489,7 @@
   display:block;
 }
 
-.inboxBody{
-  flex:1 1 auto;
-  min-width:0;
-}
+.inboxBody{ flex:1 1 auto; min-width:0; }
 
 .inboxTitle{
   font-weight:900;
@@ -546,7 +520,6 @@
   color:var(--muted);
 }
 
-/* Badge أزرق داخل قائمة المحادثات فقط */
 .badge{
   display:inline-flex;
   align-items:center;
@@ -570,7 +543,7 @@
 }
 
 /* =========================
-   ✅ DELUXE FILTERS (Marktplaats-like)
+   DELUXE FILTERS
 ========================= */
 .deluxeFilters{
   padding: 14px;
@@ -579,7 +552,6 @@
   border: 1px solid rgba(255,255,255,.08);
 }
 
-/* رأس الفلاتر */
 .filterHead{
   display:flex;
   align-items:center;
@@ -594,14 +566,13 @@
   opacity:.92;
 }
 
-/* زر صغير */
+/* زر صغير (خاص بالفلتر) */
 button.sm{
   padding:8px 10px;
   font-size:14px;
   border-radius:12px;
 }
 
-/* شبكة الحقول */
 .formGrid{
   display:grid;
   grid-template-columns: 1fr 1fr;
@@ -631,7 +602,6 @@ button.sm{
 
 .span2{ grid-column: 1 / -1; }
 
-/* ✅ الأزرار: دايماً جنب بعض (تثبيت قوي) */
 .actionsGrid{
   display:grid !important;
   grid-template-columns: 1fr 1fr !important;
@@ -642,9 +612,7 @@ button.sm{
   border-radius:14px;
 }
 
-/* =========================
-   ✅ SEGMENTED (بيع/إيجار)
-========================= */
+/* Segmented */
 .segWrap{
   display:flex;
   width:100%;
@@ -667,7 +635,6 @@ button.sm{
   cursor:pointer;
   transition: transform .06s ease, background .2s ease, box-shadow .2s ease;
 }
-
 .segBtn:active{ transform: scale(.99); }
 
 .segBtn.active{
@@ -676,9 +643,7 @@ button.sm{
   box-shadow: 0 8px 18px rgba(0,0,0,.18);
 }
 
-/* =========================
-   ✅ YEAR RANGE (من/إلى)
-========================= */
+/* Range */
 .range2{
   display:grid;
   grid-template-columns: 1fr 1fr;
@@ -688,47 +653,22 @@ button.sm{
   .range2{ grid-template-columns: 1fr 1fr; }
 }
 
-/* =========================
-   ✅ Select arrow (RTL-safe)
-========================= */
-select{
-  appearance: none;
-  background-image:
-    linear-gradient(45deg, transparent 50%, var(--muted) 50%),
-    linear-gradient(135deg, var(--muted) 50%, transparent 50%);
-  background-position:
-    calc(16px) calc(50% + 2px),
-    calc(10px) calc(50% + 2px);
-  background-size:6px 6px, 6px 6px;
-  background-repeat:no-repeat;
-
-  /* ✅ RTL safe */
-  padding-inline-start:34px;
-}
-
-/* موبايل: الحقول عمود واحد، الأزرار تبقى 2 جنب بعض */
+/* موبايل */
 @media (max-width:520px){
   .formGrid{ grid-template-columns: 1fr; }
   .span2{ grid-column: 1; }
   .actionsGrid{ grid-template-columns: 1fr 1fr !important; }
 }
 
-/* =========================
-   ✅ filtersRow legacy support (إذا listings.js القديم لسا عم يحقن)
-   - موجود وما حذفناه
-   - بس مرتب وما بيخرب
-========================= */
+/* legacy filtersRow */
 .filtersRow{
   display:grid;
   grid-template-columns: 1fr 1fr;
   gap:10px;
   margin-top:10px;
 }
-
 .filtersRow input,
-.filtersRow select{
-  border-radius:14px;
-}
+.filtersRow select{ border-radius:14px; }
 
 @media (max-width:520px){
   .filtersRow{ grid-template-columns: 1fr; }
