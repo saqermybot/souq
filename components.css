@@ -1,5 +1,5 @@
 /* =========================
-   TOPBAR + AUTHBAR
+   TOPBAR + AUTHBAR (CLEAN)
 ========================= */
 .topbar{
   position:sticky;
@@ -36,19 +36,23 @@
   vertical-align:middle;
 }
 
-/* authbar */
-.authbar{
+/* authbar (مهم: بدون wrap حتى ما ينزل سطر) */
+.authbar,
+#authBar{
   display:flex;
   gap:8px;
   align-items:center;
-  flex-wrap:wrap;
+  flex-wrap: nowrap;      /* ✅ يمنع النزول لسطر */
   position:relative;
 }
+
+/* حماية لو عندك button عام width:100% */
+.topbar button{ width:auto !important; }
 
 /* مسافة تحت الهيدر */
 .searchCard{ margin-top:12px; }
 
-/* زر أيقونة */
+/* زر أيقونة عام */
 .iconBtn{
   width:44px;
   height:44px;
@@ -61,6 +65,37 @@
   justify-content:center;
   font-size:18px;
   position:relative;
+  flex: 0 0 auto;
+}
+
+/* ✅ Inbox button (نهائي - بدون تكرار) */
+#btnInbox{
+  all: unset;
+  cursor: pointer;
+
+  width:44px;
+  height:44px;
+  border-radius:12px;
+
+  background: rgba(255,255,255,.12);
+  color:#fff;
+  border: 1px solid rgba(255,255,255,.18);
+
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+
+  font-size:18px;
+  font-weight:400;
+  line-height:1;
+  position:relative;
+  flex: 0 0 auto;
+
+  font-family: "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji", system-ui, sans-serif;
+}
+
+#btnInbox:hover{
+  background: rgba(255,255,255,.18);
 }
 
 /* Badge inbox */
@@ -82,6 +117,7 @@
   border:2px solid rgba(0,0,0,.35);
 }
 
+/* نقطة صغيرة (اختياري) */
 .inboxDot{
   position:absolute;
   top:8px;
