@@ -5,14 +5,23 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>Souq Syria</title>
 
-  <!-- ✅ Cache busting -->
-  <link rel="stylesheet" href="./base.css">
-  <link rel="stylesheet" href="./components.css">
+  <!-- ✅ Cache busting (حتى على iOS) -->
+  <link rel="stylesheet" href="./base.css?v=20260105_01">
+  <link rel="stylesheet" href="./components.css?v=20260105_01">
 
   <!-- ✅ تثبيت الدارك مود -->
   <script>
-    // نجبر الدارك دائماً (حتى قبل تحميل css)
     document.documentElement.setAttribute("data-theme", "dark");
+  </script>
+
+  <!-- ✅ (اختياري) Debug: يطبع أخطاء JS بالموبايل بالكونسول -->
+  <script>
+    window.addEventListener("error", function(e){
+      console.warn("JS error:", e && e.message, e && e.error);
+    });
+    window.addEventListener("unhandledrejection", function(e){
+      console.warn("Promise rejection:", e && e.reason);
+    });
   </script>
 </head>
 <body>
@@ -36,13 +45,11 @@
         <input id="qSearch" placeholder="بحث عن إعلان..." />
       </div>
 
-      <!-- ✅ فلاتر سريعة -->
       <div class="grid" style="margin-top:10px">
         <select id="cityFilter"></select>
         <select id="catFilter"></select>
       </div>
 
-      <!-- ✅ فلاتر متقدمة (تنزل/تطلع بسحب) -->
       <div id="advancedFilters" class="advancedFilters" style="margin-top:10px">
         <div class="grid">
           <input id="minPrice" type="number" inputmode="numeric" placeholder="السعر من" />
@@ -64,7 +71,6 @@
           </select>
         </div>
 
-        <!-- تظهر فقط حسب الصنف -->
         <div class="grid" style="margin-top:10px">
           <select id="typeFilter">
             <option value="">بيع/إيجار (الكل)</option>
@@ -121,7 +127,7 @@
       </div>
     </section>
 
-    <!-- DETAILS PAGE (Full Page) -->
+    <!-- DETAILS PAGE -->
     <section id="detailsPage" class="page hidden">
       <div class="pageInner card">
         <div class="pageHead">
@@ -149,7 +155,7 @@
       </div>
     </section>
 
-    <!-- ✅ INBOX PAGE (رسائل) -->
+    <!-- INBOX PAGE -->
     <section id="inboxPage" class="page hidden">
       <div class="pageInner card">
         <div class="pageHead">
@@ -212,12 +218,15 @@
           <h3 id="chatTitle" style="margin:0">محادثة</h3>
         </div>
 
-        <div id="chatMsgs" class="chatmsgs"></div>
+        <div id="chatMsgs" class="chatmsgs" aria-live="polite"></div>
 
         <div class="row">
-          <input id="chatInput" placeholder="اكتب رسالة..." />
-          <button id="btnSend">إرسال</button>
+          <input id="chatInput" placeholder="اكتب رسالة..." autocomplete="off" />
+          <button id="btnSend" type="button">إرسال</button>
         </div>
+
+        <!-- ✅ Debug صغير: يثبت إن الزر عم يشتغل (بتقدر تشيله لاحقاً) -->
+        <div id="chatDebug" class="muted small" style="margin-top:6px;display:none"></div>
 
         <p class="muted small">المحادثات تُحذف تلقائيًا لاحقاً (ميزة قادمة).</p>
       </div>
@@ -251,7 +260,7 @@
     </div>
   </div>
 
-  <!-- IMAGE MODAL (Fullscreen) -->
+  <!-- IMAGE MODAL -->
   <div id="imgModal" class="imgModal hidden">
     <div class="imgTop">
       <div id="imgCounter" class="imgCounter"></div>
@@ -264,6 +273,6 @@
   </div>
 
   <!-- ✅ Cache busting -->
-  <script type="module" src="./app.js?v=20260104_01"></script>
+  <script type="module" src="./app.js?v=20260105_01"></script>
 </body>
 </html>
