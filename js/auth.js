@@ -1,60 +1,18 @@
 import { auth } from "./firebase.js";
-import { signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
-import { auth } from "./firebase.js";
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
   createUserWithEmailAndPassword,
-  signOut,
   GoogleAuthProvider,
-  signInWithPopup
+  signInWithPopup,
+  signOut
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
 import { UI } from "./ui.js";
 
-let globalMenuCloserInstalled = false;
+let globalOutsideClickInstalled = false;
 
 export function initAuth() {
-  const avatar = document.getElementById("userAvatar");
-const menu = document.getElementById("userMenu");
-
-avatar?.addEventListener("click", (e) => {
-  e.stopPropagation();
-  menu.classList.toggle("hidden");
-});
-
-// إغلاق عند الضغط برا
-document.addEventListener("click", () => {
-  if (!menu.classList.contains("hidden")) {
-    menu.classList.add("hidden");
-  }
-});
-
-// أزرار القائمة
-menu?.addEventListener("click", async (e) => {
-  const act = e.target?.dataset?.act;
-  if (!act) return;
-
-  menu.classList.add("hidden");
-
-  const uid = auth.currentUser?.uid || "";
-
-  if (act === "myListings") {
-    if (!uid) return alert("يجب تسجيل الدخول");
-    location.href = `store.html?u=${uid}`;
-  }
-
-  if (act === "profile") {
-    // صفحة بسيطة حالياً
-    location.href = `profile.html`;
-  }
-
-  if (act === "logout") {
-    await signOut(auth);
-    location.reload();
-  }
-});
-
   // ✅ تثبيت الوضع الداكن دائماً
   document.documentElement.setAttribute("data-theme", "dark");
   try { localStorage.setItem("theme", "dark"); } catch {}
@@ -130,112 +88,118 @@ menu?.addEventListener("click", async (e) => {
 
     // ✅ شغّل inbox listener تلقائياً ليحدث الـ Badge بدون فتح صفحة الرسائل
     if (user && typeof UI.actions.loadInbox === "function") {
-      UI.actions.loadInbox(); // موجودة عندك في chat.js وتعمل onSnapshot
+      UI.actions.loadInbox();
     } else {
-      // لو ما في user، أخفي الـ badge
       const badge = document.getElementById("inboxBadge");
       if (badge) badge.classList.add("hidden");
     }
   });
 
   // ✅ close menu globally (مرة واحدة فقط)
-  if (!globalMenuCloserInstalled) {
-    globalMenuCloserInstalled = true;
-    document.addEventListener(
-      "click",
-      () => {
-        const menu = document.getElementById("accountMenu");
-        if (menu) menu.classList.add("hidden");
-      },
-      { capture: true }
-    );
+  if (!globalOutsideClickInstalled) {
+    globalOutsideClickInstalled = true;
+    document.addEventListener("click", () => {
+      const menu = document.getElementById("userMenu");
+      if (menu) menu.classList.add("hidden");
+    }, { capture: true });
   }
+}
 
-  function renderTopbar(user) {
-    const photo = user?.photoURL || "";
-    const email = user?.email || "";
+function renderTopbar(user) {
+  const photo = user?.photoURL || "";
+  const email = user?.email || "";
+  const display = (user?.displayName || "").trim() || (email.includes("@") ? email.split("@")[0] : "مستخدم");
 
-    UI.renderAuthBar(`
-      <button id="btnInbox" class="iconBtn" title="الرسائل" aria-label="inbox">
-        💬
-        <!-- ✅ Badge أحمر (ستايله من CSS عبر #inboxBadge) -->
-        <span id="inboxBadge" class="hidden">0</span>
-      </button>
+  // ✅ نفس البار بس بدل accountMenu القديم، نستخدم userAvatar/userMenu الموجودين بالـ HTML
+  UI.renderAuthBar(`
+    <button id="btnInbox" class="iconBtn" title="الرسائل" aria-label="inbox">
+      💬
+      <span id="inboxBadge" class="hidden">0</span>
+    </button>
 
-      <button id="btnOpenAdd" class="secondary">+ إعلان جديد</button>
+    <button id="btnOpenAdd" class="secondary">+ إعلان جديد</button>
 
-      ${
-        user
-          ? `
-            <button id="btnAccount" class="avatarBtn" title="${escapeAttr(email)}" aria-label="account">
+    ${
+      user
+        ? `
+          <div class="userMenuWrap" id="userMenuWrap">
+            <button id="btnAvatar" class="avatarBtn" title="${escapeAttr(email)}" aria-label="account">
               ${
                 photo
                   ? `<img src="${escapeAttr(photo)}" alt="me" />`
-                  : `<span class="avatarLetter">${escapeHtml((email[0] || "U").toUpperCase())}</span>`
+                  : `<span class="avatarLetter">${escapeHtml((display[0] || "U").toUpperCase())}</span>`
               }
             </button>
 
-            <div id="accountMenu" class="menu hidden">
-              <button id="btnMyAds" class="menuItem">إعلاناتي</button>
+            <div id="userMenu" class="menu hidden">
+              <button id="btnMyAdsReal" class="menuItem">إعلاناتي</button>
+              <button id="btnProfile" class="menuItem">بروفايلي</button>
               <button id="btnLogout" class="menuItem danger">خروج</button>
             </div>
-          `
-          : `<button id="btnOpenAuth" class="ghost">دخول</button>`
-      }
-    `);
-
-    // ✅ Inbox
-    document.getElementById("btnInbox").onclick = (e) => {
-      e.stopPropagation();
-      if (!auth.currentUser) return UI.actions.openAuth();
-      if (typeof UI.actions.openInbox === "function") UI.actions.openInbox();
-      else alert("صفحة الرسائل غير جاهزة بعد.");
-    };
-
-    // ✅ إضافة إعلان
-    document.getElementById("btnOpenAdd").onclick = () => {
-      if (!auth.currentUser) return UI.actions.openAuth();
-      if (typeof UI.actions.openAdd === "function") UI.actions.openAdd();
-      else UI.show(UI.el.addBox);
-    };
-
-    if (!user) {
-      document.getElementById("btnOpenAuth").onclick = () => UI.actions.openAuth();
-      return;
+          </div>
+        `
+        : `<button id="btnOpenAuth" class="ghost">دخول</button>`
     }
+  `);
 
-    // قائمة الحساب
-    const btnAccount = document.getElementById("btnAccount");
-    const menu = document.getElementById("accountMenu");
-    const closeMenu = () => menu.classList.add("hidden");
-    const toggleMenu = () => menu.classList.toggle("hidden");
+  // ✅ Inbox
+  document.getElementById("btnInbox").onclick = (e) => {
+    e.stopPropagation();
+    if (!auth.currentUser) return UI.actions.openAuth();
+    if (typeof UI.actions.openInbox === "function") UI.actions.openInbox();
+    else alert("صفحة الرسائل غير جاهزة بعد.");
+  };
 
-    btnAccount.onclick = (e) => {
-      e.stopPropagation();
-      toggleMenu();
-    };
+  // ✅ إضافة إعلان
+  document.getElementById("btnOpenAdd").onclick = () => {
+    if (!auth.currentUser) return UI.actions.openAuth();
+    if (typeof UI.actions.openAdd === "function") UI.actions.openAdd();
+    else UI.show(UI.el.addBox);
+  };
 
-    // إعلاناتي
-    document.getElementById("btnMyAds").onclick = (e) => {
-      e.stopPropagation();
-      closeMenu();
-      UI.state.onlyMine = true;
-      UI.state.filtersActive = false;
-      UI.actions.loadListings(true);
-    };
-
-    // خروج
-    document.getElementById("btnLogout").onclick = async (e) => {
-      e.stopPropagation();
-      closeMenu();
-      UI.state.onlyMine = false;
-      try { await signOut(auth); } catch {}
-
-      // أخفي الـ badge بعد الخروج
-      const badge = document.getElementById("inboxBadge");
-      if (badge) badge.classList.add("hidden");
-    };
+  // ✅ لو مو مسجل
+  if (!user) {
+    document.getElementById("btnOpenAuth").onclick = () => UI.actions.openAuth();
+    return;
   }
+
+  // ✅ Avatar menu
+  const btnAvatar = document.getElementById("btnAvatar");
+  const menu = document.getElementById("userMenu");
+
+  const closeMenu = () => menu.classList.add("hidden");
+  const toggleMenu = () => menu.classList.toggle("hidden");
+
+  btnAvatar.onclick = (e) => {
+    e.stopPropagation();
+    toggleMenu();
+  };
+
+  // ✅ إعلاناتي "الحقيقية" = صفحة store.html
+  document.getElementById("btnMyAdsReal").onclick = (e) => {
+    e.stopPropagation();
+    closeMenu();
+    const uid = auth.currentUser?.uid || "";
+    if (!uid) return alert("يجب تسجيل الدخول");
+    location.href = `store.html?u=${encodeURIComponent(uid)}`;
+  };
+
+  // ✅ بروفايل
+  document.getElementById("btnProfile").onclick = (e) => {
+    e.stopPropagation();
+    closeMenu();
+    location.href = `profile.html`;
+  };
+
+  // ✅ خروج
+  document.getElementById("btnLogout").onclick = async (e) => {
+    e.stopPropagation();
+    closeMenu();
+    try { await signOut(auth); } catch {}
+
+    const badge = document.getElementById("inboxBadge");
+    if (badge) badge.classList.add("hidden");
+  };
 }
 
 export function requireAuth() {
