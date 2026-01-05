@@ -22,7 +22,6 @@
 
     <!-- ✅ auth + avatar menu -->
     <div class="authbar" style="display:flex; align-items:center; gap:10px;">
-      <!-- هذا بيضل مثل ما هو لملف auth.js -->
       <div id="authBar"></div>
 
       <!-- ✅ صورة الحساب + منيو -->
@@ -81,7 +80,6 @@
             <button id="typeRent" class="segBtn" type="button">إيجار</button>
           </div>
 
-          <!-- ✅ قيمة حقيقية تُقرأ من JS -->
           <input id="typeFilter" type="hidden" value="">
         </div>
 
@@ -94,7 +92,7 @@
           </div>
         </div>
 
-        <!-- ✅ فلاتر العقارات (تظهر فقط عند اختيار عقارات) -->
+        <!-- ✅ فلاتر العقارات -->
         <div id="estateFilters" class="field span2 hidden">
           <label class="flabel">تفاصيل العقار</label>
           <div class="range2">
@@ -110,7 +108,6 @@
           </div>
         </div>
 
-        <!-- ✅ الأزرار لازم تكون Grid لتظل جنب بعض بالموبايل -->
         <div class="actionsGrid span2">
           <button id="btnApply" class="secondary" type="button">تطبيق</button>
           <button id="btnReset" class="ghost" type="button">مسح</button>
@@ -156,18 +153,24 @@
         <h2 id="dTitle"></h2>
         <div class="muted" id="dMeta"></div>
 
-        <!-- ✅ NEW: Seller line (اسم صاحب الإعلان + رابط متجره) -->
         <div id="dSeller" class="sellerLine"></div>
 
         <div class="price" id="dPrice"></div>
         <p id="dDesc"></p>
 
+        <!-- ✅ Actions -->
         <div class="row actions">
           <button id="btnChat" type="button">مراسلة</button>
 
-          <a id="btnWhatsapp" class="secondary hidden" target="_blank" rel="noopener">
-     
-          </a>
+          <!-- ✅ WhatsApp button لازم يكون فيه نص ليظهر -->
+          <a
+            id="btnWhatsapp"
+            class="secondary hidden"
+            href="#"
+            target="_blank"
+            rel="noopener"
+            aria-label="مراسلة عبر واتساب"
+          >واتساب</a>
 
           <button id="btnDeleteListing" class="danger hidden" type="button">حذف الإعلان</button>
         </div>
