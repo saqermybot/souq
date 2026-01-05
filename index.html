@@ -9,36 +9,7 @@
   <link rel="stylesheet" href="./components.css">
 
   <script>
-    /* Dark mode */
-[data-theme="dark"]{
-  /* خلفية أفتح شوي (مو أسود خانق) */
-  --bg: #0b1220;
-  --card: rgba(17, 28, 46, 0.92);        /* أزرق داكن لطيف */
-  --text: #e8eefc;
-  --muted: rgba(196, 210, 232, 0.70);
-  --border: rgba(148, 163, 184, 0.16);
-
-  /* ✅ الأخضر يصير هو الـ primary */
-  --brand: #22c55e;
-  --brand2: #06b6d4;
-  --accent: #22c55e;
-  --danger: #ef4444;
-
-  /* ✅ زر أساسي أخضر (بدل الرمادي الفاتح) */
-  --btn: rgba(34, 197, 94, 0.92);
-  --btnText: #07130c;
-
-  /* زر ثانوي/خلفيات ناعمة */
-  --soft: rgba(34, 197, 94, 0.14);
-
-  /* Inputs */
-  --inputBg: rgba(255,255,255,.06);
-  --inputBorder: rgba(255,255,255,.12);
-
-  /* ظل و ring أنعم */
-  --shadow: 0 12px 28px rgba(0,0,0,0.40);
-  --ring: 0 0 0 4px rgba(34,197,94,.22);
-}
+    document.documentElement.setAttribute("data-theme", "dark");
   </script>
 </head>
 <body>
@@ -80,43 +51,6 @@
         <div class="field">
           <label class="flabel">القسم</label>
           <select id="catFilter"></select>
-        </div>
-        <!-- ✅ نوع الإعلان (Segemented) -->
-        <div class="field span2">
-          <label class="flabel">نوع الإعلان</label>
-          <div class="segWrap" role="group" aria-label="نوع الإعلان">
-            <button id="typeAll" class="segBtn active" type="button" data-value="">الكل</button>
-            <button id="typeSale" class="segBtn" type="button" data-value="sale">بيع</button>
-            <button id="typeRent" class="segBtn" type="button" data-value="rent">إيجار</button>
-          </div>
-
-          <!-- ✅ قيمة حقيقية تُقرأ من JS -->
-          <input id="typeFilter" type="hidden" value="">
-        </div>
-
-        <!-- ✅ سنة السيارات (من/إلى) -->
-        <div class="field span2">
-          <label class="flabel">سنة (سيارات)</label>
-          <div class="range2">
-            <input id="yearFrom" type="number" min="1950" max="2035" placeholder="من" />
-            <input id="yearTo" type="number" min="1950" max="2035" placeholder="إلى" />
-          </div>
-        </div>
-
-        <!-- ✅ فلاتر العقارات (تظهر فقط عند اختيار عقارات) -->
-        <div id="estateFilters" class="field span2 hidden">
-          <label class="flabel">تفاصيل العقار</label>
-          <div class="range2">
-            <select id="estateKindFilter">
-              <option value="">كل أنواع العقارات</option>
-              <option value="شقة">شقة</option>
-              <option value="محل">محل</option>
-              <option value="أرض">أرض</option>
-              <option value="بيت">بيت</option>
-            </select>
-
-            <input id="roomsFilter" type="number" min="0" max="20" placeholder="غرف" />
-          </div>
         </div>
 
         <!-- ✅ الأزرار لازم تكون Grid لتظل جنب بعض بالموبايل -->
