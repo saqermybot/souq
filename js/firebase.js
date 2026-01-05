@@ -1,5 +1,8 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-app.js";
-import { getFirestore } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+import {
+  initializeFirestore,
+  // enableIndexedDbPersistence, // اختياري
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 import {
   getAuth,
   setPersistence,
@@ -18,10 +21,18 @@ const firebaseConfig = {
 };
 
 export const app = initializeApp(firebaseConfig);
-export const db = getFirestore(app);
+
+// ✅ حل مشاكل iOS/Safari: اجبار Firestore على Long-Polling
+export const db = initializeFirestore(app, {
+  experimentalForceLongPolling: true,
+  // أحياناً يساعد كمان:
+  experimentalAutoDetectLongPolling: true,
+  useFetchStreams: false
+});
+
 export const auth = getAuth(app);
 
-// ثبات تسجيل الدخول (حل نسيان iOS/Chrome)
+// ✅ ثبات تسجيل الدخول (حل نسيان iOS/Chrome)
 setPersistence(auth, browserLocalPersistence).catch(async () => {
   await setPersistence(auth, browserSessionPersistence);
 });
