@@ -126,13 +126,17 @@ async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
 
   const msgsRef = collection(db, "chats", roomId, "messages");
 
-  // ✅ أهم تعديل: عرض آخر 60 بدل أول 60
+  // ✅ عرض آخر 60
   const qy = query(msgsRef, orderBy("createdAt","asc"), limitToLast(60));
 
   if (UI.state.chatUnsub) UI.state.chatUnsub();
 
+  // ✅ التعديلين المهمين ضد تعليق iOS:
+  // 1) includeMetadataChanges: true
+  // 2) serverTimestamps: "estimate"
   UI.state.chatUnsub = onSnapshot(
     qy,
+    { includeMetadataChanges: true },
     async (snap)=>{
       UI.el.chatMsgs.innerHTML = "";
 
@@ -140,7 +144,8 @@ async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
       let needCommit = false;
 
       snap.forEach(d=>{
-        const m = d.data() || {};
+        // ✅ أهم سطر: لا تترك createdAt null
+        const m = d.data({ serverTimestamps: "estimate" }) || {};
         const isPending = d.metadata?.hasPendingWrites;
 
         const div = document.createElement("div");
@@ -180,7 +185,6 @@ async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
       try{ await updateDoc(chatDocRef, { [`unread.${me}`]: 0 }); }catch{}
     },
     (err)=>{
-      // ✅ جديد: لو صار خطأ ما يصير كل شي صامت
       console.warn("chat snapshot error:", err);
     }
   );
@@ -209,11 +213,9 @@ async function sendMsg(){
   const msgsRef = collection(db, "chats", currentChat.roomId, "messages");
   const chatDocRef = doc(db, "chats", currentChat.roomId);
 
-  // ✅ منع ضغط متكرر بدون ما يعلق للأبد
   btn.disabled = true;
 
   try{
-    // ✅ ما نمسح النص إلا بعد نجاح الإرسال
     await addDoc(msgsRef, {
       text,
       senderId: me,
@@ -223,7 +225,6 @@ async function sendMsg(){
       expiresAt: new Date(Date.now() + 7*24*3600*1000)
     });
 
-    // تحديث الميتا
     try{
       await runTransaction(db, async (tx) => {
         const snap = await tx.get(chatDocRef);
@@ -255,7 +256,6 @@ async function sendMsg(){
   }catch(err){
     console.warn("sendMsg failed:", err);
     alert("تعذر إرسال الرسالة. تأكد من الإنترنت / صلاحيات Firestore.");
-    // نخلي النص موجود ليعيد المحاولة
   }finally{
     btn.disabled = false;
   }
