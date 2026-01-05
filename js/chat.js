@@ -55,9 +55,6 @@ function bindChatControls(){
   }
 }
 
-/* =========================
-   Helpers
-========================= */
 function chatRoomId(listingId, a, b){
   return `listing_${listingId}_${[a,b].sort().join("_")}`;
 }
@@ -65,11 +62,6 @@ function chatRoomId(listingId, a, b){
 let currentChat = { listingId:null, roomId:null, otherId:null, listingTitle:"" };
 let inboxUnsub = null;
 let chatUnsub = null;
-
-const renderedIds = new Set();
-
-// ✅ مهم: لا تسمح بالإرسال قبل ما يصير chatDoc موجود
-let chatReady = false;
 
 function setInboxIndicator(totalUnread){
   const badge = document.getElementById("inboxBadge");
@@ -79,10 +71,10 @@ function setInboxIndicator(totalUnread){
   }
 }
 
+// ✓ / ✓✓
 function hasMapKey(obj, key){
   return obj && typeof obj === "object" && obj[key];
 }
-
 function statusIconForMessage(m, me, otherId, isPending){
   if (m.senderId !== me) return "";
   if (isPending) return "⏳";
@@ -92,57 +84,9 @@ function statusIconForMessage(m, me, otherId, isPending){
   if (hasMapKey(deliveredTo, otherId)) return `<span class="st">✓✓</span>`;
   return `<span class="st">✓</span>`;
 }
-
 function formatTime(createdAt){
-  try{
-    if (createdAt?.toDate) return createdAt.toDate().toLocaleString();
-  }catch{}
+  try{ if (createdAt?.toDate) return createdAt.toDate().toLocaleString(); }catch{}
   return "…";
-}
-
-function renderMsgRow({ id, m, me, otherId, isPending }){
-  const div = document.createElement("div");
-  div.className = "msg" + (m.senderId===me ? " me": "");
-  div.dataset.mid = id;
-
-  const st = statusIconForMessage(m, me, otherId, !!isPending);
-  div.innerHTML = `
-    <div>${escapeHtml(m.text||"")}</div>
-    <div class="t">${escapeHtml(formatTime(m.createdAt))} ${st}</div>
-  `;
-  UI.el.chatMsgs.appendChild(div);
-}
-
-/* =========================
-   ✅ Ensure chat doc exists (server-side)
-========================= */
-async function ensureChatExists(){
-  const me = auth.currentUser.uid;
-  const otherId = currentChat.otherId;
-  const roomId = currentChat.roomId;
-  const chatDocRef = doc(db, "chats", roomId);
-
-  // 1) جرّب اقرأ هل المستند موجود؟
-  let snap = null;
-  try{
-    snap = await getDoc(chatDocRef);
-  }catch{}
-
-  if (snap && snap.exists()) return true;
-
-  // 2) إذا مو موجود: أنشئه
-  await setDoc(chatDocRef, {
-    listingId: currentChat.listingId,
-    listingTitle: currentChat.listingTitle,
-    participants: [me, otherId].sort(),
-    updatedAt: serverTimestamp(),
-    lastText: "",
-    unread: { [me]: 0, [otherId]: 0 }
-  }, { merge: true });
-
-  // 3) اقرأ مرة ثانية للتأكد
-  const snap2 = await getDoc(chatDocRef);
-  return snap2.exists();
 }
 
 /* =========================
@@ -171,32 +115,29 @@ async function openChat(listingId, listingTitle = "إعلان", otherId = null){
   const roomId = chatRoomId(listingId, me, otherId);
   currentChat = { listingId, roomId, otherId, listingTitle };
 
-  renderedIds.clear();
   UI.el.chatMsgs.innerHTML = "";
 
-  // ✅ قفل الإرسال أثناء التحضير
-  chatReady = false;
-  if (UI.el.btnSend) UI.el.btnSend.disabled = true;
-  if (UI.el.chatInput) UI.el.chatInput.placeholder = "جاري فتح المحادثة...";
-
-  // ✅ تأكيد وجود chatDoc على السيرفر قبل السماح بالإرسال
-  try{
-    const ok = await ensureChatExists();
-    chatReady = !!ok;
-  }catch (e){
-    chatReady = false;
-    console.warn("ensureChatExists failed:", e);
-  }
-
-  if (UI.el.btnSend) UI.el.btnSend.disabled = !chatReady;
-  if (UI.el.chatInput) UI.el.chatInput.placeholder = chatReady ? "اكتب رسالة..." : "تعذر فتح المحادثة";
-
-  if (!chatReady){
-    UI.el.chatMsgs.innerHTML = `<div class="muted">تعذر فتح المحادثة بسبب الصلاحيات/الاتصال. جرّب بعد لحظات.</div>`;
-    return;
-  }
-
   const chatDocRef = doc(db, "chats", roomId);
+
+  // ✅ لا تمسح lastText/unread عند كل فتح
+  const snap = await getDoc(chatDocRef);
+  if (!snap.exists()){
+    await setDoc(chatDocRef, {
+      listingId,
+      listingTitle,
+      participants: [me, otherId].sort(),
+      updatedAt: serverTimestamp(),
+      lastText: "",
+      unread: { [me]: 0, [otherId]: 0 }
+    }, { merge: true });
+  } else {
+    // تحديث خفيف بدون لمس lastText/unread
+    try{
+      await updateDoc(chatDocRef, { updatedAt: serverTimestamp(), listingTitle });
+    }catch{}
+  }
+
+  // ✅ صفّر unread إليك
   try{ await updateDoc(chatDocRef, { [`unread.${me}`]: 0 }); }catch{}
 
   const msgsRef = collection(db, "chats", roomId, "messages");
@@ -206,44 +147,40 @@ async function openChat(listingId, listingTitle = "إعلان", otherId = null){
   chatUnsub = onSnapshot(
     qy,
     { includeMetadataChanges: true },
-    async (snap)=>{
+    async (snap2)=>{
       const meNow = auth.currentUser?.uid;
       if (!meNow) return;
+
+      UI.el.chatMsgs.innerHTML = "";
 
       const b = writeBatch(db);
       let needCommit = false;
 
-      snap.docChanges().forEach((chg)=>{
-        if (chg.type === "removed") return;
-
-        const d = chg.doc;
-        const id = d.id;
+      snap2.forEach((d)=>{
         const m = d.data({ serverTimestamps: "estimate" }) || {};
         const isPending = d.metadata?.hasPendingWrites;
 
-        const existing = UI.el.chatMsgs.querySelector(`[data-mid="${id}"]`);
-        if (existing){
-          const tEl = existing.querySelector(".t");
-          if (tEl){
-            const st = statusIconForMessage(m, meNow, otherId, !!isPending);
-            tEl.innerHTML = `${escapeHtml(formatTime(m.createdAt))} ${st}`;
-          }
-          return;
-        }
+        const div = document.createElement("div");
+        div.className = "msg" + (m.senderId===meNow ? " me": "");
+        const st = statusIconForMessage(m, meNow, otherId, !!isPending);
 
-        if (renderedIds.has(id)) return;
-        renderedIds.add(id);
+        div.innerHTML = `
+          <div>${escapeHtml(m.text||"")}</div>
+          <div class="t">${escapeHtml(formatTime(m.createdAt))} ${st}</div>
+        `;
+        UI.el.chatMsgs.appendChild(div);
 
-        renderMsgRow({ id, m, me: meNow, otherId, isPending });
-
+        // ✅ delivered/read للرسائل الواردة
         if (m.senderId && m.senderId !== meNow){
-          const msgRef = doc(db, "chats", roomId, "messages", id);
+          const msgRef = doc(db, "chats", roomId, "messages", d.id);
+          const deliveredTo = m.deliveredTo || {};
+          const readBy = m.readBy || {};
 
-          if (!(m.deliveredTo || {})[meNow]){
+          if (!deliveredTo[meNow]){
             b.set(msgRef, { deliveredTo: { [meNow]: serverTimestamp() } }, { merge: true });
             needCommit = true;
           }
-          if (!(m.readBy || {})[meNow]){
+          if (!readBy[meNow]){
             b.set(msgRef, { readBy: { [meNow]: serverTimestamp() } }, { merge: true });
             needCommit = true;
           }
@@ -267,8 +204,6 @@ function closeChat(){
   chatUnsub = null;
   UI.hide(UI.el.chatBox);
   currentChat = { listingId:null, roomId:null, otherId:null, listingTitle:"" };
-  renderedIds.clear();
-  chatReady = false;
 }
 
 /* =========================
@@ -277,11 +212,6 @@ function closeChat(){
 async function sendMsg(){
   try{ requireAuth(); }catch{ return; }
   bindChatControls();
-
-  // ✅ لا ترسل قبل جاهزية الشات
-  if (!chatReady){
-    return alert("المحادثة لسا عم تتحضر… جرّب بعد لحظات.");
-  }
 
   const input = UI.el.chatInput;
   const btn = UI.el.btnSend;
@@ -293,70 +223,40 @@ async function sendMsg(){
   const me = auth.currentUser.uid;
   const otherId = currentChat.otherId;
 
-  // optimistic row
-  const localId = "local_" + Date.now() + "_" + Math.random().toString(16).slice(2);
-  const temp = document.createElement("div");
-  temp.className = "msg me";
-  temp.dataset.mid = localId;
-  temp.innerHTML = `
-    <div>${escapeHtml(text)}</div>
-    <div class="t">${escapeHtml(new Date().toLocaleString())} ⏳</div>
-  `;
-  UI.el.chatMsgs.appendChild(temp);
-  UI.el.chatMsgs.scrollTop = UI.el.chatMsgs.scrollHeight;
-
   if (btn) btn.disabled = true;
-  if (input) input.value = "";
 
   const roomId = currentChat.roomId;
   const msgsRef = collection(db, "chats", roomId, "messages");
   const chatDocRef = doc(db, "chats", roomId);
 
-  // ✅ retry مرة واحدة إذا كان السبب أن chatDoc لسه ما ثبت
-  for (let attempt = 1; attempt <= 2; attempt++){
+  try{
+    await addDoc(msgsRef, {
+      text,
+      senderId: me,
+      createdAt: serverTimestamp(),
+      deliveredTo: {},
+      readBy: {},
+      expiresAt: new Date(Date.now() + 7*24*3600*1000)
+    });
+
+    // ✅ تحديث الميتا (إذا فشل لا يعتبر فشل إرسال)
     try{
-      await addDoc(msgsRef, {
-        text,
-        senderId: me,
-        createdAt: serverTimestamp(),
-        deliveredTo: {},
-        readBy: {},
-        expiresAt: new Date(Date.now() + 7*24*3600*1000)
+      await updateDoc(chatDocRef, {
+        lastText: text.slice(0,120),
+        updatedAt: serverTimestamp(),
+        [`unread.${otherId}`]: increment(1),
+        [`unread.${me}`]: 0
       });
-
-      try{
-        await updateDoc(chatDocRef, {
-          lastText: text.slice(0,120),
-          updatedAt: serverTimestamp(),
-          [`unread.${otherId}`]: increment(1),
-          [`unread.${me}`]: 0
-        });
-      }catch{}
-
-      if (btn) btn.disabled = false;
-      return; // ✅ نجاح
-
-    }catch(err){
-      // إذا permission-denied بالمحاولة الأولى: جرّب تأكيد وجود chatDoc ثم أعد المحاولة
-      if (attempt === 1 && err?.code === "permission-denied"){
-        try{ await ensureChatExists(); }catch{}
-        continue;
-      }
-
-      console.warn("sendMsg failed:", err);
-
-      if (input) input.value = text;
-
-      const row = UI.el.chatMsgs.querySelector(`[data-mid="${localId}"]`);
-      if (row){
-        const tEl = row.querySelector(".t");
-        if (tEl) tEl.innerHTML = `${escapeHtml(new Date().toLocaleString())} ❌`;
-      }
-
-      alert(`تعذر إرسال الرسالة.\ncode: ${err?.code || "?"}\n${err?.message || ""}`);
-      if (btn) btn.disabled = false;
-      return;
+    }catch(e){
+      console.warn("meta update failed:", e);
     }
+
+    input.value = "";
+  }catch(err){
+    console.warn("sendMsg failed:", err);
+    alert(`تعذر إرسال الرسالة.\ncode: ${err?.code || "?"}\n${err?.message || ""}`);
+  }finally{
+    if (btn) btn.disabled = false;
   }
 }
 
