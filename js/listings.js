@@ -234,12 +234,14 @@ async function deleteCurrentListing(){
 
 async function openDetails(id, data = null, fromHash = false){
   try{
+    // 1) Load listing if not provided
     if (!data){
       const snap = await getDoc(doc(db, "listings", id));
       if (!snap.exists()) return alert("الإعلان غير موجود أو تم حذفه.");
       data = snap.data();
     }
 
+    // 2) Show page + basic render
     UI.state.currentListing = { id, ...data };
     UI.showDetailsPage();
 
@@ -259,11 +261,13 @@ async function openDetails(id, data = null, fromHash = false){
     UI.el.dPrice.textContent = formatPrice(data.price, data.currency);
     UI.el.dDesc.textContent = data.description || "";
 
-    // ✅ Seller name in Details (من users/{ownerId} + رابط)
+    // 3) Seller name + link (users/{ownerId})
+    const ownerId = getSellerUid(data);
+
     if (UI.el.dSeller){
-      const ownerId = getSellerUid(data);
       if (!ownerId){
         UI.el.dSeller.classList.add("hidden");
+        UI.el.dSeller.innerHTML = "";
       } else {
         const prof = await getUserProfile(ownerId);
         const sellerName = escapeHtml(pickBestSellerName(data, prof));
@@ -271,6 +275,51 @@ async function openDetails(id, data = null, fromHash = false){
         UI.el.dSeller.classList.remove("hidden");
       }
     }
+
+    // 4) WhatsApp button (from users/{ownerId}.whatsapp)
+    if (UI.el.btnWhatsapp){
+      // اخفيه افتراضياً
+      UI.el.btnWhatsapp.classList.add("hidden");
+      UI.el.btnWhatsapp.removeAttribute("href");
+
+      if (ownerId){
+        const prof = await getUserProfile(ownerId);
+        const waRaw = (prof?.whatsapp || "").toString().trim();
+
+        if (waRaw){
+          // شيل أي رموز/فراغات (يسمح بالأرقام و +)
+          let num = waRaw.replace(/[^\d+]/g, "");
+
+          // wa.me لازم رقم بدون +
+          num = num.replace(/^\+/, "");
+
+          // (اختياري) إذا بدك تحويل 09xxxx -> 9639xxxx (سوريا فقط) فعّل السطرين:
+          // if (num.startsWith("09")) num = "963" + num.slice(1);
+
+          UI.el.btnWhatsapp.href = `https://wa.me/${num}`;
+          UI.el.btnWhatsapp.classList.remove("hidden");
+        }
+      }
+    }
+
+    // 5) Delete button only for owner
+    const me = auth.currentUser?.uid || "";
+    const isOwner = !!(me && ownerId && me === ownerId);
+
+    UI.el.btnDeleteListing?.classList.toggle("hidden", !isOwner);
+    if (UI.el.btnDeleteListing) UI.el.btnDeleteListing.disabled = false;
+
+    // 6) Update hash
+    if (!fromHash){
+      const newHash = `#listing=${encodeURIComponent(id)}`;
+      if (location.hash !== newHash) history.replaceState(null, "", newHash);
+    }
+
+  }catch(e){
+    console.error(e);
+    alert(e?.message || "فشل فتح الإعلان");
+  }
+}
 
     // زر الحذف فقط للمالك
     const me = auth.currentUser?.uid || "";
