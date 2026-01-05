@@ -9,7 +9,36 @@
   <link rel="stylesheet" href="./components.css">
 
   <script>
-    document.documentElement.setAttribute("data-theme", "dark");
+    /* Dark mode */
+[data-theme="dark"]{
+  /* خلفية أفتح شوي (مو أسود خانق) */
+  --bg: #0b1220;
+  --card: rgba(17, 28, 46, 0.92);        /* أزرق داكن لطيف */
+  --text: #e8eefc;
+  --muted: rgba(196, 210, 232, 0.70);
+  --border: rgba(148, 163, 184, 0.16);
+
+  /* ✅ الأخضر يصير هو الـ primary */
+  --brand: #22c55e;
+  --brand2: #06b6d4;
+  --accent: #22c55e;
+  --danger: #ef4444;
+
+  /* ✅ زر أساسي أخضر (بدل الرمادي الفاتح) */
+  --btn: rgba(34, 197, 94, 0.92);
+  --btnText: #07130c;
+
+  /* زر ثانوي/خلفيات ناعمة */
+  --soft: rgba(34, 197, 94, 0.14);
+
+  /* Inputs */
+  --inputBg: rgba(255,255,255,.06);
+  --inputBorder: rgba(255,255,255,.12);
+
+  /* ظل و ring أنعم */
+  --shadow: 0 12px 28px rgba(0,0,0,0.40);
+  --ring: 0 0 0 4px rgba(34,197,94,.22);
+}
   </script>
 </head>
 <body>
