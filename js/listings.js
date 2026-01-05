@@ -114,11 +114,17 @@ function buildStoreUrl(uid){
   return `store.html?u=${encodeURIComponent(uid)}`;
 }
 
+/**
+ * ✅ WhatsApp normalize:
+ * - يسمح أرقام و +
+ * - يشيل +
+ * - إذا بلش بـ 00 (مثل 0031...) يشيلها
+ * - يرجّع رقم مناسب لـ wa.me
+ */
 function normalizeWhatsapp(raw){
-  // يسمح بالأرقام و +
   let num = String(raw || "").trim().replace(/[^\d+]/g, "");
-  // wa.me لازم رقم بدون +
   num = num.replace(/^\+/, "");
+  if (num.startsWith("00")) num = num.slice(2); // ✅ الأهم لحالتك
   return num;
 }
 
@@ -290,14 +296,16 @@ async function openDetails(id, data = null, fromHash = false){
 
     // WhatsApp button (جنب زر المراسلة)
     if (UI.el.btnWhatsapp){
+      // افتراضياً: مخفي + نص ثابت
       UI.el.btnWhatsapp.classList.add("hidden");
       UI.el.btnWhatsapp.removeAttribute("href");
+      UI.el.btnWhatsapp.textContent = "واتساب";
 
       const waRaw = (prof?.whatsapp || "").toString().trim();
       const num = normalizeWhatsapp(waRaw);
 
+      // ✅ إذا الرقم موجود -> اظهر الزر
       if (ownerId && num){
-        // رسالة جاهزة اختيارية
         const msg = encodeURIComponent(`مرحبا، مهتم بالإعلان: ${data.title || ""}`);
         UI.el.btnWhatsapp.href = `https://wa.me/${num}?text=${msg}`;
         UI.el.btnWhatsapp.classList.remove("hidden");
