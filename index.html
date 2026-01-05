@@ -26,7 +26,17 @@
 
     <!-- SEARCH + FILTERS (DELUXE) -->
     <section class="card searchCard deluxeFilters">
-      <div class="formGrid">
+
+      <!-- Header صغير للفلتر (فخم + مكان لزر طي/فتح لاحقاً) -->
+      <div class="filterHead">
+        <div class="filterTitle">فلترة سريعة</div>
+
+        <!-- زر طي/فتح (اختياري - إذا ما بدك سلوك JS هلأ بيضل شكلي فقط) -->
+        <button id="btnToggleFilters" class="ghost sm" type="button">إظهار/إخفاء</button>
+      </div>
+
+      <!-- محتوى الفلاتر -->
+      <div class="formGrid" id="filtersBody">
 
         <div class="field span2">
           <label class="flabel">عن ماذا تبحث؟</label>
@@ -43,9 +53,10 @@
           <select id="catFilter"></select>
         </div>
 
-        <div class="field span2 actionsRow">
-          <button id="btnApply" class="secondary">تطبيق</button>
-          <button id="btnReset" class="ghost">مسح</button>
+        <!-- ✅ الأزرار لازم تكون Grid لتظل جنب بعض بالموبايل -->
+        <div class="actionsGrid span2">
+          <button id="btnApply" class="secondary" type="button">تطبيق</button>
+          <button id="btnReset" class="ghost" type="button">مسح</button>
         </div>
 
         <div class="muted small span2" style="margin-top:2px">
@@ -55,11 +66,11 @@
       </div>
     </section>
 
-    <!-- LISTINGS (رجعناه مثل ما كان) -->
+    <!-- LISTINGS -->
     <section class="card">
       <div class="sectionHead">
         <h3>الإعلانات</h3>
-        <button id="btnMore" class="secondary">تحميل المزيد</button>
+        <button id="btnMore" class="secondary" type="button">تحميل المزيد</button>
       </div>
 
       <div id="listings" class="cardsGrid"></div>
@@ -69,18 +80,18 @@
       </div>
     </section>
 
-    <!-- DETAILS PAGE (Full Page) -->
+    <!-- DETAILS PAGE -->
     <section id="detailsPage" class="page hidden">
       <div class="pageInner card">
         <div class="pageHead">
-          <button id="btnBack" class="ghost">رجوع</button>
-          <button id="btnShare" class="secondary">مشاركة</button>
+          <button id="btnBack" class="ghost" type="button">رجوع</button>
+          <button id="btnShare" class="secondary" type="button">مشاركة</button>
         </div>
 
         <div class="gallery">
-          <button id="gPrev" class="gbtn">‹</button>
+          <button id="gPrev" class="gbtn" type="button">‹</button>
           <img id="gImg" class="gimg" alt="image" />
-          <button id="gNext" class="gbtn">›</button>
+          <button id="gNext" class="gbtn" type="button">›</button>
         </div>
 
         <div id="gDots" class="dots"></div>
@@ -91,8 +102,8 @@
         <p id="dDesc"></p>
 
         <div class="row actions">
-          <button id="btnChat">مراسلة</button>
-          <button id="btnDeleteListing" class="danger hidden">حذف الإعلان</button>
+          <button id="btnChat" type="button">مراسلة</button>
+          <button id="btnDeleteListing" class="danger hidden" type="button">حذف الإعلان</button>
         </div>
       </div>
     </section>
@@ -101,9 +112,9 @@
     <section id="inboxPage" class="page hidden">
       <div class="pageInner card">
         <div class="pageHead">
-          <button id="btnInboxBack" class="ghost">رجوع</button>
+          <button id="btnInboxBack" class="ghost" type="button">رجوع</button>
           <h3 style="margin:0">الرسائل</h3>
-          <button id="btnInboxRefresh" class="secondary">تحديث</button>
+          <button id="btnInboxRefresh" class="secondary" type="button">تحديث</button>
         </div>
 
         <div id="inboxList" class="inboxList"></div>
@@ -118,7 +129,7 @@
     <section id="addBox" class="page hidden">
       <div class="pageInner card">
         <div class="pageHead">
-          <button id="btnAddBack" class="ghost">رجوع</button>
+          <button id="btnAddBack" class="ghost" type="button">رجوع</button>
           <div class="muted small" id="uploadStatus"></div>
         </div>
 
@@ -146,8 +157,8 @@
         <div id="imgPreview" class="preview"></div>
 
         <div class="row actions">
-          <button id="btnPublish">نشر</button>
-          <button id="btnClear" class="secondary">مسح</button>
+          <button id="btnPublish" type="button">نشر</button>
+          <button id="btnClear" class="secondary" type="button">مسح</button>
         </div>
       </div>
     </section>
@@ -156,7 +167,7 @@
     <section id="chatBox" class="page hidden">
       <div class="pageInner card">
         <div class="pageHead">
-          <button id="btnChatBack" class="ghost">رجوع</button>
+          <button id="btnChatBack" class="ghost" type="button">رجوع</button>
           <h3 id="chatTitle" style="margin:0">محادثة</h3>
         </div>
 
@@ -164,7 +175,7 @@
 
         <div class="row">
           <input id="chatInput" placeholder="اكتب رسالة..." />
-          <button id="btnSend">إرسال</button>
+          <button id="btnSend" type="button">إرسال</button>
         </div>
 
         <p class="muted small">المحادثات تُحذف تلقائيًا لاحقاً (ميزة قادمة).</p>
@@ -178,7 +189,7 @@
     <div class="modalCard">
       <div class="modalHead">
         <div style="font-weight:900">تسجيل الدخول</div>
-        <button id="btnCloseAuth" class="ghost">إغلاق</button>
+        <button id="btnCloseAuth" class="ghost" type="button">إغلاق</button>
       </div>
 
       <div class="row">
@@ -190,25 +201,25 @@
       </div>
 
       <div class="row actions" style="margin-top:12px">
-        <button id="btnLogin">دخول</button>
-        <button id="btnRegister" class="secondary">تسجيل</button>
+        <button id="btnLogin" type="button">دخول</button>
+        <button id="btnRegister" class="secondary" type="button">تسجيل</button>
       </div>
 
-      <button id="btnGoogle" class="secondary full" style="margin-top:10px">دخول عبر Google</button>
+      <button id="btnGoogle" class="secondary full" style="margin-top:10px" type="button">دخول عبر Google</button>
       <p class="muted small" style="margin-top:8px">Email + Google</p>
     </div>
   </div>
 
-  <!-- IMAGE MODAL (Fullscreen) -->
+  <!-- IMAGE MODAL -->
   <div id="imgModal" class="imgModal hidden">
     <div class="imgTop">
       <div id="imgCounter" class="imgCounter"></div>
-      <button id="imgClose" class="ghost">إغلاق</button>
+      <button id="imgClose" class="ghost" type="button">إغلاق</button>
     </div>
 
-    <button id="imgPrev" class="imgNav">‹</button>
+    <button id="imgPrev" class="imgNav" type="button">‹</button>
     <img id="imgFull" class="imgFull" alt="full" />
-    <button id="imgNext" class="imgNav">›</button>
+    <button id="imgNext" class="imgNav" type="button">›</button>
   </div>
 
   <script type="module" src="./app.js?v=20260104_01"></script>
