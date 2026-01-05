@@ -19,11 +19,33 @@
       <span class="dot"></span>
       Souq Syria
     </div>
-    <div id="authBar" class="authbar"></div>
+
+    <!-- ✅ auth + avatar menu -->
+    <div class="authbar" style="display:flex; align-items:center; gap:10px;">
+      <!-- هذا بيضل مثل ما هو لملف auth.js -->
+      <div id="authBar"></div>
+
+      <!-- ✅ صورة الحساب + منيو -->
+      <div class="userMenuWrap" id="userMenuWrap" style="display:none;">
+        <img
+          id="userAvatar"
+          class="avatar"
+          src="./img/falcon.png"
+          alt="account"
+          style="width:38px;height:38px;border-radius:999px;object-fit:cover;border:1px solid rgba(255,255,255,.12);cursor:pointer;"
+        />
+
+        <div id="userMenu" class="userMenu hidden">
+          <button type="button" data-act="myListings">📦 إعلاناتي</button>
+          <button type="button" data-act="profile">👤 بروفايلي</button>
+          <hr />
+          <button type="button" data-act="logout" class="danger">🚪 تسجيل خروج</button>
+        </div>
+      </div>
+    </div>
   </header>
 
   <main class="container">
-
     <!-- SEARCH + FILTERS (DELUXE) -->
     <section class="card searchCard deluxeFilters">
 
