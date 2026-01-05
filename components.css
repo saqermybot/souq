@@ -552,8 +552,7 @@
 }
 
 /* =========================
-   ✅ DELUXE FORMS (Marktplaats-like)
-   - يدعم الفلاتر الجديدة + ممكن نستخدمه لاحقاً بصفحة الإضافة
+   ✅ DELUXE FILTERS (Marktplaats-like)
 ========================= */
 .deluxeFilters{
   padding: 14px;
@@ -562,9 +561,32 @@
   border: 1px solid rgba(255,255,255,.08);
 }
 
+/* رأس الفلاتر */
+.filterHead{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:10px;
+  margin-bottom:12px;
+}
+
+.filterTitle{
+  font-weight:900;
+  font-size:14px;
+  opacity:.92;
+}
+
+/* زر صغير */
+button.sm{
+  padding:8px 10px;
+  font-size:14px;
+  border-radius:12px;
+}
+
+/* شبكة الحقول */
 .formGrid{
   display:grid;
-  grid-template-columns: 1fr 1fr; /* خيارين جنب بعض */
+  grid-template-columns: 1fr 1fr; /* عمودين */
   gap: 10px 12px;
   align-items:start;
 }
@@ -586,30 +608,28 @@
 .field input,
 .field select,
 .field textarea{
-  border-radius: 14px; /* لمسة ناعمة */
+  border-radius: 14px;
 }
 
+/* عنصر ياخذ سطر كامل */
 .span2{ grid-column: 1 / -1; }
 
-.actionsRow{
-  display:flex;
+/* ✅ الأزرار: دايماً جنب بعض */
+.actionsGrid{
+  display:grid;
+  grid-template-columns: 1fr 1fr;
   gap:10px;
 }
 
-.actionsRow button{
-  flex:1;
-  height: 44px;
-  border-radius: 14px;
+.actionsGrid button{
+  height:44px;
+  border-radius:14px;
 }
 
-.fileInput{
-  padding: 10px;
-  border-radius: 14px;
-  border: 1px dashed rgba(255,255,255,.16);
-  background: rgba(255,255,255,.03);
-}
-
+/* على الشاشات الصغيرة: خلي الحقول عمود واحد
+   ✅ لكن الأزرار تبقى 2 جنب بعض */
 @media (max-width:520px){
   .formGrid{ grid-template-columns: 1fr; }
   .span2{ grid-column: 1; }
+  .actionsGrid{ grid-template-columns: 1fr 1fr; } /* ✅ مهم */
 }
