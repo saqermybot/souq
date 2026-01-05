@@ -8,7 +8,10 @@ export const UI = {
     currentListing: null,
     gallery: { imgs: [], idx: 0 },
     chatUnsub: null,
-    filtersActive: false
+    filtersActive: false,
+
+    // ✅ للـ toggle
+    filtersOpen: true
   },
   actions: {
     openAuth: () => {},
@@ -25,7 +28,7 @@ export const UI = {
   },
 
   init(){
-    // ✅ تثبيت الداكن دائماً
+    // ✅ دارك مود (ممكن نغيره لاحقاً لأخضر أفتح)
     document.documentElement.setAttribute("data-theme", "dark");
 
     const ids = [
@@ -42,8 +45,13 @@ export const UI = {
 
       "authModal","btnCloseAuth","email","password","btnLogin","btnRegister","btnGoogle",
 
-      // ✅ DELUXE FILTERS (اختياري إذا موجودين بالـ HTML)
-      "typeFilter","btnTypeAll","btnTypeSale","btnTypeRent","yearFrom","yearTo"
+      // ✅ Deluxe filters (حسب HTML الجديد)
+      "btnToggleFilters","filtersBody",
+      "typeFilter","typeAll","typeSale","typeRent",
+      "yearFrom","yearTo",
+
+      // ✅ عقارات (إذا موجودين بالـ HTML)
+      "estateFilters","estateKindFilter","roomsFilter"
     ];
 
     for (const id of ids) this.el[id] = document.getElementById(id);
@@ -84,10 +92,13 @@ export const UI = {
       }catch{}
     };
 
+    // ✅ Toggle Filters (إظهار/إخفاء)
+    this.bindFiltersToggle();
+
     // ✅ Deluxe Type segmented (بيع/إيجار)
     this.bindDeluxeTypeControls();
 
-    // ✅ Apply / Reset (filters only after Apply)
+    // ✅ Apply / Reset
     this.el.btnApply.onclick = () => {
       this.state.filtersActive = true;
       this.actions.loadListings(true);
@@ -101,23 +112,27 @@ export const UI = {
 
     this.el.btnMore.onclick = () => this.actions.loadListings(false);
 
-    // keyword typing (تحديث مباشر للبحث فقط)
+    // keyword typing (تحديث مباشر للبحث)
     this.el.qSearch.addEventListener("input", debounce(() => {
       this.actions.loadListings(true);
     }, 250));
 
-    // ✅ لو المستخدم غير city/cat/year… ما نفلتر إلا بعد Apply
-    // بس إذا كان filtersActive شغال، أي تغيير يعمل reload تلقائي
+    // ✅ لو filtersActive شغال: أي تغيير يعمل reload
     const maybeReload = () => {
       if (this.state.filtersActive) this.actions.loadListings(true);
     };
 
     this.el.cityFilter?.addEventListener("change", maybeReload);
-    this.el.catFilter?.addEventListener("change", maybeReload);
+    this.el.catFilter?.addEventListener("change", () => {
+      this.syncEstateFiltersVisibility();
+      maybeReload();
+    });
 
-    // range years (optional)
     this.el.yearFrom?.addEventListener("input", maybeReload);
     this.el.yearTo?.addEventListener("input", maybeReload);
+
+    this.el.estateKindFilter?.addEventListener("change", maybeReload);
+    this.el.roomsFilter?.addEventListener("input", maybeReload);
 
     // gallery controls
     this.el.gPrev.onclick = () => this.setGalleryIdx(this.state.gallery.idx - 1);
@@ -132,33 +147,51 @@ export const UI = {
     // hash open listing
     window.addEventListener("hashchange", () => this.handleHash());
     this.handleHash();
+
+    // ✅ أول مرة: نخفي/نظهر فلاتر العقارات حسب القسم
+    this.syncEstateFiltersVisibility();
   },
 
   /* =========================
-     ✅ Deluxe controls helpers
+     ✅ Deluxe: Toggle Filters
+  ========================= */
+  bindFiltersToggle(){
+    if (!this.el.btnToggleFilters || !this.el.filtersBody) return;
+
+    const applyUI = () => {
+      this.el.filtersBody.classList.toggle("hidden", !this.state.filtersOpen);
+      this.el.btnToggleFilters.textContent = this.state.filtersOpen ? "إخفاء" : "إظهار";
+    };
+
+    this.el.btnToggleFilters.onclick = () => {
+      this.state.filtersOpen = !this.state.filtersOpen;
+      applyUI();
+    };
+
+    applyUI();
+  },
+
+  /* =========================
+     ✅ Deluxe: segmented type
   ========================= */
   bindDeluxeTypeControls(){
-    // إذا ما عندك segmented بالـ HTML، ما نكسر شي
     if (!this.el.typeFilter) return;
 
-    // افتراض: default "all" => typeFilter = ""
     const setType = (val) => {
       this.el.typeFilter.value = val || "";
       this.syncTypeButtonsUI();
       if (this.state.filtersActive) this.actions.loadListings(true);
     };
 
-    // Buttons exist?
-    if (this.el.btnTypeAll)  this.el.btnTypeAll.onclick  = () => setType("");
-    if (this.el.btnTypeSale) this.el.btnTypeSale.onclick = () => setType("sale");
-    if (this.el.btnTypeRent) this.el.btnTypeRent.onclick = () => setType("rent");
+    // ✅ IDs الصحيحة حسب HTML: typeAll/typeSale/typeRent
+    this.el.typeAll && (this.el.typeAll.onclick = () => setType(""));
+    this.el.typeSale && (this.el.typeSale.onclick = () => setType("sale"));
+    this.el.typeRent && (this.el.typeRent.onclick = () => setType("rent"));
 
-    // أول مرة
     this.syncTypeButtonsUI();
   },
 
   syncTypeButtonsUI(){
-    // لو الأزرار مش موجودة ما نعمل شي
     if (!this.el.typeFilter) return;
 
     const v = (this.el.typeFilter.value || "").trim(); // "", sale, rent
@@ -169,9 +202,26 @@ export const UI = {
       btn.setAttribute("aria-pressed", active ? "true" : "false");
     };
 
-    on(this.el.btnTypeAll,  v === "");
-    on(this.el.btnTypeSale, v === "sale");
-    on(this.el.btnTypeRent, v === "rent");
+    on(this.el.typeAll,  v === "");
+    on(this.el.typeSale, v === "sale");
+    on(this.el.typeRent, v === "rent");
+  },
+
+  /* =========================
+     ✅ Estate filters show/hide
+  ========================= */
+  normalizeCat(v){
+    const s = (v || "").toString().trim().toLowerCase();
+    if (s === "سيارات") return "cars";
+    if (s === "عقارات") return "realestate";
+    if (s === "إلكترونيات" || s === "الكترونيات") return "electronics";
+    return s; // cars/realestate/electronics/...
+  },
+
+  syncEstateFiltersVisibility(){
+    if (!this.el.estateFilters) return;
+    const cat = this.normalizeCat(this.el.catFilter?.value || "");
+    this.el.estateFilters.classList.toggle("hidden", cat !== "realestate");
   },
 
   resetFiltersUI(){
@@ -179,18 +229,15 @@ export const UI = {
     if (this.el.catFilter) this.el.catFilter.value = "";
     if (this.el.qSearch) this.el.qSearch.value = "";
 
-    // deluxe type
     if (this.el.typeFilter) this.el.typeFilter.value = "";
-
-    // years range
     if (this.el.yearFrom) this.el.yearFrom.value = "";
     if (this.el.yearTo) this.el.yearTo.value = "";
 
-    // لو عندك فلاتر عقارات legacy (إذا موجودين)
     if (this.el.estateKindFilter) this.el.estateKindFilter.value = "";
     if (this.el.roomsFilter) this.el.roomsFilter.value = "";
 
     this.syncTypeButtonsUI();
+    this.syncEstateFiltersVisibility();
   },
 
   /* ========================= */
@@ -204,8 +251,8 @@ export const UI = {
     }
   },
 
-  show(el){ el.classList.remove("hidden"); },
-  hide(el){ el.classList.add("hidden"); },
+  show(el){ el && el.classList.remove("hidden"); },
+  hide(el){ el && el.classList.add("hidden"); },
 
   resetOverlays(){
     this.hide(this.el.detailsPage);
