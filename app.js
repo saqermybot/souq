@@ -1,3 +1,4 @@
+// app.js
 import { UI } from "./js/ui.js";
 import { initListings } from "./js/listings.js";
 import { initAddListing } from "./js/addListing.js";
@@ -5,12 +6,25 @@ import { initAuth } from "./js/auth.js";
 import { initCategories } from "./js/categories.js";
 import { initChat } from "./js/chat.js";
 import { Notify } from "./js/notify.js";
+
 // ✅ ثبّت الوضع الداكن دائماً
 document.documentElement.setAttribute("data-theme", "dark");
-localStorage.setItem("theme", "dark");
+try { localStorage.setItem("theme", "dark"); } catch {}
 
+function safe(fn) {
+  try { return fn(); } catch (e) { console.error(e); }
+}
+
+async function safeAsync(fn) {
+  try { return await fn(); } catch (e) { console.error(e); }
+}
+
+// ✅ Start
 UI.init();
-Notify.ensurePermission();
+
+// إشعارات (اختياري)
+safe(() => Notify.ensurePermission());
+
 // ✅ جهّز actions أولاً
 initListings();
 initAddListing();
@@ -21,24 +35,21 @@ initChat();
 // ✅ Auth بعد ما صار loadInbox جاهز
 initAuth();
 
-// ✅ categories
-await initCategories();
+// ✅ categories (لو فشل ما يوقف الموقع)
+await safeAsync(() => initCategories());
 
 // ✅ دائماً خلي الفلاتر OFF عند أول فتح
 UI.state.filtersActive = false;
 UI.state.onlyMine = false;
 
 // ✅ أول تحميل: اعرض الكل
-await UI.actions.loadListings(true);
+await safeAsync(() => UI.actions.loadListings(true));
 
-// ✅ فتح إعلان من hash
+// ✅ فتح إعلان من hash (مرة واحدة فقط)
+// ملاحظة: UI.init() عندك أصلاً عامل listener للـ hashchange
 if ((location.hash || "").startsWith("#listing=")) {
-  try { await UI.handleHash?.(); } catch {}
+  await safeAsync(() => UI.handleHash?.());
 }
 
-window.addEventListener("hashchange", async () => {
-  if (typeof UI.handleHash === "function") UI.handleHash();
-  if (!(location.hash || "").startsWith("#listing=")) {
-    UI.hide?.(UI.el.detailsPage);
-  }
-});
+// ✅ ما عاد نحتاج listener هون إذا UI.init مركّبه
+// إذا بدك تخليه هون لازم تشيله من UI.init — الأفضل يبقى مكان واحد فقط.
