@@ -34,7 +34,7 @@ export const UI = {
       "authBar","qSearch","cityFilter","catFilter","btnApply","btnReset","btnMore","listings","emptyState",
 
       // ✅ DETAILS (+ dSeller جديد)
-      "detailsPage","btnBack","btnShare","dTitle","dMeta","dSeller","dPrice","dDesc","btnChat","btnDeleteListing","gImg","gDots","gPrev","gNext",
+      "detailsPage","btnBack","btnShare","dTitle","dMeta","dSeller","dPrice","dDesc","btnChat","btnWhatsapp","btnDeleteListing","gImg","gDots","gPrev","gNext",
 
       "inboxPage","btnInboxBack","btnInboxRefresh","inboxList","inboxEmpty",
 
