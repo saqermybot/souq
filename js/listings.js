@@ -117,10 +117,6 @@ function buildStoreUrl(uid){
 
 /**
  * ✅ WhatsApp normalize:
- * - يسمح أرقام و +
- * - يشيل +
- * - إذا بلش بـ 00 (مثل 0031...) يشيلها
- * - يرجّع رقم مناسب لـ wa.me
  */
 function normalizeWhatsapp(raw){
   let num = String(raw || "").trim().replace(/[^\d+]/g, "");
@@ -192,11 +188,17 @@ export function initListings(){
   UI.actions.loadListings = loadListings;
   UI.actions.openDetails = openDetails;
 
-  // ✅ زر مراسلة من صفحة التفاصيل
+  // ✅ زر مراسلة من صفحة التفاصيل (ممنوع للزائر)
   if (UI.el.btnChat){
     UI.el.btnChat.onclick = () => {
       const l = UI.state.currentListing;
       if (!l) return;
+
+      // ✅ لازم يكون مسجل دخول
+      if (!auth.currentUser){
+        UI.actions.openAuth?.();
+        return;
+      }
 
       const me = auth.currentUser?.uid || "";
       const ownerId = l.ownerId || l.uid || "";
@@ -285,13 +287,10 @@ async function openDetails(id, data = null, fromHash = false){
     UI.el.dPrice && (UI.el.dPrice.textContent = formatPrice(data.price, data.currency));
     UI.el.dDesc && (UI.el.dDesc.textContent = data.description || "");
 
-    // 3) Seller + WhatsApp (read profile, مع منع مشكلة الكاش)
+    // 3) Seller + WhatsApp + Report
     const ownerId = getSellerUid(data);
 
-    // اقرأ من الكاش أولاً
     let prof = ownerId ? await getUserProfile(ownerId) : null;
-
-    // ✅ إذا ما في واتساب -> جرّب فورس تحديث مرة
     const waTry = (prof?.whatsapp || "").toString().trim();
     if (ownerId && !waTry){
       prof = await getUserProfile(ownerId, { force: true });
@@ -310,21 +309,21 @@ async function openDetails(id, data = null, fromHash = false){
       }
     }
 
-    // ==== WhatsApp + Report ====
     const waBtn = UI.el.btnWhatsapp || $id("btnWhatsapp");
     const reportBtn = UI.el.btnReportWhatsapp || $id("btnReportWhatsapp");
 
     const waRaw = (prof?.whatsapp || "").toString().trim();
     const waNum = normalizeWhatsapp(waRaw);
 
-    // رابط الإعلان + ID
     const listingUrl = location.href.split("#")[0] + `#listing=${encodeURIComponent(id)}`;
 
+    // ==== WhatsApp button (ممنوع للزائر) ====
     if (waBtn){
       waBtn.classList.add("hidden");
       waBtn.removeAttribute("href");
-      waBtn.textContent = "";
+      waBtn.textContent = "واتساب"; // خلي النص ثابت
 
+      // لو ما في رقم: ضل مخفي
       if (ownerId && waNum){
         const msg = encodeURIComponent(
 `مرحباً 👋
@@ -341,20 +340,42 @@ ${listingUrl}
 للمراسلة الرسمية استخدم زر "مراسلة" داخل الموقع.`
         );
 
-        waBtn.href = `https://wa.me/${waNum}?text=${msg}`;
-        waBtn.textContent = "واتساب";
+        const href = `https://wa.me/${waNum}?text=${msg}`;
+        waBtn.href = href;
         waBtn.classList.remove("hidden");
+
+        // ✅ منع الفتح للزائر حتى لو ضغط
+        waBtn.onclick = (e) => {
+          if (!auth.currentUser){
+            e.preventDefault();
+            e.stopPropagation();
+            UI.actions.openAuth?.();
+            return false;
+          }
+          // مسجل: خليه يفتح طبيعي
+          return true;
+        };
+      } else {
+        // ما في رقم: خليه مخفي وما في onclick
+        waBtn.onclick = null;
       }
     }
 
-    // زر الإبلاغ (إن كان موجود بالـ HTML)
+    // ==== Report (يُفضّل يكون أيضاً لمستخدم مسجل حتى نعرف مين بلّغ) ====
     if (reportBtn){
       reportBtn.classList.add("hidden");
+      reportBtn.onclick = null;
 
       if (ownerId && waNum){
         reportBtn.classList.remove("hidden");
 
         reportBtn.onclick = async () => {
+          // ✅ بلاغ فقط للمسجل
+          if (!auth.currentUser){
+            UI.actions.openAuth?.();
+            return;
+          }
+
           const ok = confirm("هل تريد الإبلاغ أن رقم واتساب هذا غير صحيح أو يسبب إزعاج؟");
           if (!ok) return;
 
@@ -451,7 +472,6 @@ async function loadListings(reset = true){
     const data = ds.data();
 
     if (data.isActive === false) return;
-
     if (cityVal && data.city !== cityVal) return;
 
     if (catVal){
