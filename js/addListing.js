@@ -1,4 +1,4 @@
-// addListing.js (معدل: يتعامل مع categoryId = cars/realestate/electronics + حقول ديناميكية + حفظ منظم)
+// addListing.js (Deluxe UI + dynamic fields + organized saving)
 
 import { db, auth } from "./firebase.js";
 import { CLOUDINARY, MAX_IMAGES } from "./config.js";
@@ -18,8 +18,6 @@ let previewUrls = [];
 /* =========================
    ✅ HELPERS
 ========================= */
-
-// تحويل categoryId لاسم عربي (للواجهة/الكروت)
 function catToAr(catId){
   if (catId === "cars") return "سيارات";
   if (catId === "realestate") return "عقارات";
@@ -28,7 +26,6 @@ function catToAr(catId){
 }
 
 function getCategoryId(){
-  // UI.el.aCat value صار id من categories.js
   return (UI.el.aCat?.value || "").toString().trim();
 }
 
@@ -40,101 +37,119 @@ export function initAddListing() {
 
   if (UI.el.btnAddBack) UI.el.btnAddBack.onclick = () => UI.hide(UI.el.addBox);
 
-  UI.el.btnClear.onclick = clearForm;
-  UI.el.aImages.onchange = previewImages;
-  UI.el.btnPublish.onclick = publish;
+  if (UI.el.btnClear) UI.el.btnClear.onclick = clearForm;
+  if (UI.el.aImages) UI.el.aImages.onchange = previewImages;
+  if (UI.el.btnPublish) UI.el.btnPublish.onclick = publish;
 
   ensureDynamicFields();
-
   if (UI.el.aCat) {
-    UI.el.aCat.addEventListener("change", syncDynamicFieldsVisibility);
+    UI.el.aCat.addEventListener("change", () => {
+      syncDynamicFieldsVisibility();
+    });
     syncDynamicFieldsVisibility();
   }
 }
 
 /* =========================
-   ✅ DYNAMIC FIELDS
+   ✅ DYNAMIC FIELDS (DELUXE)
 ========================= */
 function ensureDynamicFields(){
-  const anchor =
-    UI.el.aImages?.closest(".row") ||
-    UI.el.aImages?.parentElement ||
-    UI.el.addBox;
+  // نحط الديف بعد اختيار المدينة/القسم وقبل الصور
+  // نحاول نلقط مكان ثابت: قبل aImages مباشرة
+  const imagesEl = UI.el.aImages;
+  if (!imagesEl) return;
 
-  if (!anchor) return;
+  // إذا موجود لا تعيد
   if (document.getElementById("dynamicFieldsWrap")) return;
 
   const wrap = document.createElement("div");
   wrap.id = "dynamicFieldsWrap";
-  wrap.className = "box";
+  // إذا addBox صار deluxe formGrid، هاد بيساعد ينسجم. وإذا لا، ما بيضر.
+  wrap.className = "deluxeDyn";
 
+  // نستخدم نفس كلاسات الديلوكس: formGrid/field/flabel/span2
   wrap.innerHTML = `
+    <div class="muted small" style="margin:6px 2px 10px">
+      معلومات إضافية حسب الصنف
+    </div>
+
     <!-- ✅ سيارات -->
     <div id="carFields" class="hidden">
-      <div class="row">
-        <label class="muted small">نوع الإعلان</label>
-        <select id="aTypeCar" class="input">
-          <option value="">اختر (بيع / إيجار)</option>
-          <option value="sale">بيع</option>
-          <option value="rent">إيجار</option>
-        </select>
-      </div>
+      <div class="formGrid">
+        <div class="field">
+          <label class="flabel">نوع الإعلان</label>
+          <select id="aTypeCar">
+            <option value="">اختر (بيع / إيجار)</option>
+            <option value="sale">بيع</option>
+            <option value="rent">إيجار</option>
+          </select>
+        </div>
 
-      <div class="row">
-        <label class="muted small">موديل السيارة</label>
-        <input id="aCarModel" class="input" placeholder="مثال: كيا ريو / هيونداي i10" />
-      </div>
+        <div class="field">
+          <label class="flabel">سنة الموديل</label>
+          <input id="aCarYear" type="number" min="1950" max="2035" placeholder="مثال: 2006" />
+        </div>
 
-      <div class="row">
-        <label class="muted small">سنة الموديل</label>
-        <input id="aCarYear" class="input" type="number" min="1950" max="2035" placeholder="مثال: 2006" />
+        <div class="field span2">
+          <label class="flabel">موديل السيارة</label>
+          <input id="aCarModel" placeholder="مثال: كيا ريو / هيونداي i10" />
+        </div>
       </div>
     </div>
 
     <!-- ✅ عقارات -->
     <div id="estateFields" class="hidden">
-      <div class="row">
-        <label class="muted small">نوع الإعلان</label>
-        <select id="aTypeEstate" class="input">
-          <option value="">اختر (بيع / إيجار)</option>
-          <option value="sale">بيع</option>
-          <option value="rent">إيجار</option>
-        </select>
-      </div>
+      <div class="formGrid">
+        <div class="field">
+          <label class="flabel">نوع الإعلان</label>
+          <select id="aTypeEstate">
+            <option value="">اختر (بيع / إيجار)</option>
+            <option value="sale">بيع</option>
+            <option value="rent">إيجار</option>
+          </select>
+        </div>
 
-      <div class="row">
-        <label class="muted small">نوع العقار</label>
-        <select id="aEstateKind" class="input">
-          <option value="">اختر نوع العقار</option>
-          <option value="شقة">شقة</option>
-          <option value="بيت">بيت</option>
-          <option value="محل">محل</option>
-          <option value="أرض">أرض</option>
-        </select>
-      </div>
+        <div class="field">
+          <label class="flabel">عدد الغرف (اختياري)</label>
+          <input id="aRooms" type="number" min="0" max="20" placeholder="مثال: 3" />
+        </div>
 
-      <div class="row">
-        <label class="muted small">عدد الغرف (اختياري)</label>
-        <input id="aRooms" class="input" type="number" min="0" max="20" placeholder="مثال: 3" />
+        <div class="field span2">
+          <label class="flabel">نوع العقار</label>
+          <select id="aEstateKind">
+            <option value="">اختر نوع العقار</option>
+            <option value="شقة">شقة</option>
+            <option value="بيت">بيت</option>
+            <option value="محل">محل</option>
+            <option value="أرض">أرض</option>
+          </select>
+        </div>
       </div>
     </div>
 
-    <!-- ✅ إلكترونيات (اختياري) -->
+    <!-- ✅ إلكترونيات -->
     <div id="electFields" class="hidden">
-      <div class="row">
-        <label class="muted small">نوع الإلكترونيات</label>
-        <select id="aElectKind" class="input">
-          <option value="">اختر النوع</option>
-          <option value="موبايل">موبايل</option>
-          <option value="تلفزيون">تلفزيون</option>
-          <option value="كمبيوتر">كمبيوتر</option>
-        </select>
+      <div class="formGrid">
+        <div class="field span2">
+          <label class="flabel">نوع الإلكترونيات (اختياري)</label>
+          <select id="aElectKind">
+            <option value="">اختر النوع</option>
+            <option value="موبايل">موبايل</option>
+            <option value="تلفزيون">تلفزيون</option>
+            <option value="كمبيوتر">كمبيوتر</option>
+          </select>
+        </div>
       </div>
     </div>
   `;
 
-  anchor.parentElement?.insertBefore(wrap, anchor);
+  // أدخل wrap قبل input الصور
+  const parent = imagesEl.parentElement;
+  if (!parent) return;
 
+  parent.insertBefore(wrap, imagesEl);
+
+  // اربط عناصر UI.el الجديدة
   UI.el.aTypeCar = document.getElementById("aTypeCar");
   UI.el.aCarModel = document.getElementById("aCarModel");
   UI.el.aCarYear = document.getElementById("aCarYear");
@@ -165,21 +180,22 @@ function openAdd() {
   UI.resetOverlays();
   UI.show(UI.el.addBox);
   setStatus("");
-  UI.el.imgPreview.innerHTML = "";
+  if (UI.el.imgPreview) UI.el.imgPreview.innerHTML = "";
   cleanupPreviewUrls();
   ensureDynamicFields();
   syncDynamicFieldsVisibility();
 }
 
 function clearForm() {
-  UI.el.aTitle.value = "";
-  UI.el.aDesc.value = "";
-  UI.el.aPrice.value = "";
-  UI.el.aCurrency.value = "SYP";
-  UI.el.aCity.value = "";
-  UI.el.aCat.value = "";
-  UI.el.aImages.value = "";
-  UI.el.imgPreview.innerHTML = "";
+  if (UI.el.aTitle) UI.el.aTitle.value = "";
+  if (UI.el.aDesc) UI.el.aDesc.value = "";
+  if (UI.el.aPrice) UI.el.aPrice.value = "";
+  if (UI.el.aCurrency) UI.el.aCurrency.value = "SYP";
+  if (UI.el.aCity) UI.el.aCity.value = "";
+  if (UI.el.aCat) UI.el.aCat.value = "";
+  if (UI.el.aImages) UI.el.aImages.value = "";
+  if (UI.el.imgPreview) UI.el.imgPreview.innerHTML = "";
+
   setStatus("");
   cleanupPreviewUrls();
 
@@ -211,10 +227,10 @@ function cleanupPreviewUrls(){
 function previewImages() {
   cleanupPreviewUrls();
 
-  const filesAll = Array.from(UI.el.aImages.files || []);
+  const filesAll = Array.from(UI.el.aImages?.files || []);
   const files = filesAll.slice(0, MAX_IMAGES);
 
-  UI.el.imgPreview.innerHTML = "";
+  if (UI.el.imgPreview) UI.el.imgPreview.innerHTML = "";
 
   files.forEach((f) => {
     const img = document.createElement("img");
@@ -238,25 +254,22 @@ function previewImages() {
    ✅ EXTRA FIELDS + VALIDATION
 ========================= */
 function collectExtraFields(catId){
-  // نخليها منظمة + توافق قديم
   if (catId === "cars") {
-    const typeId = (UI.el.aTypeCar?.value || "").trim(); // sale/rent
+    const typeId = (UI.el.aTypeCar?.value || "").trim();
     const carModel = (UI.el.aCarModel?.value || "").trim();
     const y = Number(UI.el.aCarYear?.value || 0);
     const carYear = (y >= 1950 && y <= 2035) ? y : null;
 
     return {
-      typeId, // ✅ قياسي
+      typeId,
       carModel,
       carYear,
-
-      // ✅ شكل منظم جديد
       car: { typeId, model: carModel, year: carYear }
     };
   }
 
   if (catId === "realestate") {
-    const typeId = (UI.el.aTypeEstate?.value || "").trim(); // sale/rent
+    const typeId = (UI.el.aTypeEstate?.value || "").trim();
     const estateKind = (UI.el.aEstateKind?.value || "").trim();
     const r = Number(UI.el.aRooms?.value || 0);
     const rooms = (r >= 0 && r <= 20) ? r : null;
@@ -265,7 +278,6 @@ function collectExtraFields(catId){
       typeId,
       estateKind,
       rooms,
-
       estate: { typeId, kind: estateKind, rooms }
     };
   }
@@ -288,7 +300,6 @@ function validateForm({ title, description, price, city, catId, files, extra }) 
   if (!catId) return "اختر الصنف";
   if (!files.length) return `اختر صورة واحدة على الأقل (حد أقصى ${MAX_IMAGES})`;
 
-  // ✅ شروط حسب الصنف
   if (catId === "cars") {
     if (!extra.typeId) return "اختر (بيع/إيجار) للسيارة";
     if (!extra.carModel) return "اكتب موديل السيارة";
@@ -298,11 +309,6 @@ function validateForm({ title, description, price, city, catId, files, extra }) 
   if (catId === "realestate") {
     if (!extra.typeId) return "اختر (بيع/إيجار) للعقار";
     if (!extra.estateKind) return "اختر نوع العقار";
-  }
-
-  if (catId === "electronics") {
-    // اختياري: إذا بدك تلزم النوع
-    // if (!extra.electKind) return "اختر نوع الإلكترونيات";
   }
 
   return null;
@@ -315,17 +321,17 @@ async function publish() {
   try { requireAuth(); } catch { return; }
   if (publishing) return;
 
-  const title = UI.el.aTitle.value.trim();
-  const description = UI.el.aDesc.value.trim();
-  const price = Number(UI.el.aPrice.value);
-  const currency = UI.el.aCurrency.value;
-  const city = UI.el.aCity.value;
+  const title = (UI.el.aTitle?.value || "").trim();
+  const description = (UI.el.aDesc?.value || "").trim();
+  const price = Number(UI.el.aPrice?.value || 0);
+  const currency = (UI.el.aCurrency?.value || "SYP").trim();
+  const city = (UI.el.aCity?.value || "").trim();
 
-  const categoryId = getCategoryId();          // cars/realestate/electronics
-  const categoryNameAr = catToAr(categoryId);  // للعرض فقط (اختياري)
+  const categoryId = getCategoryId();
+  const categoryNameAr = catToAr(categoryId);
 
   const extra = collectExtraFields(categoryId);
-  const files = Array.from(UI.el.aImages.files || []).slice(0, MAX_IMAGES);
+  const files = Array.from(UI.el.aImages?.files || []).slice(0, MAX_IMAGES);
 
   const err = validateForm({ title, description, price, city, catId: categoryId, files, extra });
   if (err) return alert(err);
@@ -355,10 +361,9 @@ async function publish() {
       currency,
       city,
 
-      // ✅ نخزن الاثنين للتوافق + سهولة العرض
-      categoryId,            // الأساسي
-      categoryNameAr,        // للعرض (اختياري)
-      category: categoryNameAr || categoryId, // دعم قديم إن كنت تستخدمه بالكروت
+      categoryId,
+      categoryNameAr,
+      category: categoryNameAr || categoryId,
 
       ...extra,
 
@@ -377,7 +382,6 @@ async function publish() {
     await reloadListingsWithRetry();
 
   } catch (e) {
-    // ✅ إذا في خطأ، رجّع الزر يشتغل وما يضل "جاري النشر"
     alert(e?.message || "فشل النشر");
     console.error("publish error:", e);
   } finally {
