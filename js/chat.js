@@ -241,52 +241,65 @@ async function sendMsg(){
   if (!text) return;
   if (!currentChat.roomId) return;
 
+  // ✅ على الموبايل أحياناً عملية الإرسال بتفشل/تتأخر (شبكة/صلاحيات)،
+  // فبنفرّغ الحقل فوراً ونمنع الضغط المتكرر، وبنرجّع النص إذا فشل الإرسال.
+  UI.el.btnSend.disabled = true;
+  UI.el.chatInput.value = "";
+  try{ UI.el.chatInput.blur(); }catch{}
+
   const me = auth.currentUser.uid;
   const otherId = currentChat.otherId;
 
-  const msgsRef = collection(db, "chats", currentChat.roomId, "messages");
-  const chatDocRef = doc(db, "chats", currentChat.roomId);
+  const roomId = currentChat.roomId;
+  const chatDocRef = doc(db, "chats", roomId);
 
-  // ✅ أرسل الرسالة (يظهر ⏳ تلقائياً بسبب hasPendingWrites)
-  await addDoc(msgsRef, {
-    text,
-    senderId: me,
-    createdAt: serverTimestamp(),
-    deliveredTo: {}, // لاحقاً بنحط deliveredTo[other]
-    readBy: {},      // لاحقاً بنحط readBy[other]
-    expiresAt: new Date(Date.now() + 7*24*3600*1000)
-  });
-
-  // ✅ حدّث الميتا + عدّاد غير مقروء للطرف الآخر
   try{
-    await runTransaction(db, async (tx) => {
-      const snap = await tx.get(chatDocRef);
-
-      if (!snap.exists()){
-        tx.set(chatDocRef, {
-          listingId: currentChat.listingId,
-          listingTitle: currentChat.listingTitle,
-          buyerId: me,
-          sellerId: otherId,
-          participants: [me, otherId].sort(),
-          updatedAt: serverTimestamp(),
-          lastText: text.slice(0,120),
-          unread: { [me]: 0, [otherId]: 1 }
-        }, { merge: true });
-        return;
-      }
-
-      tx.update(chatDocRef, {
-        lastText: text.slice(0, 120),
-        updatedAt: serverTimestamp(),
-        [`unread.${otherId}`]: increment(1),
-        [`unread.${me}`]: 0
-      });
+    await addDoc(collection(db, "chats", roomId, "messages"), {
+      text,
+      senderId: me,
+      createdAt: serverTimestamp(),
+      deliveredTo: {}, // لاحقاً بنحط deliveredTo[other]
+      readBy: {},      // لاحقاً بنحط readBy[other]
+      expiresAt: new Date(Date.now() + 7*24*3600*1000)
     });
-  }catch{}
 
-  UI.el.chatInput.value = "";
+    // ✅ حدّث الميتا + عدّاد غير مقروء للطرف الآخر
+    try{
+      await runTransaction(db, async (tx) => {
+        const snap = await tx.get(chatDocRef);
+
+        if (!snap.exists()){
+          tx.set(chatDocRef, {
+            listingId: currentChat.listingId,
+            listingTitle: currentChat.listingTitle,
+            buyerId: me,
+            sellerId: otherId,
+            participants: [me, otherId].sort(),
+            updatedAt: serverTimestamp(),
+            lastText: text.slice(0,120),
+            unread: { [me]: 0, [otherId]: 1 }
+          }, { merge: true });
+          return;
+        }
+
+        tx.update(chatDocRef, {
+          lastText: text.slice(0, 120),
+          updatedAt: serverTimestamp(),
+          [`unread.${otherId}`]: increment(1),
+          [`unread.${me}`]: 0
+        });
+      });
+    }catch{}
+  }catch(err){
+    // رجّع النص + رسالة بسيطة
+    UI.el.chatInput.value = text;
+    alert("تعذر إرسال الرسالة. تأكد من الإنترنت وسجّل خروج/دخول إذا لزم.");
+    console.warn("sendMsg failed", err);
+  }finally{
+    UI.el.btnSend.disabled = false;
+  }
 }
+
 
 /* =========================
    ✅ INBOX
