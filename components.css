@@ -732,3 +732,94 @@ button.sm{
 @media (max-width:520px){
   .filtersRow{ grid-template-columns: 1fr; }
 }
+/* =========================
+   ✅ UX PATCH (Details + WhatsApp + Dots + Touch)
+   ضع هذا المقطع في آخر components.css
+========================= */
+
+/* 1) خلي روابط <a> اللي شكلها زر تشتغل فعلاً */
+#detailsPage .row.actions a,
+#detailsPage .pageInner a.secondary,
+#detailsPage .pageInner a.ghost,
+#detailsPage .pageInner a.danger{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  gap:8px;
+
+  padding:10px 14px;
+  border-radius:12px;
+  font-size:16px;
+  line-height:1;
+  cursor:pointer;
+  user-select:none;
+
+  /* منع underline */
+  text-decoration:none !important;
+}
+
+/* زر واتساب واضح كزر */
+#btnWhatsapp.secondary{
+  border:1px solid rgba(34,197,94,.28);
+}
+
+/* 2) ترتيب أزرار التفاصيل (مراسلة + واتساب + حذف) */
+#detailsPage .row.actions{
+  display:flex;
+  gap:10px;
+  flex-wrap:wrap;
+  margin-top:12px;
+}
+
+#detailsPage .row.actions > button,
+#detailsPage .row.actions > a{
+  flex: 1 1 160px;
+  min-width: 140px;
+  height:44px;
+}
+
+/* على الموبايل: خليه صفين بشكل مرتب */
+@media (max-width:520px){
+  #detailsPage .row.actions > button,
+  #detailsPage .row.actions > a{
+    flex: 1 1 calc(50% - 6px);
+    min-width: 0;
+  }
+  /* زر الحذف ياخذ سطر لحاله لأنه خطر */
+  #btnDeleteListing{
+    flex: 1 1 100% !important;
+  }
+}
+
+/* 3) نقاط السلايدر بالدراك: الأسود مو واضح */
+.dot{
+  background: rgba(255,255,255,.25);
+}
+.dot.active{
+  background: rgba(34,197,94,.95); /* أخضر واضح */
+}
+
+/* 4) أزرار السلايدر أكبر ولمس أفضل */
+.gbtn{
+  width:48px;
+  height:48px;
+  font-size:26px;
+}
+
+/* 5) تحسين الضغط على الكروت على الموبايل */
+.cardItem{
+  -webkit-tap-highlight-color: transparent;
+}
+.cardItem:active{
+  transform: scale(.995);
+}
+
+/* 6) تثبيت الـ topbar على الموبايل بدون اهتزاز */
+.topbar{
+  will-change: transform;
+}
+
+/* 7) تحسين الـ inbox badge (أوضح شوي) */
+#inboxBadge{
+  box-shadow: 0 6px 16px rgba(0,0,0,.35);
+}
