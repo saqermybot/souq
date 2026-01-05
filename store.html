@@ -1,0 +1,95 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>إعلانات البائع</title>
+
+  <style>
+    :root { color-scheme: dark; }
+    body{
+      margin:0; font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial;
+      background:#0b0f16; color:#fff;
+    }
+    .wrap{ max-width: 900px; margin: 0 auto; padding: 14px 12px 60px; }
+    .top{
+      display:flex; gap:10px; align-items:center; justify-content:space-between;
+      padding:10px 12px; border:1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.03); border-radius:14px;
+    }
+    .titleBox{ display:flex; flex-direction:column; gap:4px; }
+    .h1{ font-size:16px; font-weight:800; }
+    .sub{ font-size:12px; opacity:.8 }
+    .btn{
+      border:1px solid rgba(255,255,255,.12); background: rgba(255,255,255,.05);
+      color:#fff; padding:8px 10px; border-radius:12px; cursor:pointer;
+      font-size:13px; text-decoration:none; display:inline-flex; align-items:center; gap:6px;
+    }
+    .btn:active{ transform: translateY(1px); }
+
+    .grid{
+      display:grid; gap:10px; margin-top:12px;
+      grid-template-columns: repeat(2, minmax(0,1fr));
+    }
+    @media (min-width: 760px){
+      .grid{ grid-template-columns: repeat(3, minmax(0,1fr)); }
+    }
+
+    .card{
+      border:1px solid rgba(255,255,255,.08);
+      background: rgba(255,255,255,.03);
+      border-radius:16px; overflow:hidden;
+      cursor:pointer;
+    }
+    .card img{ width:100%; height:140px; object-fit:cover; display:block; background:#111; }
+    .p{ padding:10px 10px 12px; }
+    .t{ font-weight:800; font-size:14px; line-height:1.35; margin-bottom:6px; }
+    .m{ font-size:12px; opacity:.85; margin-bottom:8px; }
+    .pr{ font-weight:900; font-size:14px; }
+
+    .empty{
+      margin-top:16px; padding:14px 12px;
+      border:1px dashed rgba(255,255,255,.14);
+      border-radius:14px; opacity:.85; font-size:13px;
+    }
+    .foot{
+      display:flex; justify-content:center; margin-top:14px;
+    }
+    .hint{ font-size:12px; opacity:.7; margin-top:8px; text-align:center; }
+    .row{ display:flex; gap:10px; align-items:center; }
+    .badge{
+      font-size:11px; padding:4px 8px; border-radius:999px;
+      border:1px solid rgba(255,255,255,.12);
+      background: rgba(255,255,255,.04);
+      opacity:.9;
+    }
+  </style>
+</head>
+
+<body>
+  <div class="wrap">
+    <div class="top">
+      <div class="titleBox">
+        <div class="h1" id="sellerTitle">إعلانات البائع</div>
+        <div class="sub" id="sellerSub">...</div>
+      </div>
+
+      <div class="row">
+        <span class="badge" id="countBadge">0</span>
+        <a class="btn" href="./index.html">الرجوع للسوق</a>
+      </div>
+    </div>
+
+    <div class="grid" id="grid"></div>
+
+    <div class="empty hidden" id="emptyBox">لا يوجد إعلانات لهذا البائع حالياً.</div>
+
+    <div class="foot">
+      <button class="btn" id="btnMore" style="display:none">تحميل المزيد</button>
+    </div>
+    <div class="hint" id="hint"></div>
+  </div>
+
+  <script type="module" src="./js/store.js"></script>
+</body>
+</html>
