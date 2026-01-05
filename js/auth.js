@@ -1,4 +1,6 @@
 import { auth } from "./firebase.js";
+import { signOut } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
+import { auth } from "./firebase.js";
 import {
   onAuthStateChanged,
   signInWithEmailAndPassword,
@@ -13,6 +15,46 @@ import { UI } from "./ui.js";
 let globalMenuCloserInstalled = false;
 
 export function initAuth() {
+  const avatar = document.getElementById("userAvatar");
+const menu = document.getElementById("userMenu");
+
+avatar?.addEventListener("click", (e) => {
+  e.stopPropagation();
+  menu.classList.toggle("hidden");
+});
+
+// إغلاق عند الضغط برا
+document.addEventListener("click", () => {
+  if (!menu.classList.contains("hidden")) {
+    menu.classList.add("hidden");
+  }
+});
+
+// أزرار القائمة
+menu?.addEventListener("click", async (e) => {
+  const act = e.target?.dataset?.act;
+  if (!act) return;
+
+  menu.classList.add("hidden");
+
+  const uid = auth.currentUser?.uid || "";
+
+  if (act === "myListings") {
+    if (!uid) return alert("يجب تسجيل الدخول");
+    location.href = `store.html?u=${uid}`;
+  }
+
+  if (act === "profile") {
+    // صفحة بسيطة حالياً
+    location.href = `profile.html`;
+  }
+
+  if (act === "logout") {
+    await signOut(auth);
+    location.reload();
+  }
+});
+
   // ✅ تثبيت الوضع الداكن دائماً
   document.documentElement.setAttribute("data-theme", "dark");
   try { localStorage.setItem("theme", "dark"); } catch {}
