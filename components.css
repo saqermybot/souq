@@ -35,6 +35,9 @@
   flex-wrap:wrap;
   position:relative;
 }
+.searchCard{
+  margin-top:12px;
+}
 
 /* زر أيقونة بالهيدر */
 .iconBtn{
