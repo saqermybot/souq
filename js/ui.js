@@ -28,13 +28,13 @@ export const UI = {
   },
 
   init(){
-    // ✅ دارك مود (ممكن نغيره لاحقاً لأخضر أفتح)
     document.documentElement.setAttribute("data-theme", "dark");
 
     const ids = [
       "authBar","qSearch","cityFilter","catFilter","btnApply","btnReset","btnMore","listings","emptyState",
 
-      "detailsPage","btnBack","btnShare","dTitle","dMeta","dPrice","dDesc","btnChat","btnDeleteListing","gImg","gDots","gPrev","gNext",
+      // ✅ DETAILS (+ dSeller جديد)
+      "detailsPage","btnBack","btnShare","dTitle","dMeta","dSeller","dPrice","dDesc","btnChat","btnDeleteListing","gImg","gDots","gPrev","gNext",
 
       "inboxPage","btnInboxBack","btnInboxRefresh","inboxList","inboxEmpty",
 
@@ -45,40 +45,44 @@ export const UI = {
 
       "authModal","btnCloseAuth","email","password","btnLogin","btnRegister","btnGoogle",
 
-      // ✅ Deluxe filters (حسب HTML الجديد)
+      // ✅ Deluxe filters
       "btnToggleFilters","filtersBody",
       "typeFilter","typeAll","typeSale","typeRent",
       "yearFrom","yearTo",
 
-      // ✅ عقارات (إذا موجودين بالـ HTML)
+      // ✅ عقارات
       "estateFilters","estateKindFilter","roomsFilter"
     ];
 
     for (const id of ids) this.el[id] = document.getElementById(id);
 
-    // selects
-    this.el.cityFilter.innerHTML =
-      `<option value="">كل المدن</option>` +
-      SY_CITIES.map(c=>`<option value="${c}">${c}</option>`).join("");
+    // ✅ تعبئة المدن (إذا العناصر موجودة)
+    if (this.el.cityFilter){
+      this.el.cityFilter.innerHTML =
+        `<option value="">كل المدن</option>` +
+        SY_CITIES.map(c=>`<option value="${c}">${c}</option>`).join("");
+    }
 
-    this.el.aCity.innerHTML =
-      `<option value="">اختر مدينة</option>` +
-      SY_CITIES.map(c=>`<option value="${c}">${c}</option>`).join("");
+    if (this.el.aCity){
+      this.el.aCity.innerHTML =
+        `<option value="">اختر مدينة</option>` +
+        SY_CITIES.map(c=>`<option value="${c}">${c}</option>`).join("");
+    }
 
-    // back buttons
-    this.el.btnBack.onclick = () => this.hideDetailsPage();
-    this.el.btnAddBack.onclick = () => this.hide(this.el.addBox);
-    this.el.btnChatBack.onclick = () => this.actions.closeChat();
+    // ✅ Back buttons (بحماية null)
+    this.el.btnBack && (this.el.btnBack.onclick = () => this.hideDetailsPage());
+    this.el.btnAddBack && (this.el.btnAddBack.onclick = () => this.hide(this.el.addBox));
+    this.el.btnChatBack && (this.el.btnChatBack.onclick = () => this.actions.closeChat?.());
 
     // ✅ inbox buttons
-    this.el.btnInboxBack.onclick = () => {
+    this.el.btnInboxBack && (this.el.btnInboxBack.onclick = () => {
       if (typeof this.actions.closeInbox === "function") this.actions.closeInbox();
       else this.hideInboxPage();
-    };
-    this.el.btnInboxRefresh.onclick = () => this.actions.loadInbox?.();
+    });
+    this.el.btnInboxRefresh && (this.el.btnInboxRefresh.onclick = () => this.actions.loadInbox?.());
 
-    // share
-    this.el.btnShare.onclick = async () => {
+    // ✅ share
+    this.el.btnShare && (this.el.btnShare.onclick = async () => {
       const l = this.state.currentListing;
       if (!l) return;
       const url = location.href.split("#")[0] + `#listing=${encodeURIComponent(l.id)}`;
@@ -90,36 +94,38 @@ export const UI = {
           alert("تم نسخ رابط الإعلان ✅");
         }
       }catch{}
-    };
+    });
 
-    // ✅ Toggle Filters (إظهار/إخفاء)
+    // ✅ Toggle Filters
     this.bindFiltersToggle();
 
-    // ✅ Deluxe Type segmented (بيع/إيجار)
+    // ✅ segmented type
     this.bindDeluxeTypeControls();
 
     // ✅ Apply / Reset
-    this.el.btnApply.onclick = () => {
+    this.el.btnApply && (this.el.btnApply.onclick = () => {
       this.state.filtersActive = true;
-      this.actions.loadListings(true);
-    };
+      this.actions.loadListings?.(true);
+    });
 
-    this.el.btnReset.onclick = () => {
+    this.el.btnReset && (this.el.btnReset.onclick = () => {
       this.resetFiltersUI();
       this.state.filtersActive = false;
-      this.actions.loadListings(true);
-    };
+      this.actions.loadListings?.(true);
+    });
 
-    this.el.btnMore.onclick = () => this.actions.loadListings(false);
+    this.el.btnMore && (this.el.btnMore.onclick = () => this.actions.loadListings?.(false));
 
-    // keyword typing (تحديث مباشر للبحث)
-    this.el.qSearch.addEventListener("input", debounce(() => {
-      this.actions.loadListings(true);
-    }, 250));
+    // ✅ keyword typing
+    if (this.el.qSearch){
+      this.el.qSearch.addEventListener("input", debounce(() => {
+        this.actions.loadListings?.(true);
+      }, 250));
+    }
 
-    // ✅ لو filtersActive شغال: أي تغيير يعمل reload
+    // ✅ لو filtersActive شغال
     const maybeReload = () => {
-      if (this.state.filtersActive) this.actions.loadListings(true);
+      if (this.state.filtersActive) this.actions.loadListings?.(true);
     };
 
     this.el.cityFilter?.addEventListener("change", maybeReload);
@@ -134,17 +140,19 @@ export const UI = {
     this.el.estateKindFilter?.addEventListener("change", maybeReload);
     this.el.roomsFilter?.addEventListener("input", maybeReload);
 
-    // gallery controls
-    this.el.gPrev.onclick = () => this.setGalleryIdx(this.state.gallery.idx - 1);
-    this.el.gNext.onclick = () => this.setGalleryIdx(this.state.gallery.idx + 1);
+    // ✅ gallery controls
+    this.el.gPrev && (this.el.gPrev.onclick = () => this.setGalleryIdx(this.state.gallery.idx - 1));
+    this.el.gNext && (this.el.gNext.onclick = () => this.setGalleryIdx(this.state.gallery.idx + 1));
 
-    // auth modal
-    this.el.btnCloseAuth.onclick = () => this.actions.closeAuth();
-    this.el.authModal.addEventListener("click", (e)=>{
-      if (e.target === this.el.authModal) this.actions.closeAuth();
-    });
+    // ✅ auth modal
+    this.el.btnCloseAuth && (this.el.btnCloseAuth.onclick = () => this.actions.closeAuth?.());
+    if (this.el.authModal){
+      this.el.authModal.addEventListener("click", (e)=>{
+        if (e.target === this.el.authModal) this.actions.closeAuth?.();
+      });
+    }
 
-    // hash open listing
+    // ✅ hash open listing
     window.addEventListener("hashchange", () => this.handleHash());
     this.handleHash();
 
@@ -180,10 +188,9 @@ export const UI = {
     const setType = (val) => {
       this.el.typeFilter.value = val || "";
       this.syncTypeButtonsUI();
-      if (this.state.filtersActive) this.actions.loadListings(true);
+      if (this.state.filtersActive) this.actions.loadListings?.(true);
     };
 
-    // ✅ IDs الصحيحة حسب HTML: typeAll/typeSale/typeRent
     this.el.typeAll && (this.el.typeAll.onclick = () => setType(""));
     this.el.typeSale && (this.el.typeSale.onclick = () => setType("sale"));
     this.el.typeRent && (this.el.typeRent.onclick = () => setType("rent"));
@@ -195,7 +202,6 @@ export const UI = {
     if (!this.el.typeFilter) return;
 
     const v = (this.el.typeFilter.value || "").trim(); // "", sale, rent
-
     const on = (btn, active) => {
       if (!btn) return;
       btn.classList.toggle("active", !!active);
@@ -215,7 +221,7 @@ export const UI = {
     if (s === "سيارات") return "cars";
     if (s === "عقارات") return "realestate";
     if (s === "إلكترونيات" || s === "الكترونيات") return "electronics";
-    return s; // cars/realestate/electronics/...
+    return s;
   },
 
   syncEstateFiltersVisibility(){
@@ -240,8 +246,9 @@ export const UI = {
     this.syncEstateFiltersVisibility();
   },
 
-  /* ========================= */
-
+  /* =========================
+     ✅ Hash
+  ========================= */
   handleHash(){
     const h = location.hash || "";
     if (!h.startsWith("#listing=")) return;
@@ -287,34 +294,43 @@ export const UI = {
   },
 
   renderAuthBar(html){
-    this.el.authBar.innerHTML = html;
+    if (this.el.authBar) this.el.authBar.innerHTML = html;
   },
 
+  // ✅ Gallery
   renderGallery(imgs=[]){
     this.state.gallery = { imgs, idx: 0 };
+
+    if (!this.el.gImg || !this.el.gDots) return;
+
     if (!imgs.length){
       this.el.gImg.src = "";
       this.el.gDots.innerHTML = "";
       return;
     }
+
     this.el.gImg.src = imgs[0];
     this.el.gDots.innerHTML = imgs.map((_,i)=>`<div class="dot ${i===0?"active":""}"></div>`).join("");
   },
 
   setGalleryIdx(i){
     const n = this.state.gallery.imgs.length;
-    if (!n) return;
+    if (!n || !this.el.gImg || !this.el.gDots) return;
+
     const idx = (i + n) % n;
     this.state.gallery.idx = idx;
     this.el.gImg.src = this.state.gallery.imgs[idx];
+
     [...this.el.gDots.children].forEach((d,k)=>d.classList.toggle("active", k===idx));
   },
 
   setEmptyState(isEmpty){
+    if (!this.el.emptyState) return;
     this.el.emptyState.style.display = isEmpty ? "block" : "none";
   },
 
   setInboxEmpty(isEmpty){
+    if (!this.el.inboxEmpty) return;
     this.el.inboxEmpty.style.display = isEmpty ? "block" : "none";
   }
 };
