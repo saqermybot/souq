@@ -612,35 +612,55 @@ button.sm{
   border-radius:14px;
 }
 
-/* Segmented */
+/*ص Segmented /* =========================
+   ✅ SEGMENTED (بيع/إيجار) - واضح وثابت
+========================= */
 .segWrap{
   display:flex;
   width:100%;
   border-radius:14px;
   padding:4px;
-  background: rgba(255,255,255,.06);
-  border: 1px solid rgba(255,255,255,.10);
   gap:6px;
+
+  /* خليها مثل input */
+  background: rgba(255,255,255,.04);
+  border: 1px solid rgba(255,255,255,.10);
 }
 
 .segBtn{
   flex:1;
-  height:42px;
+  height:44px;
   border-radius:12px;
-  border:0;
-  background: transparent;
-  color: var(--text);
+
+  /* مهم: ما بدنا ستايل الأزرار العام يأثر */
+  background: transparent !important;
+  color: var(--text) !important;
+
+  border: 1px solid rgba(255,255,255,.10);
+  box-shadow: none;
   font-weight:900;
   font-size:14px;
   cursor:pointer;
-  transition: transform .06s ease, background .2s ease, box-shadow .2s ease;
+
+  transition: transform .06s ease, background .2s ease, box-shadow .2s ease, border-color .2s ease;
 }
+
 .segBtn:active{ transform: scale(.99); }
 
 .segBtn.active{
-  background: rgba(34,197,94,.18);
-  border: 1px solid rgba(34,197,94,.30);
-  box-shadow: 0 8px 18px rgba(0,0,0,.18);
+  /* ✅ أوضح بكثير من قبل */
+  background: rgba(34,197,94,.22) !important;
+  border-color: rgba(34,197,94,.45) !important;
+
+  /* لمعة/عمق خفيف */
+  box-shadow:
+    0 10px 22px rgba(0,0,0,.22),
+    inset 0 0 0 1px rgba(34,197,94,.25);
+}
+
+/* (اختياري) لما يكون في Focus على iOS */
+.segBtn:focus{
+  outline: none;
 }
 
 /* Range */
