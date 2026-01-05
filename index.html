@@ -27,15 +27,11 @@
     <!-- SEARCH + FILTERS (DELUXE) -->
     <section class="card searchCard deluxeFilters">
 
-      <!-- Header صغير للفلتر (فخم + مكان لزر طي/فتح لاحقاً) -->
       <div class="filterHead">
         <div class="filterTitle">فلترة سريعة</div>
-
-        <!-- زر طي/فتح (اختياري - إذا ما بدك سلوك JS هلأ بيضل شكلي فقط) -->
         <button id="btnToggleFilters" class="ghost sm" type="button">إظهار/إخفاء</button>
       </div>
 
-      <!-- محتوى الفلاتر -->
       <div class="formGrid" id="filtersBody">
 
         <div class="field span2">
@@ -51,6 +47,45 @@
         <div class="field">
           <label class="flabel">القسم</label>
           <select id="catFilter"></select>
+        </div>
+
+        <!-- ✅ نوع الإعلان (Segemented) -->
+        <div class="field span2">
+          <label class="flabel">نوع الإعلان</label>
+
+          <div class="segWrap" role="group" aria-label="نوع الإعلان">
+            <button id="typeAll" class="segBtn active" type="button">الكل</button>
+            <button id="typeSale" class="segBtn" type="button">بيع</button>
+            <button id="typeRent" class="segBtn" type="button">إيجار</button>
+          </div>
+
+          <!-- ✅ قيمة حقيقية تُقرأ من JS -->
+          <input id="typeFilter" type="hidden" value="">
+        </div>
+
+        <!-- ✅ سنة السيارات (من/إلى) -->
+        <div class="field span2">
+          <label class="flabel">سنة (سيارات)</label>
+          <div class="range2">
+            <input id="yearFrom" type="number" min="1950" max="2035" placeholder="من" />
+            <input id="yearTo" type="number" min="1950" max="2035" placeholder="إلى" />
+          </div>
+        </div>
+
+        <!-- ✅ فلاتر العقارات (تظهر فقط عند اختيار عقارات) -->
+        <div id="estateFilters" class="field span2 hidden">
+          <label class="flabel">تفاصيل العقار</label>
+          <div class="range2">
+            <select id="estateKindFilter">
+              <option value="">كل أنواع العقارات</option>
+              <option value="شقة">شقة</option>
+              <option value="محل">محل</option>
+              <option value="أرض">أرض</option>
+              <option value="بيت">بيت</option>
+            </select>
+
+            <input id="roomsFilter" type="number" min="0" max="20" placeholder="غرف" />
+          </div>
         </div>
 
         <!-- ✅ الأزرار لازم تكون Grid لتظل جنب بعض بالموبايل -->
