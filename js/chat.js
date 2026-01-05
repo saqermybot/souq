@@ -62,13 +62,10 @@ function notifyBrowser(title, body){
   try{
     if (!("Notification" in window)) return;
     if (Notification.permission === "default") {
-      // اطلب مرة واحدة (ممكن أول رسالة جديدة)
       Notification.requestPermission().then(()=>{});
       return;
     }
     if (Notification.permission !== "granted") return;
-
-    // إشعار بسيط
     new Notification(title, { body });
   }catch{}
 }
@@ -88,11 +85,9 @@ async function resolveOwnerId(listingId){
    ✅ TOP INDICATORS (Dot/Badge)
 ========================= */
 function setInboxIndicator(totalUnread){
-  // Dot (لو موجود)
   const dot = document.getElementById("inboxDot");
   if (dot) dot.classList.toggle("hidden", !(totalUnread > 0));
 
-  // Badge (لو موجود)
   const badge = document.getElementById("inboxBadge");
   if (badge){
     badge.textContent = totalUnread > 99 ? "99+" : String(totalUnread);
@@ -106,10 +101,9 @@ function hasMapKey(obj, key){
 }
 
 function statusIconForMessage(m, me, otherId, isPending){
-  // فقط لرسائلي
   if (m.senderId !== me) return "";
+  if (isPending) return "⏳";
 
-  if (isPending) return "⏳";          // لسه ما انحفظت
   const readBy = m.readBy || {};
   const deliveredTo = m.deliveredTo || {};
 
@@ -158,26 +152,28 @@ async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
     unread: { [me]: 0, [realOwnerId]: 0 }
   }, { merge: true });
 
-  // ✅ فتح الشات = اعتبرها مقروءة بالمحادثة (unread meta)
+  // ✅ فتح الشات = اعتبرها مقروءة بالمحادثة
   try{
     await updateDoc(chatDocRef, { [`unread.${me}`]: 0 });
   }catch{}
 
   const msgsRef = collection(db, "chats", roomId, "messages");
-  const qy = query(msgsRef, orderBy("createdAt","asc"), limit(60));
+
+  // ✅ آخر 60 رسالة (الأحدث) ثم نعرضها بالترتيب الصحيح
+  const qy = query(msgsRef, orderBy("createdAt","desc"), limit(60));
 
   if (UI.state.chatUnsub) UI.state.chatUnsub();
 
   UI.state.chatUnsub = onSnapshot(qy, async (snap)=>{
     UI.el.chatMsgs.innerHTML = "";
 
-    // ✅ بعد ما نوصل للـ snapshot: علّم رسائل الطرف الثاني وصلت/انقرأت
-    // - Delivered: أي رسالة مو إلي ومو متعلّمة deliveredTo[me]
-    // - Read: بما أني داخل الشات الآن => علّم readBy[me]
     const b = writeBatch(db);
     let needCommit = false;
 
-    snap.forEach(d=>{
+    // ✅ اعكس النتائج حتى تطلع من القديم للجديد
+    const docs = [];
+    snap.forEach(d => docs.push(d));
+    docs.reverse().forEach(d=>{
       const m = d.data() || {};
       const isPending = d.metadata?.hasPendingWrites;
 
@@ -200,15 +196,12 @@ async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
       if (m.senderId && m.senderId !== me){
         const deliveredTo = m.deliveredTo || {};
         const readBy = m.readBy || {};
-
         const msgRef = doc(db, "chats", roomId, "messages", d.id);
 
         if (!deliveredTo[me]){
           b.set(msgRef, { deliveredTo: { [me]: serverTimestamp() } }, { merge: true });
           needCommit = true;
         }
-
-        // إذا أنا فاتح الشات => read
         if (!readBy[me]){
           b.set(msgRef, { readBy: { [me]: serverTimestamp() } }, { merge: true });
           needCommit = true;
@@ -222,7 +215,6 @@ async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
       try{ await b.commit(); }catch{}
     }
 
-    // بعد القراءة، صفّر unread على مستوى الميتا مرة ثانية (احتياط)
     try{ await updateDoc(chatDocRef, { [`unread.${me}`]: 0 }); }catch{}
   });
 }
@@ -247,13 +239,30 @@ async function sendMsg(){
   const msgsRef = collection(db, "chats", currentChat.roomId, "messages");
   const chatDocRef = doc(db, "chats", currentChat.roomId);
 
-  // ✅ أرسل الرسالة (يظهر ⏳ تلقائياً بسبب hasPendingWrites)
+  // ✅ ضمان وجود وثيقة الشات قبل إرسال الرسالة (مهم مع القواعد)
+  try{
+    const snap = await getDoc(chatDocRef);
+    if (!snap.exists()){
+      await setDoc(chatDocRef, {
+        listingId: currentChat.listingId,
+        listingTitle: currentChat.listingTitle,
+        buyerId: me,
+        sellerId: otherId,
+        participants: [me, otherId].sort(),
+        updatedAt: serverTimestamp(),
+        lastText: "",
+        unread: { [me]: 0, [otherId]: 0 }
+      }, { merge: true });
+    }
+  }catch{}
+
+  // ✅ أرسل الرسالة
   await addDoc(msgsRef, {
     text,
     senderId: me,
     createdAt: serverTimestamp(),
-    deliveredTo: {}, // لاحقاً بنحط deliveredTo[other]
-    readBy: {},      // لاحقاً بنحط readBy[other]
+    deliveredTo: {},
+    readBy: {},
     expiresAt: new Date(Date.now() + 7*24*3600*1000)
   });
 
@@ -322,7 +331,6 @@ async function loadInbox(){
 
   if (inboxUnsub) inboxUnsub();
 
-  // ✅ هاد هو المكان الصح (قبل onSnapshot)
   let lastTotalUnread = 0;
   let lastNotifyAt = 0;
 
@@ -354,7 +362,6 @@ async function loadInbox(){
 
     setInboxIndicator(totalUnread);
 
-    // ✅ إشعار المتصفح عند زيادة غير المقروء
     const now = Date.now();
     const increased = totalUnread > lastTotalUnread;
 
@@ -365,8 +372,6 @@ async function loadInbox(){
       const shouldNotify = document.hidden || !inboxOpen;
 
       if (shouldNotify) {
-        // إذا ما بدك "زر" هلق، بس استدعي ensurePermission مرة بـ app.js
-        // Notify.show رح يشتغل فقط إذا permission = granted
         try{
           Notify.show({
             title: "رسالة جديدة 💬",
