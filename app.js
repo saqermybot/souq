@@ -9,7 +9,7 @@ import { initChat } from "./js/features/chat.js";
 import { initInbox } from "./js/features/inbox.js";      // ✅ مهم
 import { initAuth } from "./js/features/auth.js";
 import { initCategories } from "./js/features/categories.js";
-
+document.body.insertAdjacentHTML("afterbegin", "<div style='position:fixed;top:10px;left:10px;z-index:99999;background:#22c55e;color:#000;padding:8px 10px;border-radius:10px;font-weight:900'>app.js loaded ✅</div>");
 // ✅ ثبّت الوضع الداكن دائماً
 document.documentElement.setAttribute("data-theme", "dark");
 localStorage.setItem("theme", "dark");
