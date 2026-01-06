@@ -93,8 +93,8 @@ html, body{
   all: unset;
   cursor: pointer;
 
-  width:44px;
-  height:44px;
+  width:38px;
+  height:38px;
   border-radius:12px;
 
   background: rgba(255,255,255,.12);
@@ -105,7 +105,7 @@ html, body{
   align-items:center;
   justify-content:center;
 
-  font-size:18px;
+  font-size:17px;
   font-weight:400;
   line-height:1;
   position:relative;
@@ -600,8 +600,8 @@ html, body{
 
 /* زر صغير (خاص بالفلتر) */
 button.sm{
-  padding:8px 10px;
-  font-size:14px;
+  padding:7px 10px;
+  font-size:13px;
   border-radius:12px;
 }
 
@@ -638,7 +638,7 @@ button.sm{
   gap:10px;
 }
 .actionsGrid button{
-  height:44px;
+  height:40px;
   border-radius:14px;
 }
 
@@ -655,7 +655,7 @@ button.sm{
 
 .segBtn{
   flex:1;
-  height:44px;
+  height:38px;
   border-radius:12px;
 
   background: transparent !important;
@@ -665,7 +665,7 @@ button.sm{
   box-shadow: none !important;
 
   font-weight:900;
-  font-size:14px;
+  font-size:13px;
   cursor:pointer;
   transition: transform .06s ease, background .2s ease, box-shadow .2s ease, border-color .2s ease;
 }
@@ -711,6 +711,24 @@ button.sm{
 /* =========================
    DETAILS UX PATCH (WhatsApp + Buttons)
 ========================= */
+
+/* ✅ Description (Read more) */
+.descBox{ margin-top: 10px; }
+.descText{
+  white-space: pre-wrap;
+  line-height: 1.65;
+  margin: 0;
+}
+.linkBtn{
+  margin-top: 6px;
+  padding: 6px 8px;
+  border-radius: 10px;
+  background: transparent;
+  border: 1px solid rgba(255,255,255,.10);
+  color: var(--text);
+  font-size: 13px;
+}
+.linkBtn:hover{ background: rgba(255,255,255,.04); }
 #detailsPage .row.actions a,
 #detailsPage .pageInner a.secondary,
 #detailsPage .pageInner a.ghost,
@@ -741,7 +759,7 @@ button.sm{
 #detailsPage .row.actions > a{
   flex: 1 1 160px;
   min-width: 140px;
-  height:44px;
+  height:40px;
 }
 @media (max-width:520px){
   #detailsPage .row.actions > button,
@@ -751,6 +769,27 @@ button.sm{
   }
   #btnDeleteListing{ flex: 1 1 100% !important; }
 }
+
+/* =========================
+   DETAILS: Description "Read more"
+========================= */
+.descText{
+  white-space: pre-wrap;
+  line-height: 1.65;
+  margin: 10px 0 6px;
+}
+
+.linkBtn{
+  background: transparent !important;
+  border: 0 !important;
+  padding: 4px 0 !important;
+  border-radius: 10px;
+  font-weight: 900;
+  font-size: 13px;
+  color: var(--brand2);
+  cursor: pointer;
+}
+.linkBtn:hover{ text-decoration: underline; }
 
 /* =========================
    FAVORITES + TOAST

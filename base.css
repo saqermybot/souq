@@ -181,9 +181,9 @@ h2,h3{ margin:6px 0 10px; }
 input, textarea, select{
   width:100%;
   border:1px solid var(--inputBorder);
-  padding:12px;
+  padding:11px;
   border-radius:12px;
-  font-size:16px;
+  font-size:15px;
   background: var(--inputBg);
   color: var(--text);
   outline:none;
@@ -223,8 +223,8 @@ button,
 a.btn{
   border:0;
   border-radius:12px;
-  padding:10px 14px;
-  font-size:16px;
+  padding:9px 12px;
+  font-size:15px;
   cursor:pointer;
   background:var(--btn);
   color:var(--btnText);

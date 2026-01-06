@@ -36,6 +36,7 @@
 
         <div id="userMenu" class="userMenu hidden">
           <button type="button" data-act="myListings">📦 إعلاناتي</button>
+          <button type="button" data-act="favorites">⭐ مفضلتي</button>
           <button type="button" data-act="profile">👤 بروفايلي</button>
           <hr />
           <button type="button" data-act="logout" class="danger">🚪 تسجيل خروج</button>
@@ -159,7 +160,12 @@
         <div id="dSeller" class="sellerLine"></div>
 
         <div class="price" id="dPrice"></div>
-        <p id="dDesc"></p>
+
+        <!-- ✅ Description (Read more) -->
+        <div class="descBox">
+          <p id="dDesc" class="descText"></p>
+          <button id="btnReadMore" class="linkBtn hidden" type="button">قراءة المزيد</button>
+        </div>
 
         <!-- ✅ Actions -->
         <div class="row actions">
