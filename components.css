@@ -978,3 +978,70 @@ button.sm{
   #btnFav{flex:1 1 calc(50% - 6px) !important;}
   #btnChat{flex:1 1 calc(50% - 6px) !important;}
 }
+
+/* =========================
+   DETAILS: INFO CARDS (C)
+   - Marketplace-like "Zekerheden" ...
+========================= */
+#detailsPage .infoSection{
+  margin-top:14px;
+  padding-top:10px;
+  border-top:1px solid rgba(255,255,255,.08);
+}
+
+#detailsPage .sectionTitle{
+  margin:0 0 10px 0;
+  font-size:16px;
+  font-weight:800;
+}
+
+#detailsPage .infoGrid{
+  display:grid;
+  grid-template-columns:1fr;
+  gap:10px;
+}
+
+#detailsPage .infoCard{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  padding:10px 12px;
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:14px;
+  background:rgba(15,23,42,.35);
+}
+
+#detailsPage .infoIcon{
+  width:42px;
+  height:42px;
+  border-radius:999px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(255,255,255,.06);
+  font-size:18px;
+  flex:0 0 auto;
+}
+
+#detailsPage .infoText{
+  min-width:0;
+}
+
+#detailsPage .infoLabel{
+  font-weight:800;
+  font-size:13px;
+  line-height:1.2;
+}
+
+#detailsPage .infoValue{
+  margin-top:2px;
+  font-size:13px;
+  color:rgba(255,255,255,.78);
+  overflow:hidden;
+  text-overflow:ellipsis;
+  white-space:nowrap;
+}
+
+@media (min-width: 760px){
+  #detailsPage .infoGrid{ grid-template-columns:1fr 1fr; }
+}
