@@ -35,6 +35,7 @@
         />
 
         <div id="userMenu" class="userMenu hidden">
+          <button type="button" data-act="favorites">❤️ المفضلة</button>
           <button type="button" data-act="myListings">📦 إعلاناتي</button>
           <button type="button" data-act="profile">👤 بروفايلي</button>
           <hr />
@@ -159,7 +160,10 @@
         <div id="dSeller" class="sellerLine"></div>
 
         <div class="price" id="dPrice"></div>
-        <p id="dDesc"></p>
+        <div class="desc-box" id="descBox">
+          <div class="desc-content collapsed" id="descContent"></div>
+          <button class="desc-toggle" id="descToggle" type="button">قراءة المزيد</button>
+        </div>
 
         <!-- ✅ Actions -->
         <div class="row actions">
@@ -269,7 +273,21 @@
 
   </main>
 
-  <!-- AUTH MODAL -->
+  
+  <!-- FAVORITES MODAL -->
+  <div id="favModal" class="modal hidden">
+    <div class="modalCard">
+      <div class="modalHead">
+        <div style="font-weight:900">❤️ المفضلة</div>
+        <button id="btnCloseFav" class="ghost" type="button">إغلاق</button>
+      </div>
+
+      <div id="favEmpty" class="muted" style="margin-top:10px; display:none;">لا يوجد عناصر في المفضلة.</div>
+      <div id="favGrid" class="grid" style="margin-top:12px;"></div>
+    </div>
+  </div>
+
+<!-- AUTH MODAL -->
   <div id="authModal" class="modal hidden">
     <div class="modalCard">
       <div class="modalHead">
