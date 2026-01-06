@@ -619,38 +619,57 @@ function renderDescriptionWithReadMore(text){
   if (!el) return;
 
   const full = String(text || "").trim();
-  const MAX = 260; // chars
-
   // reset
   el.dataset.full = full;
   el.dataset.expanded = "0";
 
+  // ✅ always keep full text (preserve new lines) and use CSS clamp for collapse
+  el.textContent = full;
+  el.classList.add("collapsed");
+
+  const setBtn = (expanded) => {
+    if (!btn) return;
+    btn.textContent = expanded ? "إخفاء ⌃" : "قراءة المزيد ⌄";
+  };
+
   const setCollapsed = () => {
-    el.textContent = full.length > MAX ? (full.slice(0, MAX).trimEnd() + "…") : full;
+    el.classList.add("collapsed");
     el.dataset.expanded = "0";
-    if (btn){
-      btn.textContent = "قراءة المزيد";
-      btn.classList.toggle("hidden", full.length <= MAX);
-    }
+    setBtn(false);
   };
 
   const setExpanded = () => {
-    el.textContent = full || "";
+    el.classList.remove("collapsed");
     el.dataset.expanded = "1";
-    if (btn){
-      btn.textContent = "إخفاء";
-      btn.classList.toggle("hidden", full.length <= MAX);
-    }
+    setBtn(true);
+  };
+
+  // ✅ decide whether button is needed (only if text overflows when collapsed)
+  const updateBtnVisibility = () => {
+    if (!btn) return;
+    // must be collapsed for correct measurement
+    el.classList.add("collapsed");
+    requestAnimationFrame(() => {
+      const needs = el.scrollHeight > el.clientHeight + 2;
+      btn.classList.toggle("hidden", !needs);
+      // keep correct label
+      setBtn(el.dataset.expanded === "1");
+      // restore state
+      if (el.dataset.expanded === "1") el.classList.remove("collapsed");
+    });
   };
 
   // initial
   setCollapsed();
+  updateBtnVisibility();
 
   if (btn){
     btn.onclick = () => {
       const expanded = el.dataset.expanded === "1";
       if (expanded) setCollapsed();
       else setExpanded();
+      // after toggle, keep visibility consistent
+      updateBtnVisibility();
     };
   }
 }
