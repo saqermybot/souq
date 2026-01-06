@@ -419,7 +419,7 @@
 }
 
 /* =========================
-   AVATAR + MENU
+   AVATAR + MENU (FIX)
 ========================= */
 .avatarBtn{
   width:44px;
@@ -433,6 +433,7 @@
   align-items:center;
   justify-content:center;
   color:#fff;
+  position:relative; /* ✅ مهم */
 }
 
 .avatarBtn img{
@@ -450,15 +451,22 @@
 
 .menu{
   position:absolute;
-  top:52px;
-  left:0;
-  min-width:150px;
+  top:56px;
+
+  /* ✅ بدل left:0 */
+  right:0;
+  left:auto;
+
+  min-width:170px;
   background: var(--card);
   border:1px solid var(--border);
   border-radius:12px;
-  box-shadow: var(--shadow);
+  box-shadow: 0 16px 40px rgba(0,0,0,.35);
   padding:6px;
-  z-index: 999;
+  z-index: 9999;
+
+  /* ✅ حماية من الخروج برا الشاشة */
+  max-width: calc(100vw - 16px);
 }
 
 .menuItem{
@@ -472,15 +480,16 @@
   cursor:pointer;
 }
 .menuItem:hover{ background: rgba(148,163,184,.12); }
+
 .menuItem.danger{
   background: var(--danger);
   color:#fff;
   border:0;
 }
-.menuItem.danger:hover{
-  filter: brightness(.95);
-}
+.menuItem.danger:hover{ filter: brightness(.95); }
 
+/* ✅ مهم: خلي الـ topbar يسمح للقائمة تطلع */
+.topbar{ overflow: visible !important; }
 /* =========================
    INBOX LIST
 ========================= */
