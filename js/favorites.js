@@ -36,6 +36,10 @@ function listingRef(listingId){
   return doc(db, "listings", listingId);
 }
 
+function viewDocRef(uid, listingId){
+  return doc(db, "listings", listingId, "views", uid);
+}
+
 export function requireUserForFav(){
   if (auth.currentUser) return true;
   toast("سجّل دخول لتضيف الإعلان للمفضلة ❤️");
@@ -114,6 +118,10 @@ function viewKey(listingId){
 export async function bumpViewCount(listingId){
   if (!listingId) return { bumped:false };
 
+  // ✅ Views للمسجّلين فقط
+  const uid = auth.currentUser?.uid;
+  if (!uid) return { bumped:false, needAuth:true };
+
   // gate with localStorage
   try{
     const k = viewKey(listingId);
@@ -123,8 +131,19 @@ export async function bumpViewCount(listingId){
     localStorage.setItem(k, String(now));
   }catch{}
 
+  // ✅ مرة واحدة لكل مستخدم (مع TTL لراحة الواجهة)
   try{
-    await setDoc(listingRef(listingId), { viewsCount: increment(1) }, { merge: true });
+    const lRef = listingRef(listingId);
+    const vRef = viewDocRef(uid, listingId);
+
+    await runTransaction(db, async (tx) => {
+      const vSnap = await tx.get(vRef);
+      if (vSnap.exists()) return; // counted قبل
+
+      tx.set(vRef, { createdAt: serverTimestamp() }, { merge: true });
+      tx.set(lRef, { viewsCount: increment(1) }, { merge: true });
+    });
+
     return { bumped:true };
   }catch{
     return { bumped:false };
