@@ -200,6 +200,7 @@ function readYearRange(){
 export function initListings(){
   UI.actions.loadListings = loadListings;
   UI.actions.openDetails = openDetails;
+  UI.actions.openFavorites = openFavorites;
 
   // ✅ زر مراسلة من صفحة التفاصيل (ممنوع للزائر)
   if (UI.el.btnChat){
@@ -231,6 +232,132 @@ export function initListings(){
   if (UI.el.btnDeleteListing){
     UI.el.btnDeleteListing.onclick = () => deleteCurrentListing();
   }
+}
+
+/* =========================
+   ✅ Favorites view (simple)
+   - shows user's favorite listings inside the same grid
+========================= */
+
+async function openFavorites(){
+  if (!auth.currentUser) return UI.actions.openAuth?.();
+
+  // reset UI (keep it simple)
+  try{ if (UI.el.qSearch) UI.el.qSearch.value = ""; }catch{}
+  UI.state.filtersActive = false;
+
+  await loadFavorites();
+}
+
+async function loadFavorites(){
+  const uid = auth.currentUser?.uid || "";
+  if (!uid || !UI.el.listings) return;
+
+  UI.el.listings.innerHTML = "";
+  UI.state.lastDoc = null;
+  UI.el.btnMore?.classList.add("hidden");
+
+  // ✅ Read favorites list
+  const favQ = query(collection(db, "users", uid, "favorites"), orderBy("createdAt", "desc"), limit(120));
+  const favSnap = await getDocs(favQ);
+  const favIds = favSnap.docs.map(d => d.id).filter(Boolean);
+
+  // empty
+  if (!favIds.length){
+    if (UI.el.emptyState){
+      UI.el.emptyState.style.display = "block";
+      UI.el.emptyState.textContent = "لا يوجد مفضلات حالياً";
+    }
+    return;
+  }
+
+  if (UI.el.emptyState) UI.el.emptyState.style.display = "none";
+
+  // ✅ Fetch listings docs (best-effort)
+  const docs = await Promise.all(
+    favIds.map(async (id) => {
+      try{
+        const s = await getDoc(doc(db, "listings", id));
+        return s.exists() ? { id, data: s.data() } : null;
+      }catch{
+        return null;
+      }
+    })
+  );
+
+  const frag = document.createDocumentFragment();
+
+  // We already know all are favorites
+  const favSet = new Set(favIds);
+
+  docs.filter(Boolean).forEach(({ id, data }) => {
+    if (!data || data.isActive === false) return;
+
+    const img = (data.images && data.images[0]) ? data.images[0] : "";
+
+    const extraMeta =
+      isCarsCategory(data) ? carLine(data) :
+      isEstateCategory(data) ? estateLine(data) :
+      "";
+
+    const cityTxt = escapeHtml(data.city || "");
+    const catTxt  = escapeHtml(data.category || data.categoryNameAr || data.categoryId || "");
+
+    const sellerUid = getSellerUid(data);
+    const sellerName = escapeHtml(getSellerNameFallback(data));
+    const sellerHtml = sellerUid
+      ? `<div class="sellerLine">البائع: <a class="sellerLink" href="${buildStoreUrl(sellerUid)}">${sellerName}</a></div>`
+      : `<div class="sellerLine">البائع: <span class="sellerName">${sellerName}</span></div>`;
+
+    const card = document.createElement("div");
+    card.className = "cardItem";
+    const viewsC = Number(data.viewsCount || 0) || 0;
+    const favC = Number(data.favCount || 0) || 0;
+    const isFav = favSet.has(id);
+
+    card.innerHTML = `
+      <div class="cardMedia">
+        <img src="${img}" alt="" />
+        <button class="favBtn favOverlay ${isFav ? "isFav" : ""}" type="button" aria-label="مفضلة">♥</button>
+      </div>
+      <div class="p">
+        <div class="t">${escapeHtml(data.title || "بدون عنوان")}</div>
+        ${extraMeta ? `<div class="carMeta">${escapeHtml(extraMeta)}</div>` : ``}
+        <div class="m">${cityTxt}${(cityTxt && catTxt) ? " • " : ""}${catTxt}</div>
+        ${sellerHtml}
+        <div class="pr">${escapeHtml(formatPrice(data.price, data.currency))}</div>
+        <div class="cardStats">
+          <span class="muted">♥ <span class="favCount">${favC}</span></span>
+          <span class="muted">👁️ ${viewsC}</span>
+        </div>
+      </div>
+    `;
+
+    card.onclick = () => openDetails(id, data);
+
+    const favBtn = card.querySelector(".favOverlay");
+    if (favBtn){
+      favBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!requireUserForFav()) return;
+        favBtn.disabled = true;
+        try{
+          const res = await toggleFavorite(id);
+          if (res?.ok && !res.isFav){
+            // remove card from favorites view
+            card.remove();
+          }
+        }finally{
+          favBtn.disabled = false;
+        }
+      });
+    }
+
+    frag.appendChild(card);
+  });
+
+  UI.el.listings.appendChild(frag);
 }
 
 /* =========================
@@ -298,7 +425,9 @@ async function openDetails(id, data = null, fromHash = false){
     UI.el.dMeta && (UI.el.dMeta.textContent = extraMeta ? `${baseMeta} • ${extraMeta}` : baseMeta);
 
     UI.el.dPrice && (UI.el.dPrice.textContent = formatPrice(data.price, data.currency));
-    UI.el.dDesc && (UI.el.dDesc.textContent = data.description || "");
+
+    // ✅ Description: show limited + "Read more"
+    renderDescriptionWithReadMore(data.description || "");
 
     // ✅ Views counter (ضغطة حقيقية)
     bumpViewCount(id);
@@ -481,6 +610,52 @@ ${listingUrl}
 }
 
 /* =========================
+   ✅ Description (Read more)
+========================= */
+
+function renderDescriptionWithReadMore(text){
+  const el = UI.el.dDesc;
+  const btn = UI.el.btnReadMore;
+  if (!el) return;
+
+  const full = String(text || "").trim();
+  const MAX = 260; // chars
+
+  // reset
+  el.dataset.full = full;
+  el.dataset.expanded = "0";
+
+  const setCollapsed = () => {
+    el.textContent = full.length > MAX ? (full.slice(0, MAX).trimEnd() + "…") : full;
+    el.dataset.expanded = "0";
+    if (btn){
+      btn.textContent = "قراءة المزيد";
+      btn.classList.toggle("hidden", full.length <= MAX);
+    }
+  };
+
+  const setExpanded = () => {
+    el.textContent = full || "";
+    el.dataset.expanded = "1";
+    if (btn){
+      btn.textContent = "إخفاء";
+      btn.classList.toggle("hidden", full.length <= MAX);
+    }
+  };
+
+  // initial
+  setCollapsed();
+
+  if (btn){
+    btn.onclick = () => {
+      const expanded = el.dataset.expanded === "1";
+      if (expanded) setCollapsed();
+      else setExpanded();
+    };
+  }
+}
+
+/* =========================
    ✅ Load listings
 ========================= */
 
@@ -494,7 +669,10 @@ async function loadListings(reset = true){
   if (reset){
     UI.el.listings.innerHTML = "";
     UI.state.lastDoc = null;
-    if (UI.el.btnMore) UI.el.btnMore.disabled = false;
+    if (UI.el.btnMore){
+      UI.el.btnMore.disabled = false;
+      UI.el.btnMore.classList.add("hidden"); // ✅ نخليه مخفي افتراضياً
+    }
   }
 
   let qy = query(collection(db, "listings"), orderBy("createdAt", "desc"), limit(12));
@@ -508,8 +686,18 @@ async function loadListings(reset = true){
 
   if (snap.docs.length){
     UI.state.lastDoc = snap.docs[snap.docs.length - 1];
+
+    // ✅ زر "تحميل المزيد" يظهر فقط إذا في احتمال صفحات إضافية
+    // (إذا رجع أقل من limit غالباً ما في المزيد)
+    if (UI.el.btnMore){
+      const hasMoreLikely = snap.docs.length >= 12;
+      UI.el.btnMore.classList.toggle("hidden", !hasMoreLikely);
+    }
   }else{
-    if (!reset && UI.el.btnMore) UI.el.btnMore.disabled = true;
+    if (!reset && UI.el.btnMore){
+      UI.el.btnMore.disabled = true;
+      UI.el.btnMore.classList.add("hidden");
+    }
   }
 
   const keyword = (UI.el.qSearch?.value || "").trim().toLowerCase();
