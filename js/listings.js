@@ -585,7 +585,10 @@ async function loadListings(reset = true){
     const favC = Number(data.favCount || 0) || 0;
     const isFav = favSet.has(ds.id);
     card.innerHTML = `
-      <img src="${img}" alt="" />
+      <div class="cardMedia">
+        <img src="${img}" alt="" />
+        <button class="favBtn favOverlay ${isFav ? "isFav" : ""}" type="button" aria-label="مفضلة">♥</button>
+      </div>
       <div class="p">
         <div class="t">${escapeHtml(data.title || "بدون عنوان")}</div>
         ${extraMeta ? `<div class="carMeta">${escapeHtml(extraMeta)}</div>` : ``}
@@ -594,8 +597,7 @@ async function loadListings(reset = true){
         <div class="pr">${escapeHtml(formatPrice(data.price, data.currency))}</div>
 
         <div class="cardStats">
-          <button class="favBtn ${isFav ? "isFav" : ""}" type="button" aria-label="مفضلة">❤️</button>
-          <span class="muted">${favC}</span>
+          <span class="muted">♥ <span class="favCount">${favC}</span></span>
           <span class="muted">👁️ ${viewsC}</span>
         </div>
       </div>
@@ -605,7 +607,7 @@ async function loadListings(reset = true){
     card.onclick = () => openDetails(ds.id, data);
 
     // ✅ favorite button (stop propagation)
-    const favBtn = card.querySelector(".favBtn");
+    const favBtn = card.querySelector(".favOverlay");
     if (favBtn){
       favBtn.addEventListener("click", async (e) => {
         e.preventDefault();
@@ -617,7 +619,7 @@ async function loadListings(reset = true){
           const res = await toggleFavorite(ds.id);
           if (!res?.ok) return;
           favBtn.classList.toggle("isFav", !!res.isFav);
-          const countEl = favBtn.nextElementSibling;
+          const countEl = card.querySelector(".favCount");
           if (countEl) countEl.textContent = String(res.favCount ?? 0);
         }catch(err){
           alert(err?.message || "فشل تحديث المفضلة");
