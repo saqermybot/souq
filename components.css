@@ -841,6 +841,18 @@ button.sm{
   opacity:.9;
 }
 
+.cardMedia{
+  position: relative;
+  overflow: hidden;
+  border-radius: 18px;
+}
+
+.cardMedia img{
+  display:block;
+  width:100%;
+  height:auto;
+}
+
 .favBtn{
   display:inline-flex;
   align-items:center;
@@ -849,17 +861,49 @@ button.sm{
   height:34px;
   border-radius:999px;
   border:1px solid rgba(255,255,255,.15);
-  background: rgba(255,255,255,.06);
+  background: rgba(0,0,0,.25);
+  color:#fff;
+  font-size:20px;
+  line-height:1;
 }
 
 .favBtn.isFav{
-  border-color: rgba(255,255,255,.22);
-  background: rgba(239,68,68,.12);
+  border-color: rgba(34,197,94,.55);
+  background: rgba(34,197,94,.18);
+  color: rgb(34,197,94);
+}
+
+/* قلب فوق الصورة (الصفحة الرئيسية + متجر البائع إن استُخدم) */
+.favOverlay{
+  position:absolute;
+  top:10px;
+  right:10px;
+  width:42px;
+  height:42px;
+  border-radius:999px;
+  background: rgba(0,0,0,.35);
+  border:1px solid rgba(255,255,255,.16);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  box-shadow: 0 10px 24px rgba(0,0,0,.35);
+}
+
+/* زر المفضلة داخل صفحة التفاصيل */
+#btnFav .heartIcon{
+  display:inline-block;
+  font-size:22px;
+  line-height:1;
+  color:#fff;
+  margin-inline-end:6px;
+}
+
+#btnFav.isFav .heartIcon{
+  color: rgb(34,197,94);
 }
 
 #btnFav.isFav{
-  border-color: rgba(239,68,68,.35) !important;
-  background: rgba(239,68,68,.10) !important;
+  border-color: rgba(34,197,94,.55) !important;
+  background: rgba(34,197,94,.14) !important;
 }
 
 /* ✅ Toast */
