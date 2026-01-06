@@ -3,7 +3,7 @@
 import { db, auth } from "./firebase.js";
 import { UI } from "./ui.js";
 import { escapeHtml, formatPrice } from "./utils.js";
-import { getFavoriteSet, toggleFavorite, bumpViewCount, requireUserForFav } from "./favorites.js";
+import { getFavoriteSet, toggleFavorite, bumpViewCount, requireUserForFav, loadFavoritesModal } from "./favorites.js";
 
 import {
   collection,
@@ -201,6 +201,17 @@ export function initListings(){
   UI.actions.loadListings = loadListings;
   UI.actions.openDetails = openDetails;
 
+  // ✅ Favorites
+  UI.actions.openFavorites = async () => {
+    if (!requireUserForFav()) return;
+    UI.show(UI.el.favModal);
+    await loadFavoritesModal();
+  };
+  UI.actions.closeFavorites = () => UI.hide(UI.el.favModal);
+
+  if (UI.el.btnCloseFav) UI.el.btnCloseFav.onclick = UI.actions.closeFavorites;
+
+
   // ✅ زر مراسلة من صفحة التفاصيل (ممنوع للزائر)
   if (UI.el.btnChat){
     UI.el.btnChat.onclick = () => {
@@ -298,7 +309,22 @@ async function openDetails(id, data = null, fromHash = false){
     UI.el.dMeta && (UI.el.dMeta.textContent = extraMeta ? `${baseMeta} • ${extraMeta}` : baseMeta);
 
     UI.el.dPrice && (UI.el.dPrice.textContent = formatPrice(data.price, data.currency));
-    UI.el.dDesc && (UI.el.dDesc.textContent = data.description || "");
+    if (UI.el.descContent){
+      UI.el.descContent.textContent = data.description || "";
+      // reset collapsed/expanded
+      UI.el.descContent.classList.remove("expanded");
+      UI.el.descContent.classList.add("collapsed");
+    }
+    if (UI.el.descToggle){
+      const txt = data.description || "";
+      UI.el.descToggle.style.display = (txt && txt.length > 160) ? "inline-block" : "none";
+      UI.el.descToggle.textContent = "قراءة المزيد";
+      UI.el.descToggle.onclick = () => {
+        const expanded = UI.el.descContent.classList.toggle("expanded");
+        UI.el.descContent.classList.toggle("collapsed", !expanded);
+        UI.el.descToggle.textContent = expanded ? "إخفاء" : "قراءة المزيد";
+      };
+    }
 
     // ✅ Views counter (ضغطة حقيقية)
     bumpViewCount(id);
