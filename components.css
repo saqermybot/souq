@@ -935,3 +935,21 @@ button.sm{
 #btnFavorites, .menuItem.favorites, .menuItem[data-action="favorites"]{
   display:block !important;
 }
+/* ✅ Force profile menu to anchor to avatar button (works RTL/LTR) */
+.avatarBtn{ position: relative !important; }
+
+.avatarBtn .menu{
+  position: absolute !important;
+  top: 56px !important;
+  inset-inline-end: 0 !important;   /* ✅ بدل right/left حسب اللغة */
+  inset-inline-start: auto !important;
+  left: auto !important;
+  right: auto !important;
+
+  min-width: 170px !important;
+  z-index: 99999 !important;
+  max-width: calc(100vw - 16px) !important;
+}
+
+/* خليه يطلع فوق الهيدر بدون قص */
+.topbar{ overflow: visible !important; }
