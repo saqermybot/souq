@@ -29,7 +29,11 @@ export function initChat(){
   UI.actions.closeInbox = closeInbox;
   UI.actions.loadInbox = loadInbox;
 
-  UI.el.btnSend.onclick = sendMsg;
+  // ✅ قد لا تكون عناصر الشات موجودة دائماً (حسب الصفحة/النسخة)
+  // Safari يوقف تنفيذ باقي السكربت إذا حصل TypeError هنا.
+  if (UI.el.btnSend) {
+    UI.el.btnSend.onclick = sendMsg;
+  }
 }
 
 function chatRoomId(listingId, a, b){
