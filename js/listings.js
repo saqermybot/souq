@@ -607,13 +607,7 @@ async function loadListings(reset = true){
         <div class="m">${cityTxt}${(cityTxt && catTxt) ? " • " : ""}${catTxt}</div>
         ${sellerHtml}
         
-        ${(() => {
-          const _d = (data.description || "").toString().trim();
-          if(!_d) return ``;
-          const _short = truncate(_d, 140);
-          const _btn = _d.length > 140 ? `<button class="readMoreBtn" type="button">قراءة المزيد</button>` : ``;
-          return `<div class="cardDesc">${escapeHtml(_short)}</div>${_btn}`;
-        })()}
+        
 <div class="pr">${escapeHtml(formatPrice(data.price, data.currency))}</div>
 
         <div class="cardStats">
