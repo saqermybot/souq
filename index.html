@@ -153,6 +153,9 @@
         <h2 id="dTitle"></h2>
         <div class="muted" id="dMeta"></div>
 
+        <!-- ✅ Stats (views + favorites) -->
+        <div id="dStats" class="statsLine muted small"></div>
+
         <div id="dSeller" class="sellerLine"></div>
 
         <div class="price" id="dPrice"></div>
@@ -160,6 +163,11 @@
 
         <!-- ✅ Actions -->
         <div class="row actions">
+          <!-- ✅ Favorite -->
+          <button id="btnFav" class="ghost" type="button" aria-label="إضافة للمفضلة">
+            ❤️ <span id="dFavCount">0</span>
+          </button>
+
           <button id="btnChat" type="button">مراسلة</button>
 
           <!-- ✅ WhatsApp -->
@@ -181,6 +189,9 @@
         </div>
       </div>
     </section>
+
+    <!-- ✅ Toast -->
+    <div id="toast" class="toast hidden" aria-live="polite"></div>
 
     <!-- INBOX PAGE -->
     <section id="inboxPage" class="page hidden">

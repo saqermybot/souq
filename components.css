@@ -823,3 +823,57 @@ button.sm{
 #inboxBadge{
   box-shadow: 0 6px 16px rgba(0,0,0,.35);
 }
+
+/* =========================
+   ✅ Favorites + Stats
+========================= */
+
+.statsLine{
+  margin-top:6px;
+}
+
+.cardStats{
+  display:flex;
+  align-items:center;
+  gap:12px;
+  margin-top:6px;
+  font-size:12px;
+  opacity:.9;
+}
+
+.favBtn{
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  width:34px;
+  height:34px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.15);
+  background: rgba(255,255,255,.06);
+}
+
+.favBtn.isFav{
+  border-color: rgba(255,255,255,.22);
+  background: rgba(239,68,68,.12);
+}
+
+#btnFav.isFav{
+  border-color: rgba(239,68,68,.35) !important;
+  background: rgba(239,68,68,.10) !important;
+}
+
+/* ✅ Toast */
+.toast{
+  position: fixed;
+  left: 50%;
+  bottom: 16px;
+  transform: translateX(-50%);
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: rgba(0,0,0,.85);
+  border: 1px solid rgba(255,255,255,.12);
+  color: #fff;
+  z-index: 9999;
+  max-width: calc(100% - 24px);
+  font-size: 14px;
+}
