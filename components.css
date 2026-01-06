@@ -598,6 +598,96 @@ html, body{
   opacity:.92;
 }
 
+
+/* =========================
+   ✅ Deluxe Filters: swipe + collapse animation
+   - Default collapsed: header only
+   - Smooth slide down / up
+========================= */
+.deluxeFilters.filters-collapsed{
+  padding-top: 10px;
+  padding-bottom: 10px;
+}
+
+#btnToggleFilters.ghost.sm{
+  width: 38px;
+  height: 34px;
+  padding: 0 !important;
+  border-radius: 12px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px;
+  line-height: 1;
+  opacity: .95;
+}
+
+#btnToggleFilters.is-open{
+  transform: rotate(180deg);
+}
+
+/* Collapsible body */
+#filtersBody{
+  overflow: hidden;
+  transform-origin: top;
+  will-change: max-height, opacity, transform;
+  transition: max-height .28s ease, opacity .20s ease, transform .24s ease;
+}
+
+/* start state (collapsed) */
+#filtersBody.is-collapsed{
+  max-height: 0;
+  opacity: 0;
+  transform: translateY(-6px);
+  pointer-events: none;
+}
+
+/* open state */
+#filtersBody.is-open{
+  max-height: 1400px; /* big enough for all fields */
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* Make the whole header feel like a handle */
+.deluxeFilters .filterHead{
+  cursor: ns-resize;
+  user-select: none;
+  -webkit-user-select: none;
+  touch-action: pan-y;
+}
+
+/* Smaller, cleaner inputs */
+.deluxeFilters .flabel{
+  font-size: 12px;
+  opacity: .85;
+}
+
+.deluxeFilters .field{
+  gap: 6px;
+}
+
+.deluxeFilters .field input,
+.deluxeFilters .field select{
+  height: 42px;
+  padding: 10px 12px;
+  font-size: 14px;
+  border-radius: 12px;
+}
+
+.deluxeFilters .actionsGrid .btn,
+.deluxeFilters .actionsGrid button{
+  height: 42px;
+  border-radius: 12px;
+  font-size: 14px;
+}
+
+/* Keep spacing tighter */
+.deluxeFilters .formGrid{
+  gap: 8px 10px;
+}
+
 /* زر صغير (خاص بالفلتر) */
 button.sm{
   padding:7px 10px;
