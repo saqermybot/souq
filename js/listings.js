@@ -3,7 +3,7 @@
 import { db, auth } from "./firebase.js";
 import { UI } from "./ui.js";
 import { escapeHtml, formatPrice } from "./utils.js";
-import { getFavoriteSet, toggleFavorite, bumpViewCount, requireUserForFav, getListingStats } from "./favorites.js";
+import { getFavoriteSet, toggleFavorite, bumpViewCount, requireUserForFav } from "./favorites.js";
 import { ADMIN_UIDS, ADMIN_EMAILS } from "./config.js";
 
 import {
@@ -19,34 +19,6 @@ import {
   startAfter,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
-
-// ✅ Stats live in /listingStats/{listingId} (public counters)
-function statsRef(listingId){
-  return doc(db, "listingStats", listingId);
-}
-
-async function getStatsMap(listingIds = []){
-  const ids = Array.from(new Set((listingIds || []).filter(Boolean)));
-  const map = new Map();
-  if (!ids.length) return map;
-
-  const rows = await Promise.all(ids.map(async (id) => {
-    try{
-      const s = await getDoc(statsRef(id));
-      if (!s.exists()) return [id, { viewsCount: 0, favCount: 0 }];
-      const d = s.data() || {};
-      return [id, {
-        viewsCount: Number(d.viewsCount || 0) || 0,
-        favCount: Number(d.favCount || 0) || 0
-      }];
-    }catch{
-      return [id, { viewsCount: 0, favCount: 0 }];
-    }
-  }));
-
-  rows.forEach(([id, stats]) => map.set(id, stats));
-  return map;
-}
 
 /* =========================
    ✅ Admin helper
@@ -393,9 +365,6 @@ async function loadFavorites(){
     })
   );
 
-  // ✅ Load public stats for favorites (views + favCount)
-  const statsMap = await getStatsMap(favIds);
-
   const frag = document.createDocumentFragment();
 
   // We already know all are favorites
@@ -422,9 +391,8 @@ async function loadFavorites(){
 
     const card = document.createElement("div");
     card.className = "cardItem";
-    const stats = statsMap.get(id) || {};
-    const viewsC = Number(stats.viewsCount ?? data.viewsCount ?? 0) || 0;
-    const favC = Number(stats.favCount ?? data.favCount ?? 0) || 0;
+    const viewsC = Number(data.viewsCount || 0) || 0;
+    const favC = Number(data.favCount || 0) || 0;
     const isFav = favSet.has(id);
 
     card.innerHTML = `
@@ -445,7 +413,7 @@ async function loadFavorites(){
       </div>
     `;
 
-    card.onclick = () => openDetails(id, { ...data, viewsCount: viewsC, favCount: favC });
+    card.onclick = () => openDetails(id, data);
 
     const favBtn = card.querySelector(".favOverlay");
     if (favBtn){
@@ -547,25 +515,13 @@ async function openDetails(id, data = null, fromHash = false){
     renderDescriptionWithReadMore(data.description || "");
 
     // ✅ Views counter (ضغطة حقيقية)
-    // Now stored in /listingStats (not in /listings)
-    await bumpViewCount(id);
+    bumpViewCount(id);
 
-    // ✅ Stats line (views + favs) from listingStats
-    const st0 = await getListingStats(id);
-    const viewsNow = Number(st0.viewsCount ?? data.viewsCount ?? 0) || 0;
-    const favNow = Number(st0.favCount ?? data.favCount ?? 0) || 0;
-
-    // keep current listing in sync
-    if (UI.state.currentListing && UI.state.currentListing.id === id){
-      UI.state.currentListing.viewsCount = viewsNow;
-      UI.state.currentListing.favCount = favNow;
-    }
-
+    // ✅ Stats line (views + favs)
+    const viewsNow = Number(data.viewsCount || 0) || 0;
+    const favNow = Number(data.favCount || 0) || 0;
     if (UI.el.dStats) UI.el.dStats.textContent = `👁️ ${viewsNow} • ❤️ ${favNow}`;
     if (UI.el.dFavCount) UI.el.dFavCount.textContent = String(favNow);
-
-    // ✅ refresh info cards with live numbers
-    renderInfoCards({ ...data, viewsCount: viewsNow, favCount: favNow });
 
     // ✅ Favorite button (details)
     if (UI.el.btnFav){
@@ -875,10 +831,6 @@ async function loadListings(reset = true){
     }catch{}
   }
 
-  // ✅ Load public stats (views + favCount) for this page
-  const pageIds = snap.docs.map(d => d.id);
-  const statsMap = await getStatsMap(pageIds);
-
   snap.forEach(ds=>{
     const data = ds.data();
 
@@ -937,9 +889,8 @@ async function loadListings(reset = true){
 
     const card = document.createElement("div");
     card.className = "cardItem";
-    const st = statsMap.get(ds.id) || {};
-    const viewsC = Number(st.viewsCount ?? data.viewsCount ?? 0) || 0;
-    const favC = Number(st.favCount ?? data.favCount ?? 0) || 0;
+    const viewsC = Number(data.viewsCount || 0) || 0;
+    const favC = Number(data.favCount || 0) || 0;
     const isFav = favSet.has(ds.id);
     card.innerHTML = `
       <div class="cardMedia">
@@ -963,7 +914,7 @@ async function loadListings(reset = true){
     `;
 
     // card click => open details
-    card.onclick = () => openDetails(ds.id, { ...data, viewsCount: viewsC, favCount: favC });
+    card.onclick = () => openDetails(ds.id, data);
 
     // ✅ favorite button (stop propagation)
     const favBtn = card.querySelector(".favOverlay");
