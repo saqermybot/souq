@@ -11,7 +11,7 @@ export const UI = {
     filtersActive: false,
 
     // ✅ للـ toggle
-    filtersOpen: true
+    filtersOpen: false
   },
   actions: {
     openAuth: () => {},
@@ -167,26 +167,233 @@ export const UI = {
   /* =========================
      ✅ Deluxe: Toggle Filters
   ========================= */
+  
+  /* =========================
+     ✅ Deluxe: filters collapse/expand (button + swipe)
+  ========================= */
+  
+  /* =========================
+     ✅ Deluxe: filters collapse/expand (button + swipe)
+  ========================= */
   bindFiltersToggle(){
-    if (!this.el.btnToggleFilters || !this.el.filtersBody) return;
+    if (!this.el.filtersBody) return;
+
+    const section = this.el.filtersBody.closest(".deluxeFilters") || this.el.filtersBody.parentElement;
 
     const applyUI = () => {
-      this.el.filtersBody.classList.toggle("hidden", !this.state.filtersOpen);
-      this.el.btnToggleFilters.textContent = this.state.filtersOpen ? "إخفاء" : "إظهار";
+      const open = !!this.state.filtersOpen;
+
+      // body animation classes
+      this.el.filtersBody.classList.toggle("is-open", open);
+      this.el.filtersBody.classList.toggle("is-collapsed", !open);
+
+      // section styling
+      section && section.classList.toggle("filters-open", open);
+      section && section.classList.toggle("filters-collapsed", !open);
+
+      // button: icon only (no "إظهار/إخفاء")
+      if (this.el.btnToggleFilters){
+        this.el.btnToggleFilters.classList.toggle("is-open", open);
+        this.el.btnToggleFilters.setAttribute("aria-expanded", open ? "true" : "false");
+        this.el.btnToggleFilters.setAttribute("aria-label", open ? "إخفاء الفلترة" : "إظهار الفلترة");
+        this.el.btnToggleFilters.textContent = "⌄";
+      }
     };
 
-    this.el.btnToggleFilters.onclick = () => {
-      this.state.filtersOpen = !this.state.filtersOpen;
+    const toggle = (force) => {
+      if (typeof force === "boolean") this.state.filtersOpen = force;
+      else this.state.filtersOpen = !this.state.filtersOpen;
       applyUI();
     };
 
+    // click toggle (kept, but minimal icon)
+    if (this.el.btnToggleFilters){
+      this.el.btnToggleFilters.onclick = () => toggle();
+    }
+
+    // click on header (like a handle) also toggles
+    const head = section?.querySelector?.(".filterHead");
+    if (head){
+      head.addEventListener("click", (e) => {
+        // ignore clicks on inputs/buttons inside header
+        const tag = (e.target?.tagName || "").toLowerCase();
+        if (tag === "button" || tag === "a") return;
+        toggle();
+      });
+    }
+
+
+    // init
+    // default: collapsed so الزائر يشوف الإعلانات أولاً
     applyUI();
+
+    // swipe gestures
+    this.bindFiltersSwipe?.(toggle);
   },
 
   /* =========================
      ✅ Deluxe: segmented type
   ========================= */
-  bindDeluxeTypeControls(){
+  
+  /* =========================
+     ✅ Swipe to open/close filters (luxury feel)
+     - Swipe down from top edge (or on filters header) => open
+     - Swipe up on header/top => close
+  ========================= */
+  bindFiltersSwipe(toggleFn){
+    if (!this.el.filtersBody) return;
+
+    const header = this.el.filtersBody.closest(".deluxeFilters")?.querySelector(".filterHead") || null;
+
+    const TOP_EDGE_PX = 90;     // start zone from top
+    const THRESHOLD_PX = 55;    // swipe distance
+    const MAX_X_DRIFT = 80;     // ignore diagonal drags
+
+    let startY = null, startX = null, startT = 0;
+    let startedFromTop = false;
+    let startedFromHeader = false;
+
+    const isFormControl = (el) => {
+      const t = (el?.tagName || "").toLowerCase();
+      return t === "input" || t === "select" || t === "textarea" || el?.isContentEditable;
+    };
+
+    const onStart = (e) => {
+      const t = e.touches?.[0];
+      if (!t) return;
+
+      // don't hijack when user interacts with form controls
+      if (isFormControl(e.target)) return;
+
+      startY = t.clientY;
+      startX = t.clientX;
+      startT = Date.now();
+
+      startedFromTop = startY <= TOP_EDGE_PX;
+
+      // if header exists: allow swipe start from header area for better UX
+      startedFromHeader = !!(header && (e.target === header || header.contains(e.target)));
+
+      // When collapsed, we only allow swipes from top edge or header
+      if (!this.state.filtersOpen && !(startedFromTop || startedFromHeader)){
+        startY = startX = null;
+        return;
+      }
+    };
+
+    const onEnd = (e) => {
+      if (startY == null || startX == null) return;
+
+      const t = (e.changedTouches?.[0]) || (e.touches?.[0]);
+      if (!t) { startY = startX = null; return; }
+
+      const dy = t.clientY - startY;
+      const dx = t.clientX - startX;
+      const dt = Math.max(1, Date.now() - startT);
+
+      // ignore horizontal-ish gestures
+      if (Math.abs(dx) > Math.max(MAX_X_DRIFT, Math.abs(dy))) {
+        startY = startX = null;
+        return;
+      }
+
+      // a small velocity bias (optional)
+      const vy = dy / dt; // px per ms
+
+      // OPEN: swipe down
+      if (!this.state.filtersOpen && dy > THRESHOLD_PX && (startedFromTop || startedFromHeader)) {
+        toggleFn(true);
+      }
+
+      // CLOSE: swipe up
+      if (this.state.filtersOpen && dy < -THRESHOLD_PX && (startedFromTop || startedFromHeader)) {
+        toggleFn(false);
+      }
+
+      startY = startX = null;
+    };
+
+    // attach (passive true keeps scroll smooth)
+    window.addEventListener("touchstart", onStart, { passive: true });
+    window.addEventListener("touchend", onEnd, { passive: true });
+  },
+
+
+  /* =========================
+     ✅ Swipe to open/close filters (luxury feel)
+     - Swipe down from top edge (or on filters header) => open
+     - Swipe up on header/top => close
+  ========================= */
+  bindFiltersSwipe(toggleFn){
+    if (!this.el.filtersBody) return;
+
+    const header = this.el.filtersBody.closest(".deluxeFilters")?.querySelector(".filterHead") || null;
+
+    const TOP_EDGE_PX = 90;     // start zone from top
+    const THRESHOLD_PX = 55;    // swipe distance
+    const MAX_X_DRIFT = 80;     // ignore diagonal drags
+
+    let startY = null, startX = null, startT = 0;
+    let startedFromTop = false;
+    let startedFromHeader = false;
+
+    const isFormControl = (el) => {
+      const t = (el?.tagName || "").toLowerCase();
+      return t === "input" || t === "select" || t === "textarea" || el?.isContentEditable;
+    };
+
+    const onStart = (e) => {
+      const t = e.touches?.[0];
+      if (!t) return;
+
+      if (isFormControl(e.target)) return;
+
+      startY = t.clientY;
+      startX = t.clientX;
+      startT = Date.now();
+
+      startedFromTop = startY <= TOP_EDGE_PX;
+      startedFromHeader = !!(header && (e.target === header || header.contains(e.target)));
+
+      if (!this.state.filtersOpen && !(startedFromTop || startedFromHeader)){
+        startY = startX = null;
+        return;
+      }
+    };
+
+    const onEnd = (e) => {
+      if (startY == null || startX == null) return;
+
+      const t = (e.changedTouches?.[0]) || (e.touches?.[0]);
+      if (!t) { startY = startX = null; return; }
+
+      const dy = t.clientY - startY;
+      const dx = t.clientX - startX;
+      const dt = Math.max(1, Date.now() - startT);
+
+      if (Math.abs(dx) > Math.max(MAX_X_DRIFT, Math.abs(dy))) {
+        startY = startX = null;
+        return;
+      }
+
+      // OPEN: swipe down
+      if (!this.state.filtersOpen && dy > THRESHOLD_PX && (startedFromTop || startedFromHeader)) {
+        toggleFn(true);
+      }
+
+      // CLOSE: swipe up
+      if (this.state.filtersOpen && dy < -THRESHOLD_PX && (startedFromTop || startedFromHeader)) {
+        toggleFn(false);
+      }
+
+      startY = startX = null;
+    };
+
+    window.addEventListener("touchstart", onStart, { passive: true });
+    window.addEventListener("touchend", onEnd, { passive: true });
+  },
+
+bindDeluxeTypeControls(){
     if (!this.el.typeFilter) return;
 
     const setType = (val) => {
