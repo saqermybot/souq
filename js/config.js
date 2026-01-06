@@ -18,5 +18,5 @@ export const ADMIN_UIDS = [
 ];
 
 export const ADMIN_EMAILS = [
-  // "you@example.com"
+  "alhossiniabdulhalim2@gmail.com"
 ];
