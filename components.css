@@ -838,3 +838,35 @@ button.sm{
 .menuItem[data-id="favorites"]{
   display:flex !important;
 }
+/* =========================
+   PATCH: menu position + show favorites
+   Put this at the END of components.css
+========================= */
+
+/* ✅ خلي المنيو تفتح تحت الأفاتار وبجهة اليمين (حتى مع RTL) */
+.topbar .authbar,
+.topbar #authBar{
+  position: relative !important;
+}
+
+.menu{
+  right: 0 !important;      /* ✅ تثبيت يمين */
+  left: auto !important;
+  inset-inline-start: auto !important;
+  inset-inline-end: auto !important;
+}
+
+/* ✅ محاذاة عناصر المنيو بشكل RTL صحيح */
+.menuItem{
+  justify-content: flex-start;
+  text-align: right;
+}
+
+/* ✅ إذا عنصر "مفضلتي" انحط عليه hidden بالغلط، رجّعو يظهر داخل المنيو */
+.menu .menuItem.hidden,
+.menu [id*="fav"],
+.menu [id*="Fav"],
+.menu [data-action*="fav"],
+.menu [data-action*="Fav"]{
+  display: flex !important;
+}
