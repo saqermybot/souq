@@ -183,21 +183,21 @@ export async function loadFavoritesModal(){
 
     const card = document.createElement("article");
     card.className = "card listingCard";
-    card.innerHTML = \`
+    card.innerHTML = `
       <div class="cardMedia">
-        <img src="\${img}" alt="" />
+        <img src="${img}" alt="" />
         <button class="favBtn favOverlay isFav" type="button" aria-label="إزالة من المفضلة">♥</button>
       </div>
       <div class="p">
-        <div class="t">\${escapeHtml(data.title || "بدون عنوان")}</div>
-        <div class="m">\${escapeHtml(data.city || "")}</div>
-        <div class="pr">\${escapeHtml(formatPrice(data.price, data.currency))}</div>
+        <div class="t">${escapeHtml(data.title || "بدون عنوان")}</div>
+        <div class="m">${escapeHtml(data.city || "")}</div>
+        <div class="pr">${escapeHtml(formatPrice(data.price, data.currency))}</div>
         <div class="cardStats">
-          <span class="muted">♥ <span class="favCount">\${favC}</span></span>
-          <span class="muted">👁️ \${viewsC}</span>
+          <span class="muted">♥ <span class="favCount">${favC}</span></span>
+          <span class="muted">👁️ ${viewsC}</span>
         </div>
       </div>
-    \`;
+    `;
 
     card.onclick = () => UI.actions.openDetails?.(it.id);
 
