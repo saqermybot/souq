@@ -592,9 +592,15 @@ html, body{
   gap:10px;
   margin-bottom:12px;
 }
+
+.filterHeadActions{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
 .filterTitle{
   font-weight:900;
-  font-size:14px;
+  font-size:13px;
   opacity:.92;
 }
 
@@ -660,7 +666,7 @@ html, body{
 
 /* Smaller, cleaner inputs */
 .deluxeFilters .flabel{
-  font-size: 12px;
+  font-size: 11.5px;
   opacity: .85;
 }
 
@@ -670,22 +676,26 @@ html, body{
 
 .deluxeFilters .field input,
 .deluxeFilters .field select{
-  height: 42px;
-  padding: 10px 12px;
-  font-size: 14px;
+  height: 38px;
+  padding: 8px 10px;
+  font-size: 13.5px;
   border-radius: 12px;
 }
 
-.deluxeFilters .actionsGrid .btn,
-.deluxeFilters .actionsGrid button{
-  height: 42px;
-  border-radius: 12px;
-  font-size: 14px;
-}
+/* (الأزرار صارت فوق، فخففنا المقاسات العامة) */
 
 /* Keep spacing tighter */
 .deluxeFilters .formGrid{
-  gap: 8px 10px;
+  gap: 7px 10px;
+}
+
+/* زر المسح الصغير بالأعلى */
+#btnReset.resetMini{
+  height: 34px;
+  padding: 0 12px;
+  border-radius: 12px;
+  font-size: 13px;
+  opacity: .95;
 }
 
 /* زر صغير (خاص بالفلتر) */

@@ -51,7 +51,10 @@
 
       <div class="filterHead">
         <div class="filterTitle">فلترة سريعة</div>
-        <button id="btnToggleFilters" class="ghost sm" type="button">إظهار/إخفاء</button>
+        <div class="filterHeadActions">
+          <button id="btnReset" class="ghost sm resetMini" type="button" aria-label="مسح الفلاتر">مسح</button>
+          <button id="btnToggleFilters" class="ghost sm" type="button" aria-label="فتح/إخفاء الفلاتر">⌄</button>
+        </div>
       </div>
 
       <div class="formGrid" id="filtersBody">
@@ -109,13 +112,8 @@
           </div>
         </div>
 
-        <div class="actionsGrid span2">
-          <button id="btnApply" class="secondary" type="button">تطبيق</button>
-          <button id="btnReset" class="ghost" type="button">مسح</button>
-        </div>
-
         <div class="muted small span2" style="margin-top:2px">
-          ملاحظة: الموقع يعرض كل الإعلانات تلقائياً، الفلاتر تُفعَّل فقط عند الضغط على "تطبيق".
+          ملاحظة: الفلاتر تعمل مباشرة. يمكنك مسح كل الفلاتر بزر "مسح" بالأعلى.
         </div>
 
       </div>
