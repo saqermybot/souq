@@ -6,7 +6,8 @@ import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
-  signOut
+  signOut,
+  signInAnonymously
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
 import { UI } from "./ui.js";
@@ -102,14 +103,28 @@ export function initAuth() {
   }
 
   // ===== Auth state =====
-  onAuthStateChanged(auth, (user) => {
-    renderTopbar(user);
+  onAuthStateChanged(auth, async (user) => {
+    // ✅ إذا ما في مستخدم: سجّل دخول Anonymous للزوار (بدون إظهار أي UI)
+    if (!user) {
+      try {
+        await signInAnonymously(auth);
+      } catch (e) {
+        // لو فشل لأي سبب، نكمل بدون ما نكسر الصفحة
+        console.warn("Anonymous sign-in failed:", e?.code || e);
+      }
+    }
+
+    // بعد محاولة anonymous، استخدم المستخدم الحالي (قد يكون صار موجود)
+    const u = auth.currentUser;
+
+    renderTopbar(u);
 
     // ✅ تحديث القوائم لتحديث حالة المفضلة بعد تسجيل/خروج
-    try{ UI.actions.loadListings?.(true); }catch{}
+    try { UI.actions.loadListings?.(true); } catch {}
 
     // ✅ شغّل inbox listener تلقائياً ليحدث الـ Badge بدون فتح صفحة الرسائل
-    if (user && typeof UI.actions.loadInbox === "function") {
+    // ملاحظة: inbox غالباً ما بدك يشتغل للـ anonymous
+    if (u && !u.isAnonymous && typeof UI.actions.loadInbox === "function") {
       UI.actions.loadInbox();
     } else {
       const badge = document.getElementById("inboxBadge");
@@ -119,7 +134,9 @@ export function initAuth() {
 }
 
 function renderTopbar(user) {
-  // 1) authBar content (inbox + add + login لو مو داخل)
+  const isAnon = !!user?.isAnonymous;
+
+  // 1) authBar content (inbox + add + login لو مو داخل / أو anon)
   UI.renderAuthBar(`
     <button id="btnInbox" class="iconBtn" title="الرسائل" aria-label="inbox">
       💬 <span id="inboxBadge" class="hidden">0</span>
@@ -127,7 +144,7 @@ function renderTopbar(user) {
 
     <button id="btnOpenAdd" class="secondary" type="button">+ إعلان جديد</button>
 
-    ${user ? "" : `<button id="btnOpenAuth" class="ghost" type="button">دخول</button>`}
+    ${(!user || isAnon) ? `<button id="btnOpenAuth" class="ghost" type="button">دخول</button>` : ""}
   `);
 
   // 2) Elements from HTML (userMenuWrap + userAvatar + userMenu)
@@ -140,7 +157,8 @@ function renderTopbar(user) {
   if (btnInbox) {
     btnInbox.onclick = (e) => {
       e.stopPropagation();
-      if (!auth.currentUser) return UI.actions.openAuth();
+      // للـ anonymous اعتبره غير مسجل دخول
+      if (!auth.currentUser || auth.currentUser.isAnonymous) return UI.actions.openAuth();
       if (typeof UI.actions.openInbox === "function") UI.actions.openInbox();
       else alert("صفحة الرسائل غير جاهزة بعد.");
     };
@@ -150,14 +168,15 @@ function renderTopbar(user) {
   const btnOpenAdd = document.getElementById("btnOpenAdd");
   if (btnOpenAdd) {
     btnOpenAdd.onclick = () => {
-      if (!auth.currentUser) return UI.actions.openAuth();
+      // للـ anonymous اعتبره غير مسجل دخول (بدنا حساب حقيقي لنشر إعلان)
+      if (!auth.currentUser || auth.currentUser.isAnonymous) return UI.actions.openAuth();
       if (typeof UI.actions.openAdd === "function") UI.actions.openAdd();
       else UI.show(UI.el.addBox);
     };
   }
 
-  // ✅ لو مو مسجل دخول
-  if (!user) {
+  // ✅ لو مو مسجل أو Anonymous: اخفي منيو الحساب
+  if (!user || isAnon) {
     if (wrap) wrap.style.display = "none";
     if (menu) menu.classList.add("hidden");
 
@@ -202,13 +221,11 @@ function renderTopbar(user) {
         e.stopPropagation();
         menu.classList.add("hidden");
 
-        // إذا عندك شاشة/ميزة جاهزة:
         if (typeof UI.actions.openFavorites === "function") {
           UI.actions.openFavorites();
           return;
         }
 
-        // fallback مؤقت:
         UI.toast?.("📌 صفحة المفضلة: جاهزة بالواجهة (رح نوصلها بالمنطق)");
       };
     }
@@ -245,7 +262,8 @@ function renderTopbar(user) {
 }
 
 export function requireAuth() {
-  if (!auth.currentUser) {
+  // اعتبر anonymous كأنه مو مسجّل
+  if (!auth.currentUser || auth.currentUser.isAnonymous) {
     UI.actions.openAuth();
     throw new Error("AUTH_REQUIRED");
   }
