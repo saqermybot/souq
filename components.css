@@ -1,10 +1,26 @@
 /* =========================
-   TOPBAR + AUTHBAR (CLEAN)
+   components.css (FIXED / CLEAN)
+   - Removed duplicate/conflicting blocks
+   - Kept all features: topbar/auth, cards, details gallery, chat, inbox, deluxe filters, favorites
+   - Safer RTL handling
+========================= */
+
+/* =========================
+   BASE
+========================= */
+html, body{
+  margin:0;
+  padding:0;
+  direction: rtl;           /* RTL by default */
+}
+
+/* =========================
+   TOPBAR + AUTHBAR
 ========================= */
 .topbar{
-  position:sticky;
-  top:0;
-  z-index:5;
+  position: sticky;
+  top: 0;
+  z-index: 50;
 
   background: linear-gradient(
     90deg,
@@ -21,7 +37,10 @@
   display:flex;
   align-items:center;
   justify-content:space-between;
+
   border-bottom: 1px solid rgba(255,255,255,.08);
+  overflow: visible; /* ✅ allow dropdowns */
+  will-change: transform;
 }
 
 /* شعار */
@@ -36,14 +55,15 @@
   vertical-align:middle;
 }
 
-/* authbar (مهم: بدون wrap حتى ما ينزل سطر) */
+/* authbar (بدون wrap حتى ما ينزل سطر) */
 .authbar,
 #authBar{
   display:flex;
   gap:8px;
   align-items:center;
   flex-wrap: nowrap;
-  position:relative;
+  position:relative; /* dropdown anchor */
+  margin-inline-start:auto; /* keep to the right in RTL */
 }
 
 /* حماية لو عندك button عام width:100% */
@@ -68,7 +88,7 @@
   flex: 0 0 auto;
 }
 
-/* ✅ Inbox button */
+/* ✅ Inbox button (emoji-safe) */
 #btnInbox{
   all: unset;
   cursor: pointer;
@@ -93,10 +113,7 @@
 
   font-family: "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji", system-ui, sans-serif;
 }
-
-#btnInbox:hover{
-  background: rgba(255,255,255,.18);
-}
+#btnInbox:hover{ background: rgba(255,255,255,.18); }
 
 /* Badge inbox */
 #inboxBadge{
@@ -115,18 +132,7 @@
   background:#ef4444;
   color:#fff;
   border:2px solid rgba(0,0,0,.35);
-}
-
-/* نقطة صغيرة (اختياري) */
-.inboxDot{
-  position:absolute;
-  top:8px;
-  right:8px;
-  width:10px;
-  height:10px;
-  border-radius:999px;
-  background:#ef4444;
-  box-shadow: 0 0 0 2px rgba(17,17,17,.55);
+  box-shadow: 0 6px 16px rgba(0,0,0,.35);
 }
 
 /* =========================
@@ -148,7 +154,6 @@
   flex-direction:column;
   transition: transform .12s ease, box-shadow .2s ease;
   cursor:pointer;
-
   -webkit-tap-highlight-color: transparent;
 }
 
@@ -158,25 +163,11 @@
     box-shadow: 0 16px 36px rgba(2,6,23,.10);
   }
 }
+.cardItem:active{ transform: scale(.995); }
 
-.cardItem:active{
-  transform: scale(.995);
-}
-
-/* ✅ مهم: لا نستخدم ستايل عام لـ .cardItem img
-   لأن صورتك داخل .cardMedia img وهي اللي لازم تتحكم بالحجم */
 .cardItem .p{ padding:10px; }
-
-.cardItem .t{
-  font-weight:900;
-  margin-bottom:6px;
-}
-
-.cardItem .m{
-  font-size:13px;
-  color:var(--muted);
-  opacity:.95;
-}
+.cardItem .t{ font-weight:900; margin-bottom:6px; }
+.cardItem .m{ font-size:13px; color:var(--muted); opacity:.95; }
 
 .carMeta{
   font-size:13px;
@@ -208,6 +199,23 @@
 
 .price{ font-size:22px; font-weight:900; margin:10px 0; }
 
+/* ✅ صورة القائمة (ثابتة ومتناسقة) */
+.cardMedia{
+  position: relative;
+  overflow: hidden;
+  border-radius: 14px 14px 0 0;
+  background:#000;
+}
+.cardMedia img{
+  display:block;
+  width:100%;
+  height:140px;
+  object-fit:cover;
+}
+@media(max-width:520px){
+  .cardMedia img{ height:110px; }
+}
+
 /* =========================
    DETAILS GALLERY
 ========================= */
@@ -231,23 +239,22 @@
   position:absolute;
   top:50%;
   transform:translateY(-50%);
-  width:44px;
-  height:44px;
+  width:48px;
+  height:48px;
   border-radius:999px;
   background:rgba(0,0,0,.55);
   color:#fff;
-  font-size:24px;
+  font-size:26px;
   display:flex;
   align-items:center;
   justify-content:center;
 }
-
 #gPrev{ right:10px; }
 #gNext{ left:10px; }
 
 .dots{ display:flex; gap:6px; justify-content:center; margin:8px 0 2px; }
-.dot{ width:8px; height:8px; border-radius:999px; background:#d0d5dd; }
-.dot.active{ background:#111; }
+.dot{ width:8px; height:8px; border-radius:999px; background: rgba(255,255,255,.25); }
+.dot.active{ background: rgba(34,197,94,.95); }
 
 /* =========================
    PREVIEW IMAGES
@@ -258,7 +265,6 @@
   flex-wrap:wrap;
   margin-top:10px;
 }
-
 .pimg{
   width:88px; height:88px;
   border-radius:14px;
@@ -291,7 +297,6 @@
   color:#fff;
   margin-right:auto;
 }
-
 [data-theme="dark"] .msg.me{
   background:#e5e7eb;
   color:#0b1220;
@@ -305,13 +310,7 @@
   align-items:center;
   gap:6px;
 }
-
-.msg .st{
-  font-size:12px;
-  font-weight:900;
-  opacity:.9;
-}
-
+.msg .st{ font-size:12px; font-weight:900; opacity:.9; }
 .msg .st.read{ color:#22c55e; }
 
 /* =========================
@@ -327,14 +326,12 @@
   justify-content:center;
   padding: 14px;
 }
-
 .imgFull{
   max-width: 100%;
   max-height: 85vh;
   object-fit: contain;
   border-radius: 12px;
 }
-
 #imgClose{
   position:absolute;
   top:14px;
@@ -347,7 +344,6 @@
   color:#fff;
   font-size:16px;
 }
-
 .imgNav{
   position:absolute;
   top:50%;
@@ -363,10 +359,8 @@
   align-items:center;
   justify-content:center;
 }
-
 #imgPrev{ right:12px; }
 #imgNext{ left:12px; }
-
 .imgCounter{
   position:absolute;
   bottom:14px;
@@ -390,7 +384,6 @@
   padding:14px;
   z-index:9999;
 }
-
 .modalCard{
   width:min(520px, 100%);
   background:var(--card);
@@ -398,7 +391,6 @@
   padding:14px;
   border:1px solid var(--border);
 }
-
 .modalHead{
   display:flex;
   align-items:center;
@@ -419,7 +411,7 @@
 }
 
 /* =========================
-   AVATAR + MENU (FIX)
+   AVATAR + MENU
 ========================= */
 .avatarBtn{
   width:44px;
@@ -433,29 +425,26 @@
   align-items:center;
   justify-content:center;
   color:#fff;
-  position:relative; /* ✅ مهم */
+  position:relative;
 }
-
 .avatarBtn img{
   width:100%;
   height:100%;
   object-fit:cover;
   display:block;
 }
-
 .avatarBtn .avatarLetter{
   font-weight:900;
   font-size:15px;
   opacity:.95;
 }
 
+/* القائمة: خليها تنفتح من جهة اليمين تحت الأفاتار/الـauthbar */
 .menu{
   position:absolute;
   top:56px;
-
-  /* ✅ بدل left:0 */
-  right:0;
-  left:auto;
+  inset-inline-end: 0;
+  inset-inline-start: auto;
 
   min-width:170px;
   background: var(--card);
@@ -463,14 +452,18 @@
   border-radius:12px;
   box-shadow: 0 16px 40px rgba(0,0,0,.35);
   padding:6px;
-  z-index: 9999;
+  z-index: 99999;
 
-  /* ✅ حماية من الخروج برا الشاشة */
   max-width: calc(100vw - 16px);
 }
 
 .menuItem{
   width:100%;
+  display:flex;
+  align-items:center;
+  justify-content:flex-start;
+  gap:10px;
+
   text-align:right;
   background:transparent;
   color:var(--text);
@@ -488,8 +481,6 @@
 }
 .menuItem.danger:hover{ filter: brightness(.95); }
 
-/* ✅ مهم: خلي الـ topbar يسمح للقائمة تطلع */
-.topbar{ overflow: visible !important; }
 /* =========================
    INBOX LIST
 ========================= */
@@ -499,7 +490,6 @@
   gap:10px;
   margin-top:10px;
 }
-
 .inboxItem{
   border:1px solid var(--border);
   border-radius:14px;
@@ -511,7 +501,6 @@
   cursor:pointer;
   transition: transform .08s ease, box-shadow .2s ease, background .2s ease;
 }
-
 @media (hover:hover){
   .inboxItem:hover{
     transform: translateY(-1px);
@@ -519,7 +508,6 @@
     background: rgba(255,255,255,.06);
   }
 }
-
 .inboxAvatar{
   width:46px;
   height:46px;
@@ -534,16 +522,13 @@
   font-weight:900;
   color:#fff;
 }
-
 .inboxAvatar img{
   width:100%;
   height:100%;
   object-fit:cover;
   display:block;
 }
-
 .inboxBody{ flex:1 1 auto; min-width:0; }
-
 .inboxTitle{
   font-weight:900;
   margin:0;
@@ -553,7 +538,6 @@
   overflow:hidden;
   text-overflow:ellipsis;
 }
-
 .inboxLast{
   margin-top:4px;
   font-size:13px;
@@ -562,7 +546,6 @@
   overflow:hidden;
   text-overflow:ellipsis;
 }
-
 .inboxMeta{
   display:flex;
   flex-direction:column;
@@ -572,7 +555,6 @@
   font-size:12px;
   color:var(--muted);
 }
-
 .badge{
   display:inline-flex;
   align-items:center;
@@ -587,7 +569,6 @@
   font-weight:900;
   font-size:12px;
 }
-
 @media(max-width:520px){
   .inboxItem{ padding:10px; }
   .inboxAvatar{ width:42px; height:42px; border-radius:12px; }
@@ -604,7 +585,6 @@
   background: rgba(255,255,255,.03);
   border: 1px solid rgba(255,255,255,.08);
 }
-
 .filterHead{
   display:flex;
   align-items:center;
@@ -612,7 +592,6 @@
   gap:10px;
   margin-bottom:12px;
 }
-
 .filterTitle{
   font-weight:900;
   font-size:14px;
@@ -639,7 +618,6 @@ button.sm{
   gap: 8px;
   min-width:0;
 }
-
 .flabel{
   font-size: 13px;
   font-weight: 900;
@@ -652,7 +630,6 @@ button.sm{
 .field textarea{
   border-radius: 14px;
 }
-
 .span2{ grid-column: 1 / -1; }
 
 .actionsGrid{
@@ -692,22 +669,16 @@ button.sm{
   cursor:pointer;
   transition: transform .06s ease, background .2s ease, box-shadow .2s ease, border-color .2s ease;
 }
-
-.segBtn:hover{
-  background: rgba(255,255,255,.04) !important;
-}
-
+.segBtn:hover{ background: rgba(255,255,255,.04) !important; }
 .segBtn:active{ transform: scale(.99); }
 
 .segBtn.active{
   background: rgba(34,197,94,.22) !important;
   border-color: rgba(34,197,94,.45) !important;
-
   box-shadow:
     0 10px 22px rgba(0,0,0,.22),
     inset 0 0 0 1px rgba(34,197,94,.25) !important;
 }
-
 .segBtn:focus{ outline:none; }
 
 /* Range */
@@ -715,9 +686,6 @@ button.sm{
   display:grid;
   grid-template-columns: 1fr 1fr;
   gap:10px;
-}
-@media (max-width:520px){
-  .range2{ grid-template-columns: 1fr 1fr; }
 }
 
 /* موبايل */
@@ -736,16 +704,13 @@ button.sm{
 }
 .filtersRow input,
 .filtersRow select{ border-radius:14px; }
-
 @media (max-width:520px){
   .filtersRow{ grid-template-columns: 1fr; }
 }
 
 /* =========================
-   ✅ UX PATCH (Details + WhatsApp + Dots + Touch)
+   DETAILS UX PATCH (WhatsApp + Buttons)
 ========================= */
-
-/* 1) خلي روابط <a> اللي شكلها زر تشتغل فعلاً */
 #detailsPage .row.actions a,
 #detailsPage .pageInner a.secondary,
 #detailsPage .pageInner a.ghost,
@@ -764,73 +729,33 @@ button.sm{
   text-decoration:none !important;
 }
 
-/* زر واتساب واضح كزر */
-#btnWhatsapp.secondary{
-  border:1px solid rgba(34,197,94,.28);
-}
+#btnWhatsapp.secondary{ border:1px solid rgba(34,197,94,.28); }
 
-/* 2) ترتيب أزرار التفاصيل */
 #detailsPage .row.actions{
   display:flex;
   gap:10px;
   flex-wrap:wrap;
   margin-top:12px;
 }
-
 #detailsPage .row.actions > button,
 #detailsPage .row.actions > a{
   flex: 1 1 160px;
   min-width: 140px;
   height:44px;
 }
-
-/* على الموبايل */
 @media (max-width:520px){
   #detailsPage .row.actions > button,
   #detailsPage .row.actions > a{
     flex: 1 1 calc(50% - 6px);
     min-width: 0;
   }
-  #btnDeleteListing{
-    flex: 1 1 100% !important;
-  }
-}
-
-/* 3) نقاط السلايدر بالدراك */
-.dot{
-  background: rgba(255,255,255,.25);
-}
-.dot.active{
-  background: rgba(34,197,94,.95);
-}
-
-/* 4) أزرار السلايدر أكبر ولمس أفضل */
-.gbtn{
-  width:48px;
-  height:48px;
-  font-size:26px;
-}
-
-/* 6) تثبيت الـ topbar على الموبايل بدون اهتزاز */
-.topbar{
-  will-change: transform;
-}
-
-/* 7) تحسين الـ inbox badge */
-#inboxBadge{
-  box-shadow: 0 6px 16px rgba(0,0,0,.35);
+  #btnDeleteListing{ flex: 1 1 100% !important; }
 }
 
 /* =========================
-   ✅ Favorites + Stats (FINAL)
-   - صور القائمة صغيرة ومتناسقة
-   - قلب جميل فوق الصورة
+   FAVORITES + TOAST
 ========================= */
-
-.statsLine{
-  margin-top:6px;
-}
-
+.statsLine{ margin-top:6px; }
 .cardStats{
   display:flex;
   align-items:center;
@@ -838,25 +763,6 @@ button.sm{
   margin-top:6px;
   font-size:12px;
   opacity:.9;
-}
-
-/* ✅ صورة القائمة: ثابتة */
-.cardMedia{
-  position: relative;
-  overflow: hidden;
-  border-radius: 14px 14px 0 0;
-  background:#000;
-}
-
-.cardMedia img{
-  display:block;
-  width:100%;
-  height:140px;       /* ✅ قائمة صغيرة */
-  object-fit:cover;
-}
-
-@media(max-width:520px){
-  .cardMedia img{ height:110px; }
 }
 
 /* ✅ القلب فوق الصورة (زر واحد فقط) */
@@ -877,8 +783,8 @@ button.sm{
   border:1px solid rgba(255,255,255,.16);
   background: rgba(0,0,0,.35);
 
-  color:#fff;          /* أبيض */
-  font-size:18px;      /* صغير */
+  color:#fff;
+  font-size:18px;
   line-height:1;
 
   backdrop-filter: blur(6px);
@@ -888,16 +794,12 @@ button.sm{
   cursor:pointer;
   user-select:none;
 }
-
 .favOverlay.isFav{
   border-color: rgba(34,197,94,.55);
   background: rgba(34,197,94,.18);
-  color: rgb(34,197,94); /* أخضر */
+  color: rgb(34,197,94);
 }
-
-.favOverlay:active{
-  transform: scale(.96);
-}
+.favOverlay:active{ transform: scale(.96); }
 
 /* زر المفضلة داخل صفحة التفاصيل */
 #btnFav .heartIcon{
@@ -907,17 +809,12 @@ button.sm{
   color:#fff;
   margin-inline-end:6px;
 }
-
-#btnFav.isFav .heartIcon{
-  color: rgb(34,197,94);
-}
-
+#btnFav.isFav .heartIcon{ color: rgb(34,197,94); }
 #btnFav.isFav{
   border-color: rgba(34,197,94,.55) !important;
   background: rgba(34,197,94,.14) !important;
 }
 
-/* ✅ Toast */
 .toast{
   position: fixed;
   left: 50%;
@@ -932,84 +829,8 @@ button.sm{
   max-width: calc(100% - 24px);
   font-size: 14px;
 }
-#btnFavorites, .menuItem.favorites, .menuItem[data-action="favorites"]{
-  display:block !important;
-}
-/* ✅ Force profile menu to anchor to avatar button (works RTL/LTR) */
-.avatarBtn{ position: relative !important; }
 
-.avatarBtn .menu{
-  position: absolute !important;
-  top: 56px !important;
-  inset-inline-end: 0 !important;   /* ✅ بدل right/left حسب اللغة */
-  inset-inline-start: auto !important;
-  left: auto !important;
-  right: auto !important;
-
-  min-width: 170px !important;
-  z-index: 99999 !important;
-  max-width: calc(100vw - 16px) !important;
-}
-
-/* خليه يطلع فوق الهيدر بدون قص */
-.topbar{ overflow: visible !important; }
-/* =========================
-   ✅ HARD FIX: RTL + TOPBAR ALIGN + MENU POSITION
-   ضع هذا كله آخر components.css
-========================= */
-
-/* 1) ثبّت اتجاه الموقع RTL دائماً */
-html, body{
-  direction: rtl !important;
-}
-
-/* 2) ترتيب الهيدر صح: اليمين (أفاتار + زر إعلان + …) */
-.topbar{
-  direction: rtl !important;
-  overflow: visible !important;
-}
-
-/* خليه ما يضغط العناصر ويزحط الشاشة */
-.topbar *{ min-width: 0; }
-
-/* 3) authBar دايماً على اليمين */
-#authBar, .authbar{
-  margin-inline-start: auto !important; /* يدفعه لليمين */
-  margin-inline-end: 0 !important;
-  justify-content: flex-start !important;
-}
-
-/* 4) قائمة الأفاتار تنفتح يمين تحت الأفاتار */
-.avatarBtn{
-  position: relative !important;
-}
-
-.avatarBtn .menu{
-  position: absolute !important;
-  top: 56px !important;
-  inset-inline-end: 0 !important;   /* يمين في RTL */
-  inset-inline-start: auto !important;
-  left: auto !important;
-  right: auto !important;
-  z-index: 99999 !important;
-  min-width: 170px !important;
-  max-width: calc(100vw - 16px) !important;
-}
-
-/* 5) خليه يطلع مرتب داخل القائمة */
-.menuItem{
-  display:flex !important;
-  align-items:center;
-  justify-content:flex-start;
-  gap:10px;
-  text-align:right;
-}
-
-/* =========================
-   ✅ Favorites menu item visibility
-========================= */
-
-/* إذا عندك عنصر بالمفضلة بأحد هالأسماء رح يظهر */
+/* Ensure favorites menu item visible if it exists */
 #btnFavorites,
 #menuFavorites,
 .menuItem.favorites,
