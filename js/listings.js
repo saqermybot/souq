@@ -539,14 +539,30 @@ async function loadListings(reset = true){
     if (UI.el.btnMore) UI.el.btnMore.disabled = false;
   }
 
-  let qy = query(collection(db, "listings"), orderBy("createdAt", "desc"), limit(12));
-  if (UI.state.lastDoc){
-    qy = query(collection(db, "listings"), orderBy("createdAt", "desc"), startAfter(UI.state.lastDoc), limit(12));
+  async function _fetchSnap(useFallback=false){
+    // primary: createdAt desc, fallback: document id
+    if(!useFallback){
+      let qy = query(collection(db, "listings"), orderBy("createdAt", "desc"), limit(12));
+      if (UI.state.lastDoc){
+        qy = query(collection(db, "listings"), orderBy("createdAt", "desc"), startAfter(UI.state.lastDoc), limit(12));
+      }
+      return await getDocs(qy);
+    }else{
+      let qy = query(collection(db, "listings"), orderBy("__name__", "desc"), limit(12));
+      if (UI.state.lastDoc){
+        qy = query(collection(db, "listings"), orderBy("__name__", "desc"), startAfter(UI.state.lastDoc), limit(12));
+      }
+      return await getDocs(qy);
+    }
   }
 
   let snap;
   try{
-    snap = await getDocs(qy);
+    snap = await _fetchSnap(false);
+    // ✅ إذا ما رجع شي (أو عندك بيانات بدون createdAt)، جرّب fallback
+    if (!snap.docs.length && reset){
+      snap = await _fetchSnap(true);
+    }
   }catch(e){
     showListError(e);
     return;
