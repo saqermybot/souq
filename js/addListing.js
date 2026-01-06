@@ -141,21 +141,21 @@ function ensureDynamicFields(){
       </div>
     </div>
 
-    <!-- ✅ إلكترونيات -->
-    <div id="electFields" class="hidden">
-      <div class="formGrid">
-        <div class="field span2">
-          <label class="flabel">نوع الإلكترونيات (اختياري)</label>
-          <select id="aElectKind">
-            <option value="">اختر النوع</option>
-            <option value="موبايل">موبايل</option>
-            <option value="تلفزيون">تلفزيون</option>
-            <option value="كمبيوتر">كمبيوتر</option>
-          </select>
-        </div>
-      </div>
+    <!-- ✅ إلكترونيات<!-- إلكترونيات -->
+<div id="electFields" class="hidden">
+  <div class="formGrid">
+    <div class="field span2">
+      <label class="flabel">نوع الإلكترونيات (اختياري)</label>
+      <select id="aElectKind">
+        <option value="">اختر النوع</option>
+        <option value="موبايل">موبايل</option>
+        <option value="تلفزيون">تلفزيون</option>
+        <option value="كمبيوتر">كمبيوتر</option>
+        <option value="ألعاب">ألعاب (بلايستيشن)</option>
+      </select>
     </div>
-  `;
+  </div>
+</div>
 
   // أدخل wrap قبل input الصور
   const parent = imagesEl.parentElement;
