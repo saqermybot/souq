@@ -24,10 +24,7 @@ export const UI = {
     openDetails: () => {},
     openInbox: () => {},
     closeInbox: () => {},
-    loadInbox: async () => {},
-    openFavorites: () => {},
-    closeFavorites: () => {},
-    loadFavorites: async () => {}
+    loadInbox: async () => {}
   },
 
   init(){
@@ -37,7 +34,7 @@ export const UI = {
       "authBar","qSearch","cityFilter","catFilter","btnApply","btnReset","btnMore","listings","emptyState",
 
       // ✅ DETAILS (+ dSeller جديد)
-      "detailsPage","btnBack","btnShare","dTitle","dMeta","dStats","dSeller","dPrice","descBox","descContent","descToggle",
+      "detailsPage","btnBack","btnShare","dTitle","dMeta","dStats","dSeller","dPrice","dDesc",
       "btnFav","dFavCount","btnChat","btnWhatsapp","btnDeleteListing","gImg","gDots","gPrev","gNext",
 
       "inboxPage","btnInboxBack","btnInboxRefresh","inboxList","inboxEmpty",
@@ -48,9 +45,6 @@ export const UI = {
       "chatBox","btnChatBack","chatTitle","chatMsgs","chatInput","btnSend",
 
       "authModal","btnCloseAuth","email","password","btnLogin","btnRegister","btnGoogle",
-
-      // ✅ Favorites modal
-      "favModal","btnCloseFav","favGrid","favEmpty",
 
       // ✅ toast
       "toast",
@@ -345,17 +339,7 @@ export const UI = {
   },
 
   // ✅ Toast صغير (بدون مكتبات)
-  
-
-  // ✅ FAVORITES MODAL
-  showFavorites(){
-    this.show(this.el.favModal);
-  },
-  hideFavorites(){
-    this.hide(this.el.favModal);
-  },
-
-toast(msg = "", ms = 1800){
+  toast(msg = "", ms = 1800){
     const el = this.el.toast;
     if (!el) return;
     el.textContent = String(msg || "");

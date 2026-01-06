@@ -3,7 +3,7 @@
 import { db, auth } from "./firebase.js";
 import { UI } from "./ui.js";
 import { escapeHtml, formatPrice } from "./utils.js";
-import { getFavoriteSet, toggleFavorite, bumpViewCount, requireUserForFav, loadFavoritesModal } from "./favorites.js";
+import { getFavoriteSet, toggleFavorite, bumpViewCount, requireUserForFav } from "./favorites.js";
 
 import {
   collection,
@@ -18,22 +18,6 @@ import {
   startAfter,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
-
-
-function showListError(e){
-  try{
-    const msg = (e && (e.message || e.code)) ? (e.message || e.code) : String(e);
-    const box = document.createElement("div");
-    box.className = "boot-error";
-    box.style.position = "relative";
-    box.style.top = "0";
-    box.style.left = "0";
-    box.style.right = "0";
-    box.style.margin = "12px 0";
-    box.textContent = "⚠️ تعذّر تحميل الإعلانات: " + msg;
-    UI.el.listings && UI.el.listings.prepend(box);
-  }catch{}
-}
 
 /* =========================
    ✅ Helpers
@@ -217,17 +201,6 @@ export function initListings(){
   UI.actions.loadListings = loadListings;
   UI.actions.openDetails = openDetails;
 
-  // ✅ Favorites
-  UI.actions.openFavorites = async () => {
-    if (!requireUserForFav()) return;
-    UI.show(UI.el.favModal);
-    await loadFavoritesModal();
-  };
-  UI.actions.closeFavorites = () => UI.hide(UI.el.favModal);
-
-  if (UI.el.btnCloseFav) UI.el.btnCloseFav.onclick = UI.actions.closeFavorites;
-
-
   // ✅ زر مراسلة من صفحة التفاصيل (ممنوع للزائر)
   if (UI.el.btnChat){
     UI.el.btnChat.onclick = () => {
@@ -325,22 +298,7 @@ async function openDetails(id, data = null, fromHash = false){
     UI.el.dMeta && (UI.el.dMeta.textContent = extraMeta ? `${baseMeta} • ${extraMeta}` : baseMeta);
 
     UI.el.dPrice && (UI.el.dPrice.textContent = formatPrice(data.price, data.currency));
-    if (UI.el.descContent){
-      UI.el.descContent.textContent = data.description || "";
-      // reset collapsed/expanded
-      UI.el.descContent.classList.remove("expanded");
-      UI.el.descContent.classList.add("collapsed");
-    }
-    if (UI.el.descToggle){
-      const txt = data.description || "";
-      UI.el.descToggle.style.display = (txt && txt.length > 160) ? "inline-block" : "none";
-      UI.el.descToggle.textContent = "قراءة المزيد";
-      UI.el.descToggle.onclick = () => {
-        const expanded = UI.el.descContent.classList.toggle("expanded");
-        UI.el.descContent.classList.toggle("collapsed", !expanded);
-        UI.el.descToggle.textContent = expanded ? "إخفاء" : "قراءة المزيد";
-      };
-    }
+    UI.el.dDesc && (UI.el.dDesc.textContent = data.description || "");
 
     // ✅ Views counter (ضغطة حقيقية)
     bumpViewCount(id);
@@ -539,34 +497,12 @@ async function loadListings(reset = true){
     if (UI.el.btnMore) UI.el.btnMore.disabled = false;
   }
 
-  async function _fetchSnap(useFallback=false){
-    // primary: createdAt desc, fallback: document id
-    if(!useFallback){
-      let qy = query(collection(db, "listings"), orderBy("createdAt", "desc"), limit(12));
-      if (UI.state.lastDoc){
-        qy = query(collection(db, "listings"), orderBy("createdAt", "desc"), startAfter(UI.state.lastDoc), limit(12));
-      }
-      return await getDocs(qy);
-    }else{
-      let qy = query(collection(db, "listings"), orderBy("__name__", "desc"), limit(12));
-      if (UI.state.lastDoc){
-        qy = query(collection(db, "listings"), orderBy("__name__", "desc"), startAfter(UI.state.lastDoc), limit(12));
-      }
-      return await getDocs(qy);
-    }
+  let qy = query(collection(db, "listings"), orderBy("createdAt", "desc"), limit(12));
+  if (UI.state.lastDoc){
+    qy = query(collection(db, "listings"), orderBy("createdAt", "desc"), startAfter(UI.state.lastDoc), limit(12));
   }
 
-  let snap;
-  try{
-    snap = await _fetchSnap(false);
-    // ✅ إذا ما رجع شي (أو عندك بيانات بدون createdAt)، جرّب fallback
-    if (!snap.docs.length && reset){
-      snap = await _fetchSnap(true);
-    }
-  }catch(e){
-    showListError(e);
-    return;
-  }
+  const snap = await getDocs(qy);
 
   if (mySeq !== _loadSeq) return;
 
