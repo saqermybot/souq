@@ -1,0 +1,53 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() { return request.auth != null; }
+
+    // ============================================================
+    // ✅ PATCH FOR Favorites + Views (drop-in blocks)
+    //
+    // New collections:
+    // 1) listingStats/{listingId}  -> { favCount, viewsCount }
+    // 2) views/{listingId_fingerprint} -> marker to count a view once
+    // 3) users/{uid}/favorites/{listingId} -> per-user favorites
+    //
+    // Add/merge these blocks into your existing rules.
+    // ============================================================
+
+    // -------------------------
+    // listingStats
+    // -------------------------
+    match /listingStats/{listingId} {
+      allow read: if true;
+      // allow create/update by anyone (including guests) BUT ONLY these two fields.
+      // (We intentionally avoid strict type checks here because FieldValue.increment()
+      // can be represented as a transform in the request.)
+      allow create, update: if request.resource.data.keys().hasOnly(["favCount", "viewsCount"]);
+      allow delete: if false;
+    }
+
+    // -------------------------
+    // views markers
+    // -------------------------
+    match /views/{id} {
+      allow read: if false; // not needed publicly
+      // Anyone can create a marker once. No updates/deletes.
+      allow create: if
+        request.resource.data.keys().hasOnly(["listingId", "fp", "createdAt"]) ;
+      allow update, delete: if false;
+    }
+
+    // -------------------------
+    // user favorites subcollection
+    // -------------------------
+    match /users/{uid}/favorites/{listingId} {
+      allow read: if signedIn() && request.auth.uid == uid;
+      allow create, delete: if signedIn() && request.auth.uid == uid;
+      allow update: if false;
+    }
+
+    // NOTE:
+    // Keep your existing matches below (listings, users profile, chat, reports, ...)
+  }
+}
