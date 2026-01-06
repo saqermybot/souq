@@ -973,8 +973,7 @@ async function loadListings(reset = true){
           const res = await toggleFavorite(ds.id);
           if (!res?.ok) return;
           favBtn.classList.toggle("isFav", !!res.isFav);
-          const countEl = card.querySelector(".favCount");
-          if (countEl) countEl.textContent = String(res.favCount ?? 0);
+          updateCardStats(ds.id, { favCount: res.favCount ?? 0, isFav: !!res.isFav });
         }catch(err){
           alert(err?.message || "فشل تحديث المفضلة");
         }finally{
