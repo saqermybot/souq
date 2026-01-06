@@ -839,34 +839,74 @@ button.sm{
   display:flex !important;
 }
 /* =========================
-   PATCH: menu position + show favorites
-   Put this at the END of components.css
+   FINAL PATCH for YOUR HTML:
+   #userMenuWrap + #userMenu.userMenu + buttons
 ========================= */
 
-/* ✅ خلي المنيو تفتح تحت الأفاتار وبجهة اليمين (حتى مع RTL) */
-.topbar .authbar,
-.topbar #authBar{
+/* خلي wrapper مرجع للمنيو */
+#userMenuWrap.userMenuWrap{
   position: relative !important;
+  display: flex !important;
+  align-items: center !important;
 }
 
-.menu{
-  right: 0 !important;      /* ✅ تثبيت يمين */
+/* المنيو نفسها (اسمها userMenu عندك) */
+#userMenu.userMenu{
+  position: absolute !important;
+  top: 46px !important;
+
+  right: 0 !important;
   left: auto !important;
-  inset-inline-start: auto !important;
-  inset-inline-end: auto !important;
+
+  min-width: 180px !important;
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 12px !important;
+  padding: 6px !important;
+
+  z-index: 99999 !important;
+  box-shadow: 0 16px 40px rgba(0,0,0,.35) !important;
+
+  max-width: calc(100vw - 16px) !important;
 }
 
-/* ✅ محاذاة عناصر المنيو بشكل RTL صحيح */
-.menuItem{
-  justify-content: flex-start;
-  text-align: right;
+/* أزرار المنيو عندك بدون menuItem */
+#userMenu.userMenu > button{
+  width: 100% !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: flex-start !important;
+  gap: 10px !important;
+
+  text-align: right !important;
+
+  background: transparent !important;
+  color: var(--text) !important;
+  border: 0 !important;
+
+  padding: 10px 12px !important;
+  border-radius: 10px !important;
+  cursor: pointer !important;
+}
+#userMenu.userMenu > button:hover{
+  background: rgba(148,163,184,.12) !important;
 }
 
-/* ✅ إذا عنصر "مفضلتي" انحط عليه hidden بالغلط، رجّعو يظهر داخل المنيو */
-.menu .menuItem.hidden,
-.menu [id*="fav"],
-.menu [id*="Fav"],
-.menu [data-action*="fav"],
-.menu [data-action*="Fav"]{
+#userMenu.userMenu > button.danger{
+  background: var(--danger) !important;
+  color: #fff !important;
+}
+#userMenu.userMenu > button.danger:hover{
+  filter: brightness(.95) !important;
+}
+
+#userMenu.userMenu hr{
+  border: 0 !important;
+  border-top: 1px solid rgba(255,255,255,.10) !important;
+  margin: 6px 4px !important;
+}
+
+/* تأكيد ظهور زر المفضلة */
+#userMenu.userMenu [data-act="favorites"]{
   display: flex !important;
 }
