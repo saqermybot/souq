@@ -1,5 +1,6 @@
 // favorites.js
 // ✅ Per-user favorites + global counters (favCount + viewsCount)
+// ✅ NO increment() and NO merge on counters (to pass Firestore Rules safely)
 
 import { db, auth } from "./firebase.js";
 import { UI } from "./ui.js";
@@ -7,16 +8,13 @@ import { UI } from "./ui.js";
 import {
   doc,
   getDoc,
-  setDoc,
   serverTimestamp,
-  runTransaction,
-  increment
+  runTransaction
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 /* =========================
    ✅ Toast (دبلوماسي)
 ========================= */
-
 function toast(msg){
   try{
     if (typeof UI.toast === "function") return UI.toast(msg);
@@ -27,7 +25,6 @@ function toast(msg){
 /* =========================
    ✅ Helpers
 ========================= */
-
 function favDocRef(uid, listingId){
   return doc(db, "users", uid, "favorites", listingId);
 }
@@ -50,7 +47,6 @@ export function requireUserForFav(){
 /* =========================
    ✅ Read favorites for a list of listings (12-24 is fine)
 ========================= */
-
 export async function getFavoriteSet(listingIds = []){
   const uid = auth.currentUser?.uid || "";
   const ids = Array.from(new Set((listingIds || []).filter(Boolean)));
@@ -71,9 +67,10 @@ export async function getFavoriteSet(listingIds = []){
 }
 
 /* =========================
-   ✅ Toggle favorite (transaction-safe, updates global favCount)
+   ✅ Toggle favorite (transaction-safe)
+   - write favorite doc (create/delete)
+   - update listing favCount as a plain integer (no increment)
 ========================= */
-
 export async function toggleFavorite(listingId){
   if (!listingId) return { ok:false };
   if (!requireUserForFav()) return { ok:false, needAuth:true };
@@ -91,13 +88,19 @@ export async function toggleFavorite(listingId){
     const wasFav = favSnap.exists();
     const delta = wasFav ? -1 : 1;
 
-    if (wasFav) tx.delete(favRef);
-    else tx.set(favRef, { listingId, createdAt: serverTimestamp() }, { merge: true });
+    // ✅ favorites doc: create/delete فقط (بدون merge)
+    if (wasFav) {
+      tx.delete(favRef);
+    } else {
+      tx.set(favRef, { listingId, createdAt: serverTimestamp() });
+    }
 
-    tx.set(lRef, { favCount: increment(delta) }, { merge: true });
-
+    // ✅ listing counter: رقم صريح
     const prev = Number(lSnap.data()?.favCount || 0) || 0;
     const next = Math.max(0, prev + delta);
+
+    // نستخدم update لأن وثيقة الإعلان موجودة أكيد
+    tx.update(lRef, { favCount: next });
 
     return { ok:true, isFav: !wasFav, favCount: next };
   });
@@ -106,9 +109,10 @@ export async function toggleFavorite(listingId){
 /* =========================
    ✅ Views counter ("ضغطة حقيقية")
    - يزيد عند فتح صفحة التفاصيل
-   - يمنع الزيادة المتكررة السريعة لنفس الإعلان (TTL)
+   - للمسجّلين فقط
+   - مرة واحدة لكل مستخدم (لأن وثيقة views/{uid} تمنع التكرار)
+   - TTL فقط لراحة الواجهة (يعني ما يعمل محاولة كل مرة بسرعة)
 ========================= */
-
 const VIEW_TTL_MS = 2 * 60 * 1000; // 2 minutes
 
 function viewKey(listingId){
@@ -122,7 +126,7 @@ export async function bumpViewCount(listingId){
   const uid = auth.currentUser?.uid;
   if (!uid) return { bumped:false, needAuth:true };
 
-  // gate with localStorage
+  // gate with localStorage (UI comfort)
   try{
     const k = viewKey(listingId);
     const last = Number(localStorage.getItem(k) || 0) || 0;
@@ -131,7 +135,6 @@ export async function bumpViewCount(listingId){
     localStorage.setItem(k, String(now));
   }catch{}
 
-  // ✅ مرة واحدة لكل مستخدم (مع TTL لراحة الواجهة)
   try{
     const lRef = listingRef(listingId);
     const vRef = viewDocRef(uid, listingId);
@@ -140,8 +143,17 @@ export async function bumpViewCount(listingId){
       const vSnap = await tx.get(vRef);
       if (vSnap.exists()) return; // counted قبل
 
-      tx.set(vRef, { createdAt: serverTimestamp() }, { merge: true });
-      tx.set(lRef, { viewsCount: increment(1) }, { merge: true });
+      const lSnap = await tx.get(lRef);
+      if (!lSnap.exists()) return;
+
+      // ✅ create view doc (no merge)
+      tx.set(vRef, { createdAt: serverTimestamp() });
+
+      // ✅ update viewsCount as plain integer
+      const prevViews = Number(lSnap.data()?.viewsCount || 0) || 0;
+      const nextViews = prevViews + 1;
+
+      tx.update(lRef, { viewsCount: nextViews });
     });
 
     return { bumped:true };
