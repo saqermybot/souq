@@ -190,11 +190,28 @@ function renderTopbar(user) {
   // ✅ Bind menu actions using data-act (مثل الـ HTML)
   if (menu) {
     const actBtn = (act) => menu.querySelector(`[data-act="${act}"]`);
-    
+
     const btnFav = actBtn("favorites");
     const btnMy = actBtn("myListings");
     const btnProf = actBtn("profile");
     const btnLogout = actBtn("logout");
+
+    // ✅ FAVORITES
+    if (btnFav) {
+      btnFav.onclick = (e) => {
+        e.stopPropagation();
+        menu.classList.add("hidden");
+
+        // إذا عندك شاشة/ميزة جاهزة:
+        if (typeof UI.actions.openFavorites === "function") {
+          UI.actions.openFavorites();
+          return;
+        }
+
+        // fallback مؤقت:
+        UI.toast?.("📌 صفحة المفضلة: جاهزة بالواجهة (رح نوصلها بالمنطق)");
+      };
+    }
 
     if (btnMy) {
       btnMy.onclick = (e) => {
@@ -210,8 +227,6 @@ function renderTopbar(user) {
       btnProf.onclick = (e) => {
         e.stopPropagation();
         menu.classList.add("hidden");
-        // إذا بدك رجوع تلقائي للسوق بعد الحفظ:
-        // sessionStorage.setItem("profile_back", location.href);
         location.href = `profile.html`;
       };
     }
