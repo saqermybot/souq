@@ -1145,3 +1145,6 @@ button.sm{
 @media (min-width: 760px){
   #detailsPage .infoGrid{ grid-template-columns:1fr 1fr; }
 }
+.heartIcon {
+  color: #22c55e; /* أخضر */
+}
