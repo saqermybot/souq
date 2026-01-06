@@ -34,7 +34,8 @@ export const UI = {
       "authBar","qSearch","cityFilter","catFilter","btnApply","btnReset","btnMore","listings","emptyState",
 
       // ✅ DETAILS (+ dSeller جديد)
-      "detailsPage","btnBack","btnShare","dTitle","dMeta","dSeller","dPrice","dDesc","btnChat","btnWhatsapp","btnDeleteListing","gImg","gDots","gPrev","gNext",
+      "detailsPage","btnBack","btnShare","dTitle","dMeta","dStats","dSeller","dPrice","dDesc",
+      "btnFav","dFavCount","btnChat","btnWhatsapp","btnDeleteListing","gImg","gDots","gPrev","gNext",
 
       "inboxPage","btnInboxBack","btnInboxRefresh","inboxList","inboxEmpty",
 
@@ -44,6 +45,9 @@ export const UI = {
       "chatBox","btnChatBack","chatTitle","chatMsgs","chatInput","btnSend",
 
       "authModal","btnCloseAuth","email","password","btnLogin","btnRegister","btnGoogle",
+
+      // ✅ toast
+      "toast",
 
       // ✅ Deluxe filters
       "btnToggleFilters","filtersBody",
@@ -332,5 +336,17 @@ export const UI = {
   setInboxEmpty(isEmpty){
     if (!this.el.inboxEmpty) return;
     this.el.inboxEmpty.style.display = isEmpty ? "block" : "none";
+  },
+
+  // ✅ Toast صغير (بدون مكتبات)
+  toast(msg = "", ms = 1800){
+    const el = this.el.toast;
+    if (!el) return;
+    el.textContent = String(msg || "");
+    el.classList.remove("hidden");
+    clearTimeout(this._toastT);
+    this._toastT = setTimeout(() => {
+      try{ el.classList.add("hidden"); }catch{}
+    }, Math.max(800, Number(ms) || 1800));
   }
 };

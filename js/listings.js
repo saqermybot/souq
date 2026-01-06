@@ -3,6 +3,7 @@
 import { db, auth } from "./firebase.js";
 import { UI } from "./ui.js";
 import { escapeHtml, formatPrice } from "./utils.js";
+import { getFavoriteSet, toggleFavorite, bumpViewCount, requireUserForFav } from "./favorites.js";
 
 import {
   collection,
@@ -287,6 +288,51 @@ async function openDetails(id, data = null, fromHash = false){
     UI.el.dPrice && (UI.el.dPrice.textContent = formatPrice(data.price, data.currency));
     UI.el.dDesc && (UI.el.dDesc.textContent = data.description || "");
 
+    // ✅ Views counter (ضغطة حقيقية)
+    bumpViewCount(id);
+
+    // ✅ Stats line (views + favs)
+    const viewsNow = Number(data.viewsCount || 0) || 0;
+    const favNow = Number(data.favCount || 0) || 0;
+    if (UI.el.dStats) UI.el.dStats.textContent = `👁️ ${viewsNow} • ❤️ ${favNow}`;
+    if (UI.el.dFavCount) UI.el.dFavCount.textContent = String(favNow);
+
+    // ✅ Favorite button (details)
+    if (UI.el.btnFav){
+      UI.el.btnFav.disabled = false;
+      UI.el.btnFav.classList.remove("isFav");
+
+      let isFav = false;
+      try{
+        const favSet = await getFavoriteSet([id]);
+        isFav = favSet.has(id);
+      }catch{}
+
+      UI.el.btnFav.classList.toggle("isFav", isFav);
+
+      UI.el.btnFav.onclick = async () => {
+        if (!requireUserForFav()) return;
+
+        UI.el.btnFav.disabled = true;
+        try{
+          const res = await toggleFavorite(id);
+          if (!res?.ok) return;
+
+          UI.el.btnFav.classList.toggle("isFav", !!res.isFav);
+          if (UI.el.dFavCount) UI.el.dFavCount.textContent = String(res.favCount ?? 0);
+          if (UI.el.dStats) UI.el.dStats.textContent = `👁️ ${viewsNow} • ❤️ ${res.favCount ?? 0}`;
+
+          if (UI.state.currentListing && UI.state.currentListing.id === id){
+            UI.state.currentListing.favCount = res.favCount ?? 0;
+          }
+        }catch(e){
+          alert(e?.message || "فشل تحديث المفضلة");
+        }finally{
+          UI.el.btnFav.disabled = false;
+        }
+      };
+    }
+
     // 3) Seller + WhatsApp + Report
     const ownerId = getSellerUid(data);
 
@@ -468,6 +514,15 @@ async function loadListings(reset = true){
 
   const frag = document.createDocumentFragment();
 
+  // ✅ favorites for this page (only if logged)
+  let favSet = new Set();
+  if (auth.currentUser){
+    try{
+      const ids = snap.docs.map(d => d.id);
+      favSet = await getFavoriteSet(ids);
+    }catch{}
+  }
+
   snap.forEach(ds=>{
     const data = ds.data();
 
@@ -526,6 +581,9 @@ async function loadListings(reset = true){
 
     const card = document.createElement("div");
     card.className = "cardItem";
+    const viewsC = Number(data.viewsCount || 0) || 0;
+    const favC = Number(data.favCount || 0) || 0;
+    const isFav = favSet.has(ds.id);
     card.innerHTML = `
       <img src="${img}" alt="" />
       <div class="p">
@@ -534,10 +592,40 @@ async function loadListings(reset = true){
         <div class="m">${cityTxt}${(cityTxt && catTxt) ? " • " : ""}${catTxt}</div>
         ${sellerHtml}
         <div class="pr">${escapeHtml(formatPrice(data.price, data.currency))}</div>
+
+        <div class="cardStats">
+          <button class="favBtn ${isFav ? "isFav" : ""}" type="button" aria-label="مفضلة">❤️</button>
+          <span class="muted">${favC}</span>
+          <span class="muted">👁️ ${viewsC}</span>
+        </div>
       </div>
     `;
 
+    // card click => open details
     card.onclick = () => openDetails(ds.id, data);
+
+    // ✅ favorite button (stop propagation)
+    const favBtn = card.querySelector(".favBtn");
+    if (favBtn){
+      favBtn.addEventListener("click", async (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!requireUserForFav()) return;
+
+        favBtn.disabled = true;
+        try{
+          const res = await toggleFavorite(ds.id);
+          if (!res?.ok) return;
+          favBtn.classList.toggle("isFav", !!res.isFav);
+          const countEl = favBtn.nextElementSibling;
+          if (countEl) countEl.textContent = String(res.favCount ?? 0);
+        }catch(err){
+          alert(err?.message || "فشل تحديث المفضلة");
+        }finally{
+          favBtn.disabled = false;
+        }
+      });
+    }
 
     const sellerLinkEl = card.querySelector(".sellerLink");
     if (sellerLinkEl){

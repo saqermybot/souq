@@ -105,6 +105,9 @@ export function initAuth() {
   onAuthStateChanged(auth, (user) => {
     renderTopbar(user);
 
+    // ✅ تحديث القوائم لتحديث حالة المفضلة بعد تسجيل/خروج
+    try{ UI.actions.loadListings?.(true); }catch{}
+
     // ✅ شغّل inbox listener تلقائياً ليحدث الـ Badge بدون فتح صفحة الرسائل
     if (user && typeof UI.actions.loadInbox === "function") {
       UI.actions.loadInbox();
