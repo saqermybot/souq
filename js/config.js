@@ -10,3 +10,13 @@ export const SY_CITIES = [
 ];
 
 export const MAX_IMAGES = 3;
+
+// ✅ Admin (مالك الموقع) — ضع UID أو البريد الإلكتروني الخاص بك هنا
+// يمكنك معرفة UID من Firebase Authentication (Users) أو عبر console أثناء تسجيل دخولك.
+export const ADMIN_UIDS = [
+  // "PUT_YOUR_UID_HERE"
+];
+
+export const ADMIN_EMAILS = [
+  // "you@example.com"
+];

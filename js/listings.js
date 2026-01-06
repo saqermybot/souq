@@ -4,6 +4,7 @@ import { db, auth } from "./firebase.js";
 import { UI } from "./ui.js";
 import { escapeHtml, formatPrice } from "./utils.js";
 import { getFavoriteSet, toggleFavorite, bumpViewCount, requireUserForFav } from "./favorites.js";
+import { ADMIN_UIDS, ADMIN_EMAILS } from "./config.js";
 
 import {
   collection,
@@ -18,6 +19,21 @@ import {
   startAfter,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+/* =========================
+   ✅ Admin helper
+========================= */
+function isAdminUser(user){
+  if (!user) return false;
+  const uid = user.uid || "";
+  const email = (user.email || "").toLowerCase().trim();
+
+  const byUid = Array.isArray(ADMIN_UIDS) && ADMIN_UIDS.includes(uid);
+  const byEmail = Array.isArray(ADMIN_EMAILS) && ADMIN_EMAILS.map(x => (x||"").toLowerCase().trim()).includes(email);
+
+  return !!(byUid || byEmail);
+}
+
 
 /* =========================
    ✅ Helpers
@@ -437,9 +453,11 @@ async function deleteCurrentListing(){
     const ownerId = l.ownerId || "";
 
     if (!me) return alert("يجب تسجيل الدخول أولاً");
-    if (!ownerId || ownerId !== me) return alert("لا يمكنك حذف هذا الإعلان");
+    const isOwner = !!(ownerId && ownerId === me);
+    const isAdmin = isAdminUser(auth.currentUser);
 
-    const ok = confirm("هل أنت متأكد أنك تريد حذف الإعلان نهائياً؟");
+    if (!isOwner && !isAdmin) return alert("لا يمكنك حذف هذا الإعلان");
+const ok = confirm("هل أنت متأكد أنك تريد حذف الإعلان نهائياً؟");
     if (!ok) return;
 
     if (UI.el.btnDeleteListing) UI.el.btnDeleteListing.disabled = true;
@@ -660,12 +678,13 @@ ${listingUrl}
       }
     }
 
-    // 4) Delete button only for owner
+    // 4) Delete button for owner OR admin
     const me = auth.currentUser?.uid || "";
     const isOwner = !!(me && ownerId && me === ownerId);
+    const isAdmin = isAdminUser(auth.currentUser);
 
-    UI.el.btnDeleteListing?.classList.toggle("hidden", !isOwner);
-    if (UI.el.btnDeleteListing) UI.el.btnDeleteListing.disabled = false;
+    UI.el.btnDeleteListing?.classList.toggle("hidden", !(isOwner || isAdmin));
+if (UI.el.btnDeleteListing) UI.el.btnDeleteListing.disabled = false;
 
     // 5) Update hash
     if (!fromHash){

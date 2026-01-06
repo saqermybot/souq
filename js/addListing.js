@@ -81,8 +81,7 @@ function ensureDynamicFields(){
   // إذا addBox صار deluxe formGrid، هاد بيساعد ينسجم. وإذا لا، ما بيضر.
   wrap.className = "deluxeDyn";
 
-  // ✅ نستخدم نفس كلاسات الديلوكس: formGrid/field/flabel/span2
-  // ✅ مهم: كل الـ HTML لازم يبقى داخل الـ template string
+  // نستخدم نفس كلاسات الديلوكس: formGrid/field/flabel/span2
   wrap.innerHTML = `
     <div class="muted small" style="margin:6px 2px 10px">
       معلومات إضافية حسب الصنف
@@ -159,13 +158,13 @@ function ensureDynamicFields(){
     </div>
   `;
 
-  // ✅ أدخل wrap قبل input الصور
+  // أدخل wrap قبل input الصور
   const parent = imagesEl.parentElement;
   if (!parent) return;
 
   parent.insertBefore(wrap, imagesEl);
 
-  // ✅ اربط عناصر UI.el الجديدة
+  // اربط عناصر UI.el الجديدة
   UI.el.aTypeCar = document.getElementById("aTypeCar");
   UI.el.aCarModel = document.getElementById("aCarModel");
   UI.el.aCarYear = document.getElementById("aCarYear");
