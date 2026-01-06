@@ -932,3 +932,6 @@ button.sm{
   max-width: calc(100% - 24px);
   font-size: 14px;
 }
+#btnFavorites, .menuItem.favorites, .menuItem[data-action="favorites"]{
+  display:block !important;
+}
