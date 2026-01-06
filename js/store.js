@@ -15,7 +15,16 @@ import {
 
 const grid = document.getElementById("grid");
 const sellerTitle = document.getElementById("sellerTitle");
+
+// ✅ عناصر الهيدر الجديدة (من store.html المعدّل)
+const sellerMeta = document.getElementById("sellerMeta");
+const sellerWhatsWrap = document.getElementById("sellerWhatsWrap");
+const sellerWhatsMasked = document.getElementById("sellerWhatsMasked");
+const btnRevealWhats = document.getElementById("btnRevealWhats");
+
+// (fallback) لو ما عدّلت HTML لأي سبب
 const sellerSub = document.getElementById("sellerSub");
+
 const emptyBox = document.getElementById("emptyBox");
 const btnMore = document.getElementById("btnMore");
 const hint = document.getElementById("hint");
@@ -78,19 +87,66 @@ async function loadSellerProfile(uid){
   }
 }
 
+// ✅ تطبيع رقم واتساب (مثل listings.js)
+function normalizeWhatsapp(raw){
+  let num = String(raw || "").trim().replace(/[^\d+]/g, "");
+  num = num.replace(/^\+/, "");
+  if (num.startsWith("00")) num = num.slice(2);
+  return num;
+}
+
+// ✅ تمويه ذكي: يعرض أول 2 + آخر 2 والباقي نجوم
+function maskPhone(raw){
+  const n = normalizeWhatsapp(raw);
+  if (!n) return "";
+  const len = n.length;
+
+  // أرقام قصيرة: خبيها كلها تقريباً
+  if (len <= 4) return "••••";
+
+  const head = n.slice(0, 2);
+  const tail = n.slice(-2);
+  const stars = "•".repeat(Math.max(4, len - 4));
+  return `${head}${stars}${tail}`;
+}
+
 function renderSellerHeader(profile){
   const name = (profile?.displayName || "").toString().trim();
   const city = (profile?.city || "").toString().trim();
-  const whatsapp = (profile?.whatsapp || "").toString().trim();
+  const whatsappRaw = (profile?.whatsapp || "").toString().trim();
 
+  // العنوان
   sellerTitle.textContent = name ? `إعلانات ${name}` : "إعلانات البائع";
 
+  // ✅ الميتا (بدون رقم كامل أبداً)
   const parts = [];
   if (city) parts.push(city);
-  if (whatsapp) parts.push(`واتساب: ${whatsapp}`);
   parts.push(`ID: ${sellerUid.slice(0, 8)}...`);
 
-  sellerSub.textContent = parts.join(" • ");
+  // إذا عندك عناصر جديدة في الـ HTML
+  if (sellerMeta){
+    sellerMeta.textContent = parts.join(" • ");
+  } else if (sellerSub) {
+    // fallback لو HTML قديم
+    sellerSub.textContent = parts.join(" • ");
+  }
+
+  // ✅ واتساب: نظهر سطر "مموّه" فقط (بدون الرقم الكامل)
+  const masked = maskPhone(whatsappRaw);
+
+  if (sellerWhatsWrap && sellerWhatsMasked && masked){
+    sellerWhatsMasked.textContent = masked;
+    sellerWhatsWrap.classList.remove("hidden");
+
+    // زر "إظهار" مخفي افتراضياً (حتى ما نرجع نفضح الرقم)
+    if (btnRevealWhats){
+      btnRevealWhats.classList.add("hidden");
+      btnRevealWhats.onclick = null;
+    }
+  } else {
+    // ما في واتساب أو HTML قديم
+    if (sellerWhatsWrap) sellerWhatsWrap.classList.add("hidden");
+  }
 }
 
 /* =========================
@@ -191,7 +247,9 @@ function takeFallbackPage(pageSize){
 async function loadMore(reset=false){
   if (!sellerUid) {
     sellerTitle.textContent = "خطأ";
-    sellerSub.textContent = "لا يوجد معرف بائع في الرابط (u=...)";
+    if (sellerMeta) sellerMeta.textContent = "لا يوجد معرف بائع في الرابط (u=...)";
+    else if (sellerSub) sellerSub.textContent = "لا يوجد معرف بائع في الرابط (u=...)";
+
     btnMore.style.display = "none";
     showEmpty(true);
     setHint("");
