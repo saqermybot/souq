@@ -125,7 +125,7 @@ function renderTopbar(user) {
       💬 <span id="inboxBadge" class="hidden">0</span>
     </button>
 
-    <button id="btnOpenAdd" class="secondary" type="button">+ إعلان جديد</button>
+    <button id="btnOpenAdd" class="secondary" type="button">➕ إضافة إعلان </button>
 
     ${user ? "" : `<button id="btnOpenAuth" class="ghost" type="button">دخول</button>`}
   `);
