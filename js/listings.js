@@ -57,6 +57,18 @@ function getTypeId(data){
   return (data.typeId ?? data.car?.typeId ?? data.estate?.typeId ?? data.type ?? "").toString().trim();
 }
 
+/* =========================
+   ✅ Helpers
+   - Smart truncate for cards
+========================= */
+function truncate(text, max = 140){
+  if(!text) return "";
+  const s = String(text);
+  if(s.length <= max) return s;
+  return s.slice(0, max) + "…";
+}
+
+
 // ---- Cars ----
 function isCarsCategory(data){ return getCatId(data) === "cars"; }
 
@@ -594,7 +606,15 @@ async function loadListings(reset = true){
         ${extraMeta ? `<div class="carMeta">${escapeHtml(extraMeta)}</div>` : ``}
         <div class="m">${cityTxt}${(cityTxt && catTxt) ? " • " : ""}${catTxt}</div>
         ${sellerHtml}
-        <div class="pr">${escapeHtml(formatPrice(data.price, data.currency))}</div>
+        
+        ${(() => {
+          const _d = (data.description || "").toString().trim();
+          if(!_d) return ``;
+          const _short = truncate(_d, 140);
+          const _btn = _d.length > 140 ? `<button class="readMoreBtn" type="button">قراءة المزيد</button>` : ``;
+          return `<div class="cardDesc">${escapeHtml(_short)}</div>${_btn}`;
+        })()}
+<div class="pr">${escapeHtml(formatPrice(data.price, data.currency))}</div>
 
         <div class="cardStats">
           <span class="muted">♥ <span class="favCount">${favC}</span></span>
@@ -626,6 +646,17 @@ async function loadListings(reset = true){
         }finally{
           favBtn.disabled = false;
         }
+      });
+    }
+
+
+    // ✅ "قراءة المزيد" (stop propagation)
+    const rmBtn = card.querySelector(".readMoreBtn");
+    if (rmBtn){
+      rmBtn.addEventListener("click", (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        openDetails(ds.id, data);
       });
     }
 
