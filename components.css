@@ -8,6 +8,8 @@
 /* =========================
    BASE
 ========================= */
+*, *::before, *::after{ box-sizing:border-box; }
+
 html, body{
   margin:0;
   padding:0;
@@ -324,7 +326,7 @@ html, body{
   display:flex;
   align-items:center;
   justify-content:center;
-  padding: 14px;
+  padding: 12px;
 }
 .imgFull{
   max-width: 100%;
@@ -581,7 +583,7 @@ html, body{
 ========================= */
 .deluxeFilters{
   padding: 14px;
-  border-radius: 18px;
+  border-radius: 16px;
   background: rgba(255,255,255,.03);
   border: 1px solid rgba(255,255,255,.08);
 }
@@ -600,7 +602,7 @@ html, body{
 
 /* زر صغير (خاص بالفلتر) */
 button.sm{
-  padding:8px 10px;
+  padding:7px 10px;
   font-size:14px;
   border-radius:12px;
 }
@@ -615,11 +617,11 @@ button.sm{
 .field{
   display:flex;
   flex-direction:column;
-  gap: 8px;
+  gap: 6px;
   min-width:0;
 }
 .flabel{
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 900;
   opacity: .88;
   padding-inline: 2px;
@@ -655,8 +657,8 @@ button.sm{
 
 .segBtn{
   flex:1;
-  height:44px;
-  border-radius:12px;
+  height:38px;
+  border-radius:11px;
 
   background: transparent !important;
   color: var(--text) !important;
@@ -949,6 +951,7 @@ button.sm{
   transition:max-height .25s ease;
   white-space: pre-wrap;
   word-break: break-word;
+  overflow-wrap: anywhere;
 }
 .desc-content.collapsed{ max-height:90px; }
 .desc-content.expanded{ max-height:900px; }
