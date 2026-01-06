@@ -41,6 +41,32 @@ function isAdminUser(user){
 
 function $id(id){ return document.getElementById(id); }
 
+// ✅ تحديث بطاقة إعلان أينما كانت موجودة (قائمة / مفضلة)
+function updateCardStats(listingId, patch = {}){
+  try{
+    const id = String(listingId || "").trim();
+    if (!id) return;
+
+    const cards = document.querySelectorAll(`.cardItem[data-id="${CSS.escape(id)}"]`);
+    if (!cards || !cards.length) return;
+
+    cards.forEach((card) => {
+      if (patch.favCount != null){
+        const el = card.querySelector(".favCount");
+        if (el) el.textContent = String(Math.max(0, Number(patch.favCount) || 0));
+      }
+      if (patch.viewsCount != null){
+        const el = card.querySelector(".viewsCount");
+        if (el) el.textContent = String(Math.max(0, Number(patch.viewsCount) || 0));
+      }
+      if (patch.isFav != null){
+        const btn = card.querySelector(".favOverlay");
+        if (btn) btn.classList.toggle("isFav", !!patch.isFav);
+      }
+    });
+  }catch{}
+}
+
 function typeToAr(typeId){
   if (typeId === "sale") return "بيع";
   if (typeId === "rent") return "إيجار";
@@ -391,6 +417,7 @@ async function loadFavorites(){
 
     const card = document.createElement("div");
     card.className = "cardItem";
+    card.setAttribute("data-id", id);
     const viewsC = Number(data.viewsCount || 0) || 0;
     const favC = Number(data.favCount || 0) || 0;
     const isFav = favSet.has(id);
@@ -408,7 +435,7 @@ async function loadFavorites(){
         <div class="pr">${escapeHtml(formatPrice(data.price, data.currency))}</div>
         <div class="cardStats">
           <span class="muted">♥ <span class="favCount">${favC}</span></span>
-          <span class="muted">👁️ ${viewsC}</span>
+          <span class="muted">👁️ <span class="viewsCount">${viewsC}</span></span>
         </div>
       </div>
     `;
@@ -514,14 +541,25 @@ async function openDetails(id, data = null, fromHash = false){
     // ✅ Description: show limited + "Read more"
     renderDescriptionWithReadMore(data.description || "");
 
-    // ✅ Views counter (ضغطة حقيقية)
-    bumpViewCount(id);
+    // ✅ Stats line (views + favs) + تحديث ديناميكي
+    let viewsNow = Number(data.viewsCount || 0) || 0;
+    let favNow = Number(data.favCount || 0) || 0;
 
-    // ✅ Stats line (views + favs)
-    const viewsNow = Number(data.viewsCount || 0) || 0;
-    const favNow = Number(data.favCount || 0) || 0;
+    // ✅ Views counter (ضغطة حقيقية) (مع TTL)
+    try{
+      const r = await bumpViewCount(id);
+      if (r?.bumped){
+        viewsNow += 1; // تحديث فوري بالواجهة
+        if (UI.state.currentListing && UI.state.currentListing.id === id){
+          UI.state.currentListing.viewsCount = viewsNow;
+        }
+        updateCardStats(id, { viewsCount: viewsNow });
+      }
+    }catch{}
+
     if (UI.el.dStats) UI.el.dStats.textContent = `👁️ ${viewsNow} • ❤️ ${favNow}`;
     if (UI.el.dFavCount) UI.el.dFavCount.textContent = String(favNow);
+    updateCardStats(id, { favCount: favNow });
 
     // ✅ Favorite button (details)
     if (UI.el.btnFav){
@@ -545,15 +583,20 @@ async function openDetails(id, data = null, fromHash = false){
           if (!res?.ok) return;
 
           UI.el.btnFav.classList.toggle("isFav", !!res.isFav);
-          if (UI.el.dFavCount) UI.el.dFavCount.textContent = String(res.favCount ?? 0);
-          if (UI.el.dStats) UI.el.dStats.textContent = `👁️ ${viewsNow} • ❤️ ${res.favCount ?? 0}`;
+          const newFav = Math.max(0, Number(res.favCount ?? 0) || 0);
+          favNow = newFav;
+          if (UI.el.dFavCount) UI.el.dFavCount.textContent = String(newFav);
+          if (UI.el.dStats) UI.el.dStats.textContent = `👁️ ${viewsNow} • ❤️ ${newFav}`;
 
           if (UI.state.currentListing && UI.state.currentListing.id === id){
             UI.state.currentListing.favCount = res.favCount ?? 0;
           }
 
+          // ✅ تحديث البطاقة بالواجهة (قائمة/مفضلة)
+          updateCardStats(id, { favCount: newFav, isFav: !!res.isFav });
+
           // ✅ تحديث كروت المعلومات (المفضلة)
-          renderInfoCards({ ...data, favCount: (res.favCount ?? 0), viewsCount: viewsNow });
+          renderInfoCards({ ...data, favCount: newFav, viewsCount: viewsNow });
         }catch(e){
           alert(e?.message || "فشل تحديث المفضلة");
         }finally{
@@ -889,6 +932,7 @@ async function loadListings(reset = true){
 
     const card = document.createElement("div");
     card.className = "cardItem";
+    card.setAttribute("data-id", ds.id);
     const viewsC = Number(data.viewsCount || 0) || 0;
     const favC = Number(data.favCount || 0) || 0;
     const isFav = favSet.has(ds.id);
@@ -908,7 +952,7 @@ async function loadListings(reset = true){
 
         <div class="cardStats">
           <span class="muted">♥ <span class="favCount">${favC}</span></span>
-          <span class="muted">👁️ ${viewsC}</span>
+          <span class="muted">👁️ <span class="viewsCount">${viewsC}</span></span>
         </div>
       </div>
     `;
