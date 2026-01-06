@@ -124,6 +124,7 @@ function syncSubFiltersForCategory(catId) {
         <option value="موبايل">موبايل</option>
         <option value="تلفزيون">تلفزيون</option>
         <option value="كمبيوتر">كمبيوتر</option>
+        <option value="ألعاب">ألعاب (بلايستيشن)</option>
       `;
     }
   }
