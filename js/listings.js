@@ -68,6 +68,70 @@ function truncate(text, max = 140){
   return s.slice(0, max) + "…";
 }
 
+function formatListingDate(ts){
+  try{
+    let d = null;
+    if (!ts) return "";
+    if (typeof ts.toDate === "function") d = ts.toDate();
+    else if (typeof ts.seconds === "number") d = new Date(ts.seconds * 1000);
+    else if (typeof ts === "number") d = new Date(ts);
+    if (!d || isNaN(d.getTime())) return "";
+    const dd = String(d.getDate()).padStart(2,"0");
+    const mm = String(d.getMonth()+1).padStart(2,"0");
+    const yyyy = d.getFullYear();
+    return `${dd}/${mm}/${yyyy}`;
+  }catch{ return ""; }
+}
+
+function renderInfoCards(data){
+  const box = UI.el.dInfo || $id("dInfo");
+  if (!box) return;
+
+  const catTxt = (data.category || data.categoryNameAr || data.categoryId || "").toString().trim();
+  const typeTxt = typeToAr(getTypeId(data)) || "";
+  const created = formatListingDate(data.createdAt);
+  const views = Number(data.viewsCount || 0) || 0;
+  const favs  = Number(data.favCount || 0) || 0;
+
+  const cards = [];
+
+  // أساسي
+  if (data.city) cards.push({ icon:"📍", label:"المدينة", value: String(data.city) });
+  if (catTxt)   cards.push({ icon:"🏷️", label:"القسم", value: catTxt });
+  if (typeTxt)  cards.push({ icon:"🤝", label:"النوع", value: typeTxt });
+  if (created)  cards.push({ icon:"🗓️", label:"تاريخ النشر", value: created });
+
+  // سيارات
+  if (isCarsCategory(data)){
+    const model = getCarModel(data);
+    const year  = getCarYearRaw(data);
+    if (model) cards.push({ icon:"🚗", label:"الموديل", value: model });
+    if (year)  cards.push({ icon:"📅", label:"السنة", value: year });
+  }
+
+  // عقارات
+  if (isEstateCategory(data)){
+    const kind  = getEstateKind(data);
+    const rooms = getRoomsNum(data);
+    if (kind) cards.push({ icon:"🏠", label:"النوع العقاري", value: kind });
+    if (rooms) cards.push({ icon:"🛏️", label:"الغرف", value: `${rooms}` });
+  }
+
+  // إحصائيات
+  cards.push({ icon:"👁️", label:"المشاهدات", value: `${views}` });
+  cards.push({ icon:"❤️", label:"المفضلة", value: `${favs}` });
+
+  box.innerHTML = cards.map(c => `
+    <div class="infoCard">
+      <div class="infoIcon" aria-hidden="true">${escapeHtml(c.icon)}</div>
+      <div class="infoText">
+        <div class="infoLabel">${escapeHtml(c.label)}</div>
+        <div class="infoValue" title="${escapeHtml(c.value)}">${escapeHtml(c.value)}</div>
+      </div>
+    </div>
+  `).join("");
+}
+
 
 // ---- Cars ----
 function isCarsCategory(data){ return getCatId(data) === "cars"; }
@@ -426,6 +490,9 @@ async function openDetails(id, data = null, fromHash = false){
 
     UI.el.dPrice && (UI.el.dPrice.textContent = formatPrice(data.price, data.currency));
 
+    // ✅ C) Info cards (Marketplace-like)
+    renderInfoCards(data);
+
     // ✅ Description: show limited + "Read more"
     renderDescriptionWithReadMore(data.description || "");
 
@@ -466,6 +533,9 @@ async function openDetails(id, data = null, fromHash = false){
           if (UI.state.currentListing && UI.state.currentListing.id === id){
             UI.state.currentListing.favCount = res.favCount ?? 0;
           }
+
+          // ✅ تحديث كروت المعلومات (المفضلة)
+          renderInfoCards({ ...data, favCount: (res.favCount ?? 0), viewsCount: viewsNow });
         }catch(e){
           alert(e?.message || "فشل تحديث المفضلة");
         }finally{
