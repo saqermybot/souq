@@ -190,7 +190,8 @@ function renderTopbar(user) {
   // ✅ Bind menu actions using data-act (مثل الـ HTML)
   if (menu) {
     const actBtn = (act) => menu.querySelector(`[data-act="${act}"]`);
-
+    
+    const btnFav = actBtn("favorites");
     const btnMy = actBtn("myListings");
     const btnProf = actBtn("profile");
     const btnLogout = actBtn("logout");
