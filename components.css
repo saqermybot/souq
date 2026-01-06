@@ -910,3 +910,24 @@ button.sm{
 #userMenu.userMenu [data-act="favorites"]{
   display: flex !important;
 }
+
+
+/* =========================
+   ✅ Card description + Read more
+========================= */
+.cardDesc{
+  margin-top:6px;
+  color:#cbd5e1;
+  font-size:14px;
+  line-height:1.6;
+}
+
+.readMoreBtn{
+  margin-top:6px;
+  padding:0;
+  background:none;
+  border:none;
+  color:var(--brand);
+  font-size:13px;
+  cursor:pointer;
+}
