@@ -1,62 +1,55 @@
-// app.js (safe boot + cache-bust)
+// app.js
+import { UI } from "./js/ui.js";
+import { initListings } from "./js/listings.js";
+import { initAddListing } from "./js/addListing.js";
+import { initAuth } from "./js/auth.js";
+import { initCategories } from "./js/categories.js";
+import { initChat } from "./js/chat.js";
+import { Notify } from "./js/notify.js";
+
+// ✅ ثبّت الوضع الداكن دائماً
 document.documentElement.setAttribute("data-theme", "dark");
 try { localStorage.setItem("theme", "dark"); } catch {}
 
-const V =
-  new URLSearchParams(location.search).get("v") ||
-  new URL(import.meta.url).searchParams.get("v") ||
-  "1";
-
-function showBootError(err){
-  const el = document.getElementById("bootError");
-  if(!el) return;
-  const msg = (err && (err.message || err.code)) ? (err.message || err.code) : String(err);
-  el.textContent = "⚠️ خطأ: " + msg;
-  el.classList.remove("hidden");
+function safe(fn) {
+  try { return fn(); } catch (e) { console.error(e); }
 }
 
-function safe(fn){
-  try { return fn(); } catch (e){ console.error(e); showBootError(e); }
-}
-async function safeAsync(fn){
-  try { return await fn(); } catch (e){ console.error(e); showBootError(e); }
+async function safeAsync(fn) {
+  try { return await fn(); } catch (e) { console.error(e); }
 }
 
-try{
-  const [{ UI }, { initListings }, { initAddListing }, { initAuth }, { initChat }] = await Promise.all([
-    import(`./js/ui.js?v=${V}`),
-    import(`./js/listings.js?v=${V}`),
-    import(`./js/addListing.js?v=${V}`),
-    import(`./js/auth.js?v=${V}`),
-    import(`./js/chat.js?v=${V}`),
-  ]);
+// ✅ Start
+UI.init();
 
-  // side-effect modules
-  await Promise.all([
-    import(`./js/categories.js?v=${V}`),
-    import(`./js/notify.js?v=${V}`),
-    import(`./js/favorites.js?v=${V}`),
-    import(`./js/inbox.js?v=${V}`),
-    import(`./js/profile.js?v=${V}`),
-    import(`./js/store.js?v=${V}`),
-  ]);
+// إشعارات (اختياري)
+safe(() => Notify.ensurePermission());
 
-  safe(() => UI.init());
-  safe(() => initAuth());
-  safe(() => initListings());
-  safe(() => initAddListing());
-  safe(() => initChat());
+// ✅ جهّز actions أولاً
+initListings();
+initAddListing();
 
-  // always start without filters
-  UI.state.filtersActive = false;
-  UI.state.onlyMine = false;
+// ✅ مهم جداً: اربط chat/inbox actions قبل auth
+initChat();
 
-  await safeAsync(() => UI.actions.loadListings(true));
+// ✅ Auth بعد ما صار loadInbox جاهز
+initAuth();
 
-  if ((location.hash || "").startsWith("#listing=")) {
-    await safeAsync(() => UI.handleHash?.());
-  }
-}catch(e){
-  console.error(e);
-  showBootError(e);
+// ✅ categories (لو فشل ما يوقف الموقع)
+await safeAsync(() => initCategories());
+
+// ✅ دائماً خلي الفلاتر OFF عند أول فتح
+UI.state.filtersActive = false;
+UI.state.onlyMine = false;
+
+// ✅ أول تحميل: اعرض الكل
+await safeAsync(() => UI.actions.loadListings(true));
+
+// ✅ فتح إعلان من hash (مرة واحدة فقط)
+// ملاحظة: UI.init() عندك أصلاً عامل listener للـ hashchange
+if ((location.hash || "").startsWith("#listing=")) {
+  await safeAsync(() => UI.handleHash?.());
 }
+
+// ✅ ما عاد نحتاج listener هون إذا UI.init مركّبه
+// إذا بدك تخليه هون لازم تشيله من UI.init — الأفضل يبقى مكان واحد فقط.

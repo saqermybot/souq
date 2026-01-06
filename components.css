@@ -8,8 +8,6 @@
 /* =========================
    BASE
 ========================= */
-*, *::before, *::after{ box-sizing:border-box; }
-
 html, body{
   margin:0;
   padding:0;
@@ -326,7 +324,7 @@ html, body{
   display:flex;
   align-items:center;
   justify-content:center;
-  padding: 12px;
+  padding: 14px;
 }
 .imgFull{
   max-width: 100%;
@@ -583,7 +581,7 @@ html, body{
 ========================= */
 .deluxeFilters{
   padding: 14px;
-  border-radius: 16px;
+  border-radius: 18px;
   background: rgba(255,255,255,.03);
   border: 1px solid rgba(255,255,255,.08);
 }
@@ -602,7 +600,7 @@ html, body{
 
 /* زر صغير (خاص بالفلتر) */
 button.sm{
-  padding:7px 10px;
+  padding:8px 10px;
   font-size:14px;
   border-radius:12px;
 }
@@ -617,11 +615,11 @@ button.sm{
 .field{
   display:flex;
   flex-direction:column;
-  gap: 6px;
+  gap: 8px;
   min-width:0;
 }
 .flabel{
-  font-size: 12px;
+  font-size: 13px;
   font-weight: 900;
   opacity: .88;
   padding-inline: 2px;
@@ -657,8 +655,8 @@ button.sm{
 
 .segBtn{
   flex:1;
-  height:38px;
-  border-radius:11px;
+  height:44px;
+  border-radius:12px;
 
   background: transparent !important;
   color: var(--text) !important;
@@ -861,8 +859,6 @@ button.sm{
   left: auto !important;
 
   min-width: 180px !important;
-  max-width: min(260px, calc(100vw - 16px)) !important;
-  overflow: hidden !important;
   background: var(--card) !important;
   border: 1px solid var(--border) !important;
   border-radius: 12px !important;
@@ -930,63 +926,4 @@ button.sm{
   #detailsPage .row.actions{flex-wrap:wrap;}
   #btnFav{flex:1 1 calc(50% - 6px) !important;}
   #btnChat{flex:1 1 calc(50% - 6px) !important;}
-}
-
-
-/* =========================
-   DESCRIPTION BOX (DETAILS)
-========================= */
-.desc-box{
-  margin-top:14px;
-  padding:14px;
-  background:rgba(255,255,255,.04);
-  border-radius:14px;
-  border:1px solid rgba(255,255,255,.06);
-}
-.desc-content{
-  color:#e5e7eb;
-  font-size:14px;
-  line-height:1.7;
-  overflow:hidden;
-  transition:max-height .25s ease;
-  white-space: pre-wrap;
-  word-break: break-word;
-  overflow-wrap: anywhere;
-}
-.desc-content.collapsed{ max-height:90px; }
-.desc-content.expanded{ max-height:900px; }
-.desc-toggle{
-  margin-top:10px;
-  background:none;
-  border:none;
-  color:var(--brand);
-  font-size:13px;
-  cursor:pointer;
-}
-
-
-/* ===== Boot Error Overlay ===== */
-.boot-error{
-  position: fixed;
-  top: 12px;
-  left: 12px;
-  right: 12px;
-  z-index: 9999;
-  padding: 12px 14px;
-  border-radius: 12px;
-  background: rgba(239,68,68,.18);
-  border: 1px solid rgba(239,68,68,.35);
-  color: #fff;
-  font-size: 13px;
-  line-height: 1.6;
-}
-.boot-error.hidden{ display:none !important; }
-
-/* ===== Favorites Modal layout safety (mobile) ===== */
-#favModal .modal-card,
-.fav-modal,
-.favorites-modal{
-  max-width: 560px;
-  width: calc(100% - 24px);
-  margin: 0 auto;
 }
