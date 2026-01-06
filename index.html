@@ -11,51 +11,90 @@
   <script>
     document.documentElement.setAttribute("data-theme", "dark");
   </script>
+
+  <!-- ✅ TAGLINE STYLE (محلي ومضمون) -->
+  <style>
+    .filterHead{
+      display:block;
+    }
+
+    .filterHeadTop{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:8px;
+    }
+
+    .siteTagline{
+      display:block;
+      margin:6px 0 14px;
+      padding-inline-start:2px;
+      font-size:.78rem;
+      color:rgba(34,197,94,.75);
+      text-align:right;
+      direction:rtl;
+      line-height:1.6;
+    }
+  </style>
 </head>
+
 <body>
 
-  <header class="topbar">
-    <div class="brand">
-      <span class="dot"></span>
-      Souq Syria
-    </div>
+<header class="topbar">
+  <div class="brand">
+    <span class="dot"></span>
+    Souq Syria
+  </div>
 
-    <!-- ✅ auth + avatar menu -->
-    <div class="authbar" style="display:flex; align-items:center; gap:10px;">
-      <div id="authBar"></div>
+  <!-- ✅ auth + avatar menu -->
+  <div class="authbar" style="display:flex; align-items:center; gap:10px;">
+    <div id="authBar"></div>
 
-      <!-- ✅ صورة الحساب + منيو -->
-      <div class="userMenuWrap" id="userMenuWrap" style="display:none;">
-        <img
-          id="userAvatar"
-          class="avatar"
-          src="./img/falcon.png"
-          alt="account"
-          style="width:38px;height:38px;border-radius:999px;object-fit:cover;border:1px solid rgba(255,255,255,.12);cursor:pointer;"
-        />
+    <!-- ✅ صورة الحساب + منيو -->
+    <div class="userMenuWrap" id="userMenuWrap" style="display:none;">
+      <img
+        id="userAvatar"
+        class="avatar"
+        src="./img/falcon.png"
+        alt="account"
+        style="width:38px;height:38px;border-radius:999px;object-fit:cover;border:1px solid rgba(255,255,255,.12);cursor:pointer;"
+      />
 
-        <div id="userMenu" class="userMenu hidden">
-          <button type="button" data-act="myListings">📦 إعلاناتي</button>
-          <button type="button" data-act="favorites">⭐ مفضلتي</button>
-          <button type="button" data-act="profile">👤 بروفايلي</button>
-          <hr />
-          <button type="button" data-act="logout" class="danger">🚪 تسجيل خروج</button>
-        </div>
+      <div id="userMenu" class="userMenu hidden">
+        <button type="button" data-act="myListings">📦 إعلاناتي</button>
+        <button type="button" data-act="favorites">⭐ مفضلتي</button>
+        <button type="button" data-act="profile">👤 بروفايلي</button>
+        <hr />
+        <button type="button" data-act="logout" class="danger">🚪 تسجيل خروج</button>
       </div>
     </div>
-  </header>
+  </div>
+</header>
 
-  <main class="container">
-    <!-- SEARCH + FILTERS (DELUXE) -->
-    <section class="card searchCard deluxeFilters">
+<main class="container">
+  <!-- SEARCH + FILTERS (DELUXE) -->
+  <section class="card searchCard deluxeFilters">
 
-      <div class="filterHead">
+    <div class="filterHead">
+
+      <div class="filterHeadTop">
         <div class="filterTitle">فلترة سريعة</div>
+
         <div class="filterHeadActions">
-          <button id="btnReset" class="ghost sm resetMini" type="button" aria-label="مسح الفلاتر">مسح</button>
-          <button id="btnToggleFilters" class="ghost sm" type="button" aria-label="فتح/إخفاء الفلاتر">⌄</button>
+          <button id="btnReset" class="ghost sm resetMini" type="button" aria-label="مسح الفلاتر">
+            مسح
+          </button>
+          <button id="btnToggleFilters" class="ghost sm" type="button" aria-label="فتح/إخفاء الفلاتر">
+            ⌄
+          </button>
         </div>
       </div>
+
+      <p class="siteTagline">
+        سوق سوريا — المنصة السورية للبيع والإيجار (جديد ومستعمل)
+      </p>
+
+    </div>
 
       <div class="formGrid" id="filtersBody">
 
