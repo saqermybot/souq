@@ -912,22 +912,18 @@ button.sm{
 }
 
 
-/* =========================
-   ✅ Card description + Read more
-========================= */
-.cardDesc{
-  margin-top:6px;
-  color:#cbd5e1;
-  font-size:14px;
-  line-height:1.6;
-}
+/* Card description/read more disabled on home cards */
+.cardDesc,.readMoreBtn{display:none !important;}
 
-.readMoreBtn{
-  margin-top:6px;
-  padding:0;
-  background:none;
-  border:none;
-  color:var(--brand);
-  font-size:13px;
-  cursor:pointer;
+
+/* === Compact details action buttons (fix long boring buttons) === */
+#detailsPage .row.actions{flex-wrap:nowrap;}
+#detailsPage .row.actions > button,
+#detailsPage .row.actions > a{height:40px; font-size:14px; padding:8px 10px;}
+#btnFav{flex:0 0 96px !important;}
+#btnChat{flex:1 1 auto !important;}
+@media (max-width:520px){
+  #detailsPage .row.actions{flex-wrap:wrap;}
+  #btnFav{flex:1 1 calc(50% - 6px) !important;}
+  #btnChat{flex:1 1 calc(50% - 6px) !important;}
 }
