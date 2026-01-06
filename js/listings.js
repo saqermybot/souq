@@ -19,6 +19,22 @@ import {
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
+
+function showListError(e){
+  try{
+    const msg = (e && (e.message || e.code)) ? (e.message || e.code) : String(e);
+    const box = document.createElement("div");
+    box.className = "boot-error";
+    box.style.position = "relative";
+    box.style.top = "0";
+    box.style.left = "0";
+    box.style.right = "0";
+    box.style.margin = "12px 0";
+    box.textContent = "⚠️ تعذّر تحميل الإعلانات: " + msg;
+    UI.el.listings && UI.el.listings.prepend(box);
+  }catch{}
+}
+
 /* =========================
    ✅ Helpers
 ========================= */
@@ -528,7 +544,13 @@ async function loadListings(reset = true){
     qy = query(collection(db, "listings"), orderBy("createdAt", "desc"), startAfter(UI.state.lastDoc), limit(12));
   }
 
-  const snap = await getDocs(qy);
+  let snap;
+  try{
+    snap = await getDocs(qy);
+  }catch(e){
+    showListError(e);
+    return;
+  }
 
   if (mySeq !== _loadSeq) return;
 
