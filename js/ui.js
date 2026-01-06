@@ -107,11 +107,28 @@ export const UI = {
     this.bindDeluxeTypeControls();
 
     // ✅ Apply / Reset
-    this.el.btnApply && (this.el.btnApply.onclick = () => {
-      this.state.filtersActive = true;
-      this.actions.loadListings?.(true);
-    });
+    const hasAnyFilter = () => {
+      const q = (this.el.qSearch?.value || "").trim();
+      const city = (this.el.cityFilter?.value || "").trim();
+      const cat = (this.el.catFilter?.value || "").trim();
+      const type = (this.el.typeFilter?.value || "").trim();
+      const yf = (this.el.yearFrom?.value || "").toString().trim();
+      const yt = (this.el.yearTo?.value || "").toString().trim();
+      const ek = (this.el.estateKindFilter?.value || "").toString().trim();
+      const rr = (this.el.roomsFilter?.value || "").toString().trim();
+      return !!(q || city || cat || type || yf || yt || ek || rr);
+    };
 
+    const liveReload = () => {
+      // ✅ الفلترة تعمل مباشرة: إذا المستخدم حط أي قيمة -> filtersActive
+      this.state.filtersActive = hasAnyFilter();
+      this.actions.loadListings?.(true);
+    };
+
+    // (زر تطبيق لم يعد مستخدم، نتركه إذا كان موجوداً للـ backward-compat)
+    this.el.btnApply && (this.el.btnApply.onclick = () => liveReload());
+
+    // ✅ Reset (جميل وخفيف بالأعلى)
     this.el.btnReset && (this.el.btnReset.onclick = () => {
       this.resetFiltersUI();
       this.state.filtersActive = false;
@@ -120,29 +137,25 @@ export const UI = {
 
     this.el.btnMore && (this.el.btnMore.onclick = () => this.actions.loadListings?.(false));
 
-    // ✅ keyword typing
+    // ✅ keyword typing (Live)
     if (this.el.qSearch){
       this.el.qSearch.addEventListener("input", debounce(() => {
-        this.actions.loadListings?.(true);
+        liveReload();
       }, 250));
     }
 
-    // ✅ لو filtersActive شغال
-    const maybeReload = () => {
-      if (this.state.filtersActive) this.actions.loadListings?.(true);
-    };
-
-    this.el.cityFilter?.addEventListener("change", maybeReload);
+    // ✅ باقي الحقول (Live)
+    this.el.cityFilter?.addEventListener("change", liveReload);
     this.el.catFilter?.addEventListener("change", () => {
       this.syncEstateFiltersVisibility();
-      maybeReload();
+      liveReload();
     });
 
-    this.el.yearFrom?.addEventListener("input", maybeReload);
-    this.el.yearTo?.addEventListener("input", maybeReload);
+    this.el.yearFrom?.addEventListener("input", debounce(liveReload, 200));
+    this.el.yearTo?.addEventListener("input", debounce(liveReload, 200));
 
-    this.el.estateKindFilter?.addEventListener("change", maybeReload);
-    this.el.roomsFilter?.addEventListener("input", maybeReload);
+    this.el.estateKindFilter?.addEventListener("change", liveReload);
+    this.el.roomsFilter?.addEventListener("input", debounce(liveReload, 200));
 
     // ✅ gallery controls
     this.el.gPrev && (this.el.gPrev.onclick = () => this.setGalleryIdx(this.state.gallery.idx - 1));
@@ -399,7 +412,9 @@ bindDeluxeTypeControls(){
     const setType = (val) => {
       this.el.typeFilter.value = val || "";
       this.syncTypeButtonsUI();
-      if (this.state.filtersActive) this.actions.loadListings?.(true);
+      // ✅ Live filtering: تغيير النوع يفلتر فوراً
+      this.state.filtersActive = true;
+      this.actions.loadListings?.(true);
     };
 
     this.el.typeAll && (this.el.typeAll.onclick = () => setType(""));
