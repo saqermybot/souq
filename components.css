@@ -777,6 +777,15 @@ button.sm{
   white-space: pre-wrap;
   line-height: 1.65;
   margin: 10px 0 6px;
+  word-break: break-word;
+}
+
+/* ✅ collapsed state like Marketplace (4 lines + read more) */
+.descText.collapsed{
+  display: -webkit-box;
+  -webkit-line-clamp: 4;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
 }
 
 .linkBtn{
@@ -788,6 +797,9 @@ button.sm{
   font-size: 13px;
   color: var(--brand2);
   cursor: pointer;
+  display:inline-flex;
+  align-items:center;
+  gap:6px;
 }
 .linkBtn:hover{ text-decoration: underline; }
 
