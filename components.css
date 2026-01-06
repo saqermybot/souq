@@ -158,9 +158,10 @@
 
 .cardItem img{
   width:100%;
-  height:160px;
-  object-fit:cover;
-  background:#eee;
+  height:150px;        /* ⬅️ صغّرنا الطول شوي */
+  object-fit:cover;    /* ⬅️ يمنع الاستطالة */
+  display:block;
+  background:#000;
 }
 
 .cardItem .p{ padding:10px; }
