@@ -25,7 +25,7 @@ function catToAr(catId){
 
   // ✅ NEW
   if (catId === "clothing") return "ملابس و أحذية";
-  
+
   return "";
 }
 
@@ -161,7 +161,7 @@ function ensureDynamicFields(){
       </div>
     </div>
 
-    <!-- ✅ NEW: ملابس + أحذية (رجالي/نسائي/ولادي فقط) -->
+    <!-- ✅ NEW: ملابس و أحذية (رجالي/نسائي/ولادي فقط) -->
     <div id="fashionFields" class="hidden">
       <div class="formGrid">
         <div class="field span2">
@@ -210,7 +210,7 @@ function syncDynamicFieldsVisibility(){
   if (estBox) estBox.classList.toggle("hidden", catId !== "realestate");
   if (eleBox) eleBox.classList.toggle("hidden", catId !== "electronics");
 
-  // ✅ NEW: تظهر للملابس + الأحذية
+  // ✅ NEW: تظهر فقط لقسم الملابس
   const isFashion = (catId === "clothing");
   if (fashBox) fashBox.classList.toggle("hidden", !isFashion);
 }
@@ -332,8 +332,8 @@ function collectExtraFields(catId){
     return { electronics: { kind }, electKind: kind };
   }
 
-  // ✅ NEW: ملابس + أحذية (رجالي/نسائي/ولادي)
-  if (catId === "clothing")
+  // ✅ NEW: ملابس و أحذية (رجالي/نسائي/ولادي)
+  if (catId === "clothing") {
     const group = (UI.el.aFashionGroup?.value || "").trim();
     return {
       fashionGroup: group,
@@ -366,7 +366,7 @@ function validateForm({ title, description, price, city, catId, files, extra }) 
   }
 
   // ✅ NEW
-  if (catId === "clothing")
+  if (catId === "clothing") {
     if (!extra.fashionGroup) return "اختر القسم (رجالي / نسائي / ولادي)";
   }
 
