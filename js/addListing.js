@@ -1,16 +1,10 @@
 // addListing.js (Deluxe UI + dynamic fields + organized saving)
-
-import { db, auth } from "./firebase.js";
+// ✅ تم تحويل النشر إلى API (بدل Firestore) + Guest Account (مهم لسوريا)
 import { CLOUDINARY, MAX_IMAGES } from "./config.js";
 import { UI } from "./ui.js";
-import { requireAuth } from "./auth.js";
+import { ensureGuest } from "./guest.js";
+import { API } from "./apiClient.js";
 import { fileToResizedJpeg } from "./utils.js";
-
-import {
-  addDoc,
-  collection,
-  serverTimestamp
-} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 let publishing = false;
 let previewUrls = [];
@@ -35,15 +29,9 @@ function getCategoryId(){
 
 // ✅ NEW: safe seller name (for store/profile page)
 function getSafeSellerName() {
-  const u = auth.currentUser;
-  if (!u) return "مستخدم";
-
-  const dn = (u.displayName || "").trim();
-  if (dn) return dn;
-
-  const em = (u.email || "").trim();
-  if (em && em.includes("@")) return em.split("@")[0];
-
+  // ✅ Guest: اسم افتراضي بسيط (يمكن تطويره لاحقاً بصفحة "توثيق الحساب")
+  const cached = (localStorage.getItem("guest_displayName") || "").trim();
+  if (cached) return cached;
   return "مستخدم";
 }
 
@@ -371,7 +359,11 @@ function validateForm({ title, description, price, city, catId, files, extra }) 
    ✅ PUBLISH
 ========================= */
 async function publish() {
-  try { requireAuth(); } catch { return; }
+  // ✅ تفعيل حساب الجهاز فقط عند النشر
+  try { await ensureGuest(); } catch {
+    alert("مشكلة اتصال مؤقتة. جرّب مرة ثانية.");
+    return;
+  }
   if (publishing) return;
 
   const title = (UI.el.aTitle?.value || "").trim();
@@ -405,36 +397,21 @@ async function publish() {
 
     setStatus("جاري نشر الإعلان...");
 
-    const expiresAt = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000);
-
     const sellerName = getSafeSellerName();
-    const sellerEmail = (auth.currentUser?.email || "").trim() || null;
-
-    await addDoc(collection(db, "listings"), {
+    const payload = {
       title,
       description,
       price,
       currency,
       city,
-
       categoryId,
       categoryNameAr,
-      category: categoryNameAr || categoryId,
-
-      ...extra,
-
+      extra,
       images: urls,
+      sellerName
+    };
 
-      sellerName,
-      sellerEmail,
-      uid: auth.currentUser.uid,
-
-      ownerId: auth.currentUser.uid,
-
-      isActive: true,
-      createdAt: serverTimestamp(),
-      expiresAt
-    });
+    await API.createListing(payload);
 
     setStatus("تم نشر الإعلان ✅");
 

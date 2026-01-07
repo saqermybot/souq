@@ -1,15 +1,9 @@
-// categories.js (نسخة مرتبة: عربي + value=id + كاش + دعم قوائم فرعية اختياري)
+// categories.js
+// ✅ تحميل الأصناف من config.js (بدل Firestore) لتفادي مشاكل الوصول في سوريا
 
-import { db } from "./firebase.js";
 import { UI } from "./ui.js";
 import { escapeHtml } from "./utils.js";
-
-import {
-  collection,
-  getDocs,
-  orderBy,
-  query
-} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+import { CATEGORIES } from "./config.js";
 
 export async function initCategories() {
   // خيارات افتراضية
@@ -39,12 +33,8 @@ export async function initCategories() {
  * - كاش إلى UI.state.categories
  */
 async function loadCategories() {
-  const qy = query(collection(db, "categories"), orderBy("order", "asc"));
-  const snap = await getDocs(qy);
-
-  const active = snap.docs
-    .map((d) => ({ id: d.id, ...d.data() }))
-    .filter((x) => x.isActive === true);
+  const active = (CATEGORIES || []).filter((x) => x && x.isActive === true)
+    .sort((a, b) => (Number(a.order || 0) - Number(b.order || 0)));
 
   // ✅ خزّن بالكاش لتستخدمها بأي ملف
   UI.state.categories = active;
