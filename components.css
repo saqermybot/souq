@@ -1085,7 +1085,7 @@ button.sm{
 #userMenu.userMenu{
   position: absolute !important;
   top: calc(100% + 10px) !important;   /* تحت الأيقونة مباشرة */
-  right: 0 !important;                 /* ملاصقة ليمين الأيقونة */
+  right: -10px !important;                 /* ملاصقة ليمين الأيقونة */
   left: auto !important;
 
   direction: rtl !important;
