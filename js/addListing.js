@@ -333,7 +333,7 @@ function collectExtraFields(catId){
   }
 
   // ✅ NEW: ملابس + أحذية (رجالي/نسائي/ولادي)
-  if (catId === "clothes" || catId === "shoes") {
+  if (catId === "clothing")
     const group = (UI.el.aFashionGroup?.value || "").trim();
     return {
       fashionGroup: group,
