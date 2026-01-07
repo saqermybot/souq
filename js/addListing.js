@@ -22,6 +22,7 @@ function catToAr(catId){
   if (catId === "cars") return "سيارات";
   if (catId === "realestate") return "عقارات";
   if (catId === "electronics") return "إلكترونيات";
+  if (catId === "clothes") return "ملابس وأحذية";
   return "";
 }
 
@@ -68,20 +69,14 @@ export function initAddListing() {
    ✅ DYNAMIC FIELDS (DELUXE)
 ========================= */
 function ensureDynamicFields(){
-  // نحط الديف بعد اختيار المدينة/القسم وقبل الصور
-  // نحاول نلقط مكان ثابت: قبل aImages مباشرة
   const imagesEl = UI.el.aImages;
   if (!imagesEl) return;
-
-  // إذا موجود لا تعيد
   if (document.getElementById("dynamicFieldsWrap")) return;
 
   const wrap = document.createElement("div");
   wrap.id = "dynamicFieldsWrap";
-  // إذا addBox صار deluxe formGrid، هاد بيساعد ينسجم. وإذا لا، ما بيضر.
   wrap.className = "deluxeDyn";
 
-  // نستخدم نفس كلاسات الديلوكس: formGrid/field/flabel/span2
   wrap.innerHTML = `
     <div class="muted small" style="margin:6px 2px 10px">
       معلومات إضافية حسب الصنف
@@ -98,15 +93,13 @@ function ensureDynamicFields(){
             <option value="rent">إيجار</option>
           </select>
         </div>
-
         <div class="field">
           <label class="flabel">سنة الموديل</label>
-          <input id="aCarYear" type="number" min="1950" max="2035" placeholder="مثال: 2006" />
+          <input id="aCarYear" type="number" min="1950" max="2035" />
         </div>
-
         <div class="field span2">
           <label class="flabel">موديل السيارة</label>
-          <input id="aCarModel" placeholder="مثال: كيا ريو / هيونداي i10" />
+          <input id="aCarModel" />
         </div>
       </div>
     </div>
@@ -117,21 +110,19 @@ function ensureDynamicFields(){
         <div class="field">
           <label class="flabel">نوع الإعلان</label>
           <select id="aTypeEstate">
-            <option value="">اختر (بيع / إيجار)</option>
+            <option value="">اختر</option>
             <option value="sale">بيع</option>
             <option value="rent">إيجار</option>
           </select>
         </div>
-
         <div class="field">
-          <label class="flabel">عدد الغرف (اختياري)</label>
-          <input id="aRooms" type="number" min="0" max="20" placeholder="مثال: 3" />
+          <label class="flabel">عدد الغرف</label>
+          <input id="aRooms" type="number" />
         </div>
-
         <div class="field span2">
           <label class="flabel">نوع العقار</label>
           <select id="aEstateKind">
-            <option value="">اختر نوع العقار</option>
+            <option value="">اختر</option>
             <option value="شقة">شقة</option>
             <option value="بيت">بيت</option>
             <option value="محل">محل</option>
@@ -145,26 +136,36 @@ function ensureDynamicFields(){
     <div id="electFields" class="hidden">
       <div class="formGrid">
         <div class="field span2">
-          <label class="flabel">نوع الإلكترونيات (اختياري)</label>
+          <label class="flabel">نوع الإلكترونيات</label>
           <select id="aElectKind">
-            <option value="">اختر النوع</option>
+            <option value="">اختر</option>
             <option value="موبايل">موبايل</option>
             <option value="تلفزيون">تلفزيون</option>
             <option value="كمبيوتر">كمبيوتر</option>
-            <option value="ألعاب">ألعاب (بلايستيشن)</option>
+            <option value="ألعاب">ألعاب</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- ✅ ملابس وأحذية -->
+    <div id="clothesFields" class="hidden">
+      <div class="formGrid">
+        <div class="field span2">
+          <label class="flabel">الفئة</label>
+          <select id="aClothesType">
+            <option value="">اختر</option>
+            <option value="رجالي">رجالي</option>
+            <option value="نسائي">نسائي</option>
+            <option value="ولادي">ولادي</option>
           </select>
         </div>
       </div>
     </div>
   `;
 
-  // أدخل wrap قبل input الصور
-  const parent = imagesEl.parentElement;
-  if (!parent) return;
+  imagesEl.parentElement.insertBefore(wrap, imagesEl);
 
-  parent.insertBefore(wrap, imagesEl);
-
-  // اربط عناصر UI.el الجديدة
   UI.el.aTypeCar = document.getElementById("aTypeCar");
   UI.el.aCarModel = document.getElementById("aCarModel");
   UI.el.aCarYear = document.getElementById("aCarYear");
@@ -174,20 +175,33 @@ function ensureDynamicFields(){
   UI.el.aRooms = document.getElementById("aRooms");
 
   UI.el.aElectKind = document.getElementById("aElectKind");
+  UI.el.aClothesType = document.getElementById("aClothesType");
 }
 
 function syncDynamicFieldsVisibility(){
   const catId = getCategoryId();
 
-  const carBox = document.getElementById("carFields");
-  const estBox = document.getElementById("estateFields");
-  const eleBox = document.getElementById("electFields");
+  ["car","estate","elect","clothes"].forEach(k=>{
+    const el = document.getElementById(k+"Fields");
+    if (el) el.classList.add("hidden");
+  });
 
-  if (carBox) carBox.classList.toggle("hidden", catId !== "cars");
-  if (estBox) estBox.classList.toggle("hidden", catId !== "realestate");
-  if (eleBox) eleBox.classList.toggle("hidden", catId !== "electronics");
+  if (catId === "cars") document.getElementById("carFields")?.classList.remove("hidden");
+  if (catId === "realestate") document.getElementById("estateFields")?.classList.remove("hidden");
+  if (catId === "electronics") document.getElementById("electFields")?.classList.remove("hidden");
+  if (catId === "clothes") document.getElementById("clothesFields")?.classList.remove("hidden");
 }
 
+/* =========================
+   ✅ EXTRA FIELDS
+========================= */
+function collectExtraFields(catId){
+  if (catId === "clothes") {
+    const type = (UI.el.aClothesType?.value || "").trim();
+    return { clothesType: type, clothes: { type } };
+  }
+  return {};
+}
 /* =========================
    ✅ OPEN/CLEAR
 ========================= */
