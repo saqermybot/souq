@@ -300,7 +300,7 @@ async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
       const div = document.createElement("div");
       div.className = "msg" + (m.senderId===me ? " me": "");
       const time = m.createdAt?.toDate ? m.createdAt.toDate().toLocaleString() : "";
-      const st = statusIconForMessage(m, me, realOwnerId, !!isPending);
+      const st = statusIconForMessage(m, me, otherId, !!isPending);
 
       div.innerHTML = `
         <div>${escapeHtml(m.text||"")}</div>
