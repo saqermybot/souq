@@ -1068,13 +1068,11 @@ button.sm{
    - RTL friendly
 ========================= */
 
-/* مهم: منع قص المنيو من الهيدر */
 .topbar,
 .authbar{
   overflow: visible !important;
 }
 
-/* خلي wrapper مرجع للمنيو */
 #userMenuWrap.userMenuWrap{
   position: relative !important;
   display: flex !important;
@@ -1084,9 +1082,15 @@ button.sm{
 /* المنيو نفسها */
 #userMenu.userMenu{
   position: absolute !important;
-  top: calc(100% + 10px) !important;   /* تحت الأيقونة مباشرة */
-  right: -50px !important;                 /* ملاصقة ليمين الأيقونة */
+  top: calc(100% + 10px) !important;
+
+  /* ✅ إلصاق حقيقي بيمين الأيقونة */
+  right: 0 !important;
   left: auto !important;
+
+  /* ✅ إذا بدك تزحزحها أكتر لليمين/اليسار عدّل الرقم هون */
+  transform: translateX(-10px) !important;  /* -10 = تتحرك شوي يمين */
+  /* إذا بدكها يمين أكتر: -20 / -30 …  إذا بدكها ترجع يسار: -5 أو 0 */
 
   direction: rtl !important;
   text-align: right !important;
@@ -1102,7 +1106,6 @@ button.sm{
   max-width: calc(100vw - 24px) !important;
 }
 
-/* أزرار المنيو */
 #userMenu.userMenu > button{
   width: 100% !important;
   display: flex !important;
@@ -1138,7 +1141,6 @@ button.sm{
   margin: 6px 4px !important;
 }
 
-/* تأكيد ظهور زر المفضلة */
 #userMenu.userMenu [data-act="favorites"]{
   display: flex !important;
 }
