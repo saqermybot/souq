@@ -52,10 +52,13 @@ export const UI = {
       // ✅ Deluxe filters
       "btnToggleFilters","filtersBody",
       "typeFilter","typeAll","typeSale","typeRent",
-      "yearFrom","yearTo",
+      "yearFrom","yearTo","carFilters",
 
       // ✅ عقارات
-      "estateFilters","estateKindFilter","roomsFilter"
+      "estateFilters","estateKindFilter","roomsFilter",
+
+      // ✅ إلكترونيات
+      "electFilters","electKindFilter"
     ];
 
     for (const id of ids) this.el[id] = document.getElementById(id);
@@ -153,6 +156,9 @@ export const UI = {
 
     this.el.yearFrom?.addEventListener("input", debounce(liveReload, 200));
     this.el.yearTo?.addEventListener("input", debounce(liveReload, 200));
+
+    // ✅ إلكترونيات
+    this.el.electKindFilter?.addEventListener("change", liveReload);
 
     this.el.estateKindFilter?.addEventListener("change", liveReload);
     this.el.roomsFilter?.addEventListener("input", debounce(liveReload, 200));
@@ -451,9 +457,34 @@ bindDeluxeTypeControls(){
   },
 
   syncEstateFiltersVisibility(){
-    if (!this.el.estateFilters) return;
     const cat = this.normalizeCat(this.el.catFilter?.value || "");
-    this.el.estateFilters.classList.toggle("hidden", cat !== "realestate");
+
+    // ✅ عقارات: نوع العقار + غرف
+    if (this.el.estateFilters){
+      const isEstate = (cat === "realestate");
+      this.el.estateFilters.classList.toggle("hidden", !isEstate);
+      if (!isEstate){
+        if (this.el.estateKindFilter) this.el.estateKindFilter.value = "";
+        if (this.el.roomsFilter) this.el.roomsFilter.value = "";
+      }
+    }
+
+    // ✅ إلكترونيات: نوع الإلكترونيات
+    if (this.el.electFilters){
+      const isElect = (cat === "electronics");
+      this.el.electFilters.classList.toggle("hidden", !isElect);
+      if (!isElect && this.el.electKindFilter) this.el.electKindFilter.value = "";
+    }
+
+    // ✅ سيارات: سنة
+    if (this.el.carFilters){
+      const isCars = (cat === "cars");
+      this.el.carFilters.classList.toggle("hidden", !isCars);
+      if (!isCars){
+        if (this.el.yearFrom) this.el.yearFrom.value = "";
+        if (this.el.yearTo) this.el.yearTo.value = "";
+      }
+    }
   },
 
   resetFiltersUI(){
@@ -467,6 +498,8 @@ bindDeluxeTypeControls(){
 
     if (this.el.estateKindFilter) this.el.estateKindFilter.value = "";
     if (this.el.roomsFilter) this.el.roomsFilter.value = "";
+
+    if (this.el.electKindFilter) this.el.electKindFilter.value = "";
 
     this.syncTypeButtonsUI();
     this.syncEstateFiltersVisibility();

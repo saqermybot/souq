@@ -193,6 +193,13 @@ function carLine(data){
 // ---- Real Estate ----
 function isEstateCategory(data){ return getCatId(data) === "realestate"; }
 
+// ---- Electronics ----
+function isElectronicsCategory(data){ return getCatId(data) === "electronics"; }
+
+function getElectKind(data){
+  return (data.elect?.kind ?? data.electKind ?? data.electronicsKind ?? data.kind ?? "").toString().trim();
+}
+
 function getEstateKind(data){
   return (data.estate?.kind ?? data.estateKind ?? data.kind ?? data.subType ?? "").toString().trim();
 }
@@ -946,6 +953,7 @@ async function loadListings(reset = true){
 
   const estateKindVal = useFilters ? (($id("estateKindFilter")?.value || "").toString().trim()) : "";
   const roomsVal = useFilters ? Number(($id("roomsFilter")?.value || "").toString().trim() || 0) : 0;
+  const electKindVal = useFilters ? (($id("electKindFilter")?.value || "").toString().trim()) : "";
 
   const frag = document.createDocumentFragment();
 
@@ -989,6 +997,14 @@ async function loadListings(reset = true){
       if (roomsVal){
         const rr = getRoomsNum(data);
         if (rr !== roomsVal) return;
+      }
+    }
+
+    // ✅ فلاتر الإلكترونيات
+    if (isElectronicsCategory(data)){
+      if (electKindVal){
+        const ek = getElectKind(data);
+        if (ek !== electKindVal) return;
       }
     }
 
