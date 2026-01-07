@@ -211,7 +211,7 @@ function syncDynamicFieldsVisibility(){
   if (eleBox) eleBox.classList.toggle("hidden", catId !== "electronics");
 
   // ✅ NEW: تظهر للملابس + الأحذية
-  const isFashion = (catId === "clothes" || catId === "shoes");
+  const isFashion = (catId === "clothing");
   if (fashBox) fashBox.classList.toggle("hidden", !isFashion);
 }
 
