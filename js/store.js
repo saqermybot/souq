@@ -384,5 +384,26 @@ async function loadMore(reset=false){
   }
 }
 
+const btnShare = document.getElementById("btnShareStore");
+
+if (btnShare) {
+  btnShare.onclick = async () => {
+    const title = document.getElementById("sellerTitle")?.textContent || "إعلانات بائع";
+    const url = window.location.href;
+
+    if (navigator.share) {
+      try {
+        await navigator.share({
+          title,
+          text: `شوف إعلانات ${title} على سوق سوريا`,
+          url
+        });
+      } catch (e) {}
+    } else {
+      await navigator.clipboard.writeText(url);
+      alert("تم نسخ رابط صفحة التاجر 📋");
+    }
+  };
+}
 btnMore.onclick = () => loadMore(false);
 loadMore(true);
