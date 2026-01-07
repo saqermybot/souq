@@ -1093,7 +1093,7 @@ button.sm{
 
   min-width: 190px !important;
   background: var(--card) !important;
-  seen: 1px solid var(--border) !important;
+  border: 1px solid var(--border) !important;
   border-radius: 12px !important;
   padding: 6px !important;
 
