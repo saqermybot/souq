@@ -39,6 +39,62 @@ function chatRoomId(listingId, a, b){
 let currentChat = { listingId:null, roomId:null, otherId:null, listingTitle:"" };
 let inboxUnsub = null;
 
+async function getUserPublicProfile(uid){
+  try{
+    const uref = doc(db, "users", uid);
+    const usnap = await getDoc(uref);
+    if(!usnap.exists()) return { displayName: "مستخدم", phone: "", avatar: "", createdAt: null };
+    const d = usnap.data() || {};
+    return {
+      displayName: d.displayName || d.name || d.username || "مستخدم",
+      phone: d.phone || "",
+      avatar: d.avatar || "",
+      createdAt: d.createdAt || null
+    };
+  }catch(e){
+    return { displayName: "مستخدم", phone: "", avatar: "", createdAt: null };
+  }
+}
+
+async function getListingTitle(listingId){
+  try{
+    const lref = doc(db, "listings", listingId);
+    const lsnap = await getDoc(lref);
+    if(!lsnap.exists()) return "";
+    const d = lsnap.data() || {};
+    return d.title || d.name || "";
+  }catch(e){
+    return "";
+  }
+}
+
+async function updateChatHeader(){
+  const titleEl = UI.el.chatTitle;
+  const userLinkEl = document.getElementById("chatUserLink");
+  const listingLinkEl = document.getElementById("chatListingLink");
+  const sepEl = document.getElementById("chatMetaSep");
+
+  if(!titleEl) return;
+
+  const other = await getUserPublicProfile(currentChat.otherId);
+  const listingTitle = currentChat.listingTitle || (await getListingTitle(currentChat.listingId));
+  currentChat.listingTitle = listingTitle || currentChat.listingTitle;
+
+  titleEl.textContent = other.displayName || "محادثة";
+
+  if(userLinkEl){
+    userLinkEl.textContent = "بروفايل";
+    userLinkEl.href = `./store.html?u=${encodeURIComponent(currentChat.otherId)}`;
+  }
+  if(listingLinkEl){
+    listingLinkEl.textContent = listingTitle ? `الإعلان: ${listingTitle}` : "الإعلان";
+    listingLinkEl.href = `./index.html#${encodeURIComponent(currentChat.listingId)}`;
+  }
+  if(sepEl){
+    sepEl.style.display = (userLinkEl && listingLinkEl) ? "inline" : "none";
+  }
+}
+
 // ====== Notifications (sound + browser notif while page open) ======
 let lastTotalUnread = 0;
 
@@ -81,6 +137,30 @@ async function resolveOwnerId(listingId){
   return null;
 }
 
+async function renderChatHeader(otherUid, listingId, listingTitle){
+  // Title = other user name
+  const prof = await getUserPublicProfile(otherUid);
+  const name = (prof.displayName || "مستخدم").trim() || "مستخدم";
+  const titleEl = document.getElementById("chatTitle");
+  if (titleEl) titleEl.textContent = name;
+
+  const userLink = document.getElementById("chatUserLink");
+  if (userLink){
+    userLink.textContent = "عرض الحساب";
+    userLink.href = `./store.html?u=${encodeURIComponent(otherUid)}`;
+  }
+
+  const listingLink = document.getElementById("chatListingLink");
+  if (listingLink){
+    const t = (listingTitle || "الإعلان").trim() || "الإعلان";
+    listingLink.textContent = `إعلان: ${t}`;
+    listingLink.href = `./index.html#listing=${encodeURIComponent(listingId)}`;
+  }
+
+  const sep = document.getElementById("chatMetaSep");
+  if (sep) sep.style.display = (userLink && listingLink) ? "inline" : "none";
+}
+
 /* =========================
    ✅ TOP INDICATORS (Dot/Badge)
 ========================= */
@@ -120,23 +200,41 @@ async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
 
   UI.resetOverlays();
   UI.show(UI.el.chatBox);
-  UI.el.chatTitle.textContent = `محادثة: ${listingTitle}`;
+  UI.el.chatTitle.textContent = `محادثة`;
 
   const me = auth.currentUser.uid;
-  const realOwnerId = ownerId || await resolveOwnerId(listingId);
 
-  if (!realOwnerId){
+  // ✅ صاحب الإعلان الحقيقي (seller) من قاعدة البيانات إن أمكن
+  const listingOwnerId = await resolveOwnerId(listingId) || ownerId;
+  if (!listingOwnerId){
     UI.el.chatMsgs.innerHTML = `<div class="muted">تعذر تحديد صاحب الإعلان. جرّب فتح الإعلان ثم اضغط مراسلة.</div>`;
     return;
   }
 
-  if (realOwnerId === me){
-    UI.el.chatMsgs.innerHTML = `<div class="muted">لا يمكن مراسلة نفسك.</div>`;
-    return;
+  // ✅ تحديد الطرف الآخر حسب من فتح الشات
+  let buyerId;
+  let sellerId = listingOwnerId;
+  let otherId;
+
+  if (me === sellerId){
+    // أنا صاحب الإعلان (seller) — لازم يكون ownerId هو المشتري/الطرف الآخر
+    if (!ownerId || ownerId === me){
+      UI.el.chatMsgs.innerHTML = `<div class="muted">لا يمكن فتح محادثة بدون طرف آخر.</div>`;
+      return;
+    }
+    buyerId = ownerId;
+    otherId = ownerId;
+  } else {
+    // أنا مشتري/مهتم
+    buyerId = me;
+    otherId = sellerId;
   }
 
-  const roomId = chatRoomId(listingId, me, realOwnerId);
-  currentChat = { listingId, roomId, otherId: realOwnerId, listingTitle };
+  const roomId = chatRoomId(listingId, buyerId, sellerId);
+  currentChat = { listingId, roomId, otherId, listingTitle };
+
+  // ✅ هيدر الشات: اسم الشخص + رابط الإعلان + رابط الحساب
+  await renderChatHeader(otherId, listingId, listingTitle);
 
   const chatDocRef = doc(db, "chats", roomId);
 
@@ -144,12 +242,12 @@ async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
   await setDoc(chatDocRef, {
     listingId,
     listingTitle,
-    buyerId: me,
-    sellerId: realOwnerId,
-    participants: [me, realOwnerId].sort(),
+    buyerId,
+    sellerId,
+    participants: [buyerId, sellerId].sort(),
     updatedAt: serverTimestamp(),
     lastText: "",
-    unread: { [me]: 0, [realOwnerId]: 0 }
+    unread: { [buyerId]: 0, [sellerId]: 0 }
   }, { merge: true });
 
   // ✅ فتح الشات = اعتبرها مقروءة بالمحادثة
