@@ -990,21 +990,26 @@ button.sm{
   display:flex !important;
 }
 /* =========================
-/* =========================
-   ✅ USER MENU (FIXED) - no clipping / no weird offsets
+   ✅ USER MENU (FIXED) - under avatar / no clipping / no weird offsets
 ========================= */
 
+/* مهم: نمنع قصّ المنيو من الهيدر */
+.topbar,
+.authbar{
+  overflow: visible !important;
+}
+
 #userMenuWrap.userMenuWrap{
-  position: static !important;          /* بدل relative */
+  position: relative !important;        /* لازم relative ليرتبط drop-down فيه */
   display: flex !important;
   align-items: center !important;
 }
 
-/* المنيو نفسها (اسمها userMenu عندك) */
+/* المنيو نفسها */
 #userMenu.userMenu{
-  position: fixed !important;           /* بدل absolute */
-  top: 70px !important;                 /* تحت التوب بار */
-  right: 12px !important;               /* ثابتة يمين */
+  position: absolute !important;        /* بدل fixed */
+  top: calc(100% + 10px) !important;    /* تحت الصورة مباشرة */
+  right: 0 !important;                  /* ملاصقة ليمين زر الصورة */
   left: auto !important;
 
   min-width: 190px !important;
@@ -1019,7 +1024,7 @@ button.sm{
   max-width: calc(100vw - 24px) !important;
 }
 
-/* أزرار المنيو عندك بدون menuItem */
+/* أزرار المنيو */
 #userMenu.userMenu > button{
   width: 100% !important;
   display: flex !important;
@@ -1037,6 +1042,7 @@ button.sm{
   border-radius: 10px !important;
   cursor: pointer !important;
 }
+
 #userMenu.userMenu > button:hover{
   background: rgba(148,163,184,.12) !important;
 }
