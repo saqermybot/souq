@@ -6,6 +6,8 @@ import {
   createUserWithEmailAndPassword,
   GoogleAuthProvider,
   signInWithPopup,
+  signInWithRedirect,
+  getRedirectResult,
   signOut
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
@@ -19,7 +21,11 @@ export function initAuth() {
   try { localStorage.setItem("theme", "dark"); } catch {}
 
   // ===== Modal open/close =====
-  UI.actions.openAuth = () => UI.show(UI.el.authModal);
+  UI.actions.openAuth = () => {
+    UI.show(UI.el.authModal);
+    // تحسين تجربة: ركّز على الإيميل
+    try { UI.el.email?.focus?.(); } catch {}
+  };
   UI.actions.closeAuth = () => UI.hide(UI.el.authModal);
 
   if (UI.el.authModal) {
@@ -33,6 +39,18 @@ export function initAuth() {
     if (UI.el.btnRegister) UI.el.btnRegister.disabled = isBusy;
     if (UI.el.btnGoogle) UI.el.btnGoogle.disabled = isBusy;
   };
+
+  // ✅ حاول التقاط نتيجة redirect (بعض الأجهزة ما بتنجح popup)
+  (async () => {
+    try {
+      const res = await getRedirectResult(auth);
+      // إذا نجح، سكّر المودال
+      if (res?.user) UI.actions.closeAuth();
+    } catch (e) {
+      // ما نعمل alert مزعج هون—يكفي أنه يتعالج عند زر Google
+      console.warn("getRedirectResult:", e?.code || e);
+    }
+  })();
 
   // ===== Email/Password Login =====
   if (UI.el.btnLogin) {
@@ -75,13 +93,35 @@ export function initAuth() {
   // ===== Google Login =====
   if (UI.el.btnGoogle) {
     UI.el.btnGoogle.onclick = async () => {
+      const provider = new GoogleAuthProvider();
       try {
         setBusy(true);
-        const provider = new GoogleAuthProvider();
         await signInWithPopup(auth, provider);
         UI.actions.closeAuth();
       } catch (e) {
-        alert(prettyAuthError(e));
+        const msg = prettyAuthError(e);
+
+        // ✅ إذا popup فشل لأي سبب "شائع بالموبايل"، جرّب redirect كخطة B
+        const code = e?.code || "";
+        const shouldTryRedirect =
+          code === "auth/popup-blocked" ||
+          code === "auth/popup-closed-by-user" ||
+          code === "auth/cancelled-popup-request" ||
+          code === "auth/operation-not-supported-in-this-environment" ||
+          code === "auth/network-request-failed";
+
+        if (shouldTryRedirect) {
+          // أعطي المستخدم سبب واضح + جرّب redirect
+          alert(msg + "\n\nسنحاول طريقة بديلة (Redirect)...");
+          try {
+            await signInWithRedirect(auth, provider);
+            return;
+          } catch (e2) {
+            alert(prettyAuthError(e2));
+          }
+        } else {
+          alert(msg);
+        }
       } finally {
         setBusy(false);
       }
@@ -263,9 +303,21 @@ function prettyAuthError(e) {
   if (code === "auth/email-already-in-use") return "هذا الإيميل مسجل مسبقاً.";
   if (code === "auth/weak-password") return "الباسورد ضعيف (لازم 6 أحرف على الأقل).";
 
-  if (code === "auth/popup-blocked") return "المتصفح حجب نافذة Google. جرّب Safari أو اسمح بالنوافذ المنبثقة.";
+  if (code === "auth/popup-blocked") return "المتصفح حجب نافذة Google. جرّب Chrome/Firefox أو اسمح بالنوافذ المنبثقة.";
   if (code === "auth/popup-closed-by-user") return "سكرّت نافذة Google قبل ما تكمّل.";
   if (code === "auth/cancelled-popup-request") return "انلغت العملية. جرّب مرة ثانية.";
+
+  // ✅ سوريا/شبكات: أوضح رسالة + حل عملي
+  if (code === "auth/network-request-failed" || code === "auth/timeout") {
+    return (
+      "تعذّر الاتصال بخدمة تسجيل الدخول.\n" +
+      "هذا غالباً بسبب حجب/ضعف اتصال لخدمات Google/Firebase في بلدك.\n\n" +
+      "✅ الحلول المقترحة:\n" +
+      "1) جرّب VPN (مثل Psiphon) وقت الدخول فقط.\n" +
+      "2) جرّب شبكة مختلفة (واي فاي/بيانات).\n" +
+      "3) جرّب DNS: 1.1.1.1 أو 8.8.8.8.\n"
+    );
+  }
 
   return e?.message || "فشل تسجيل الدخول.";
 }
