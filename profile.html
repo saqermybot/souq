@@ -21,13 +21,18 @@
     </div>
 
     <div class="authbar" style="gap:10px">
-      <!-- ✅ خليها زر واضح -->
       <a href="./index.html" class="ghostLink" aria-label="الرجوع للسوق">الرجوع للسوق</a>
     </div>
   </header>
 
   <main class="container">
     <section class="deluxeFilters" style="margin-top:12px">
+
+      <!-- ✅ أزرار بسيطة وواضحة -->
+      <div class="profileTopActions">
+        <button id="btnSharePage" class="secondary sm" type="button">🔗 مشاركة الصفحة</button>
+      </div>
+
       <div class="filterHead">
         <div class="filterTitle">الملف الشخصي</div>
         <div id="pStatus" class="muted small"></div>
@@ -69,7 +74,6 @@
         </div>
 
         <div class="field span2 actionsGrid">
-          <!-- ✅ مهم: type=button -->
           <button id="btnSave" class="primary" type="button">حفظ</button>
           <button id="btnMyStore" class="secondary" type="button">إعلاناتي</button>
         </div>
@@ -83,7 +87,45 @@
 
   <script type="module" src="./js/profile.js?v=2"></script>
 
-  <!-- ✅ ستايل خفيف للرابط ليطلع مثل زر -->
+  <!-- ✅ منطق المشاركة (بسيط + مضمون) -->
+  <script type="module">
+    import { auth } from "./js/firebase.js";
+    import { UI } from "./js/ui.js";
+
+    const btnShare = document.getElementById("btnSharePage");
+
+    if (btnShare) {
+      btnShare.onclick = async () => {
+        const user = auth.currentUser;
+        if (!user) {
+          UI.toast?.("لازم تسجل دخول أولاً") || alert("لازم تسجل دخول أولاً");
+          return;
+        }
+
+        const name =
+          document.getElementById("displayName")?.value ||
+          user.displayName ||
+          "تاجر سوق سوريا";
+
+        const url = new URL("./store.html", location.href);
+        url.searchParams.set("u", user.uid);
+
+        try {
+          if (navigator.share) {
+            await navigator.share({
+              title: name,
+              text: `شاهد إعلانات ${name} على سوق سوريا`,
+              url: url.toString()
+            });
+          } else {
+            await navigator.clipboard.writeText(url.toString());
+            UI.toast?.("تم نسخ رابط الصفحة 📋") || alert("تم نسخ رابط الصفحة");
+          }
+        } catch {}
+      };
+    }
+  </script>
+
   <style>
     .ghostLink{
       display:inline-flex;
@@ -99,6 +141,19 @@
       white-space:nowrap;
     }
     .ghostLink:active{ transform: scale(.98); }
+
+    .profileTopActions{
+      display:flex;
+      gap:8px;
+      margin-bottom:10px;
+    }
+    .profileTopActions .sm{
+      height:36px;
+      padding:0 12px;
+      border-radius:12px;
+      font-size:13px;
+      white-space:nowrap;
+    }
   </style>
 </body>
 </html>
