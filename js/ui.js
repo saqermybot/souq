@@ -64,7 +64,10 @@ export const UI = {
       "estateFilters","estateKindFilter","roomsFilter",
 
       // ✅ إلكترونيات
-      "electFilters","electKindFilter"
+      "electFilters","electKindFilter",
+
+      // ✅ NEW: ملابس
+      "fashionFilters","fashionGroupFilter"
     ];
 
     for (const id of ids) this.el[id] = document.getElementById(id);
@@ -152,7 +155,12 @@ export const UI = {
       const yt = (this.el.yearTo?.value || "").toString().trim();
       const ek = (this.el.estateKindFilter?.value || "").toString().trim();
       const rr = (this.el.roomsFilter?.value || "").toString().trim();
-      return !!(q || city || cat || type || yf || yt || ek || rr);
+      const elK = (this.el.electKindFilter?.value || "").toString().trim();
+
+      // ✅ NEW: ملابس
+      const fg = (this.el.fashionGroupFilter?.value || "").toString().trim();
+
+      return !!(q || city || cat || type || yf || yt || ek || rr || elK || fg);
     };
 
     const liveReload = () => {
@@ -196,6 +204,9 @@ export const UI = {
     this.el.estateKindFilter?.addEventListener("change", liveReload);
     this.el.roomsFilter?.addEventListener("input", debounce(liveReload, 200));
 
+    // ✅ NEW: ملابس
+    this.el.fashionGroupFilter?.addEventListener("change", liveReload);
+
     // ✅ gallery controls
     this.el.gPrev && (this.el.gPrev.onclick = () => this.setGalleryIdx(this.state.gallery.idx - 1));
     this.el.gNext && (this.el.gNext.onclick = () => this.setGalleryIdx(this.state.gallery.idx + 1));
@@ -216,14 +227,6 @@ export const UI = {
     this.syncEstateFiltersVisibility();
   },
 
-  /* =========================
-     ✅ Deluxe: Toggle Filters
-  ========================= */
-  
-  /* =========================
-     ✅ Deluxe: filters collapse/expand (button + swipe)
-  ========================= */
-  
   /* =========================
      ✅ Deluxe: filters collapse/expand (button + swipe)
   ========================= */
@@ -274,7 +277,6 @@ export const UI = {
       });
     }
 
-
     // init
     // default: collapsed so الزائر يشوف الإعلانات أولاً
     applyUI();
@@ -284,168 +286,81 @@ export const UI = {
   },
 
   /* =========================
+     ✅ Swipe to open/close filters (luxury feel)
+  ========================= */
+  bindFiltersSwipe(toggleFn){
+    if (!this.el.filtersBody) return;
+
+    const header = this.el.filtersBody.closest(".deluxeFilters")?.querySelector(".filterHead") || null;
+
+    const TOP_EDGE_PX = 90;     // start zone from top
+    const THRESHOLD_PX = 55;    // swipe distance
+    const MAX_X_DRIFT = 80;     // ignore diagonal drags
+
+    let startY = null, startX = null, startT = 0;
+    let startedFromTop = false;
+    let startedFromHeader = false;
+
+    const isFormControl = (el) => {
+      const t = (el?.tagName || "").toLowerCase();
+      return t === "input" || t === "select" || t === "textarea" || el?.isContentEditable;
+    };
+
+    const onStart = (e) => {
+      const t = e.touches?.[0];
+      if (!t) return;
+
+      if (isFormControl(e.target)) return;
+
+      startY = t.clientY;
+      startX = t.clientX;
+      startT = Date.now();
+
+      startedFromTop = startY <= TOP_EDGE_PX;
+      startedFromHeader = !!(header && (e.target === header || header.contains(e.target)));
+
+      if (!this.state.filtersOpen && !(startedFromTop || startedFromHeader)){
+        startY = startX = null;
+        return;
+      }
+    };
+
+    const onEnd = (e) => {
+      if (startY == null || startX == null) return;
+
+      const t = (e.changedTouches?.[0]) || (e.touches?.[0]);
+      if (!t) { startY = startX = null; return; }
+
+      const dy = t.clientY - startY;
+      const dx = t.clientX - startX;
+      const dt = Math.max(1, Date.now() - startT);
+
+      if (Math.abs(dx) > Math.max(MAX_X_DRIFT, Math.abs(dy))) {
+        startY = startX = null;
+        return;
+      }
+
+      // OPEN: swipe down
+      if (!this.state.filtersOpen && dy > THRESHOLD_PX && (startedFromTop || startedFromHeader)) {
+        toggleFn(true);
+      }
+
+      // CLOSE: swipe up
+      if (this.state.filtersOpen && dy < -THRESHOLD_PX && (startedFromTop || startedFromHeader)) {
+        toggleFn(false);
+      }
+
+      startY = startX = null;
+    };
+
+    window.addEventListener("touchstart", onStart, { passive: true });
+    window.addEventListener("touchend", onEnd, { passive: true });
+  },
+
+  /* =========================
      ✅ Deluxe: segmented type
   ========================= */
-  
-  /* =========================
-     ✅ Swipe to open/close filters (luxury feel)
-     - Swipe down from top edge (or on filters header) => open
-     - Swipe up on header/top => close
-  ========================= */
-  bindFiltersSwipe(toggleFn){
-    if (!this.el.filtersBody) return;
-
-    const header = this.el.filtersBody.closest(".deluxeFilters")?.querySelector(".filterHead") || null;
-
-    const TOP_EDGE_PX = 90;     // start zone from top
-    const THRESHOLD_PX = 55;    // swipe distance
-    const MAX_X_DRIFT = 80;     // ignore diagonal drags
-
-    let startY = null, startX = null, startT = 0;
-    let startedFromTop = false;
-    let startedFromHeader = false;
-
-    const isFormControl = (el) => {
-      const t = (el?.tagName || "").toLowerCase();
-      return t === "input" || t === "select" || t === "textarea" || el?.isContentEditable;
-    };
-
-    const onStart = (e) => {
-      const t = e.touches?.[0];
-      if (!t) return;
-
-      // don't hijack when user interacts with form controls
-      if (isFormControl(e.target)) return;
-
-      startY = t.clientY;
-      startX = t.clientX;
-      startT = Date.now();
-
-      startedFromTop = startY <= TOP_EDGE_PX;
-
-      // if header exists: allow swipe start from header area for better UX
-      startedFromHeader = !!(header && (e.target === header || header.contains(e.target)));
-
-      // When collapsed, we only allow swipes from top edge or header
-      if (!this.state.filtersOpen && !(startedFromTop || startedFromHeader)){
-        startY = startX = null;
-        return;
-      }
-    };
-
-    const onEnd = (e) => {
-      if (startY == null || startX == null) return;
-
-      const t = (e.changedTouches?.[0]) || (e.touches?.[0]);
-      if (!t) { startY = startX = null; return; }
-
-      const dy = t.clientY - startY;
-      const dx = t.clientX - startX;
-      const dt = Math.max(1, Date.now() - startT);
-
-      // ignore horizontal-ish gestures
-      if (Math.abs(dx) > Math.max(MAX_X_DRIFT, Math.abs(dy))) {
-        startY = startX = null;
-        return;
-      }
-
-      // a small velocity bias (optional)
-      const vy = dy / dt; // px per ms
-
-      // OPEN: swipe down
-      if (!this.state.filtersOpen && dy > THRESHOLD_PX && (startedFromTop || startedFromHeader)) {
-        toggleFn(true);
-      }
-
-      // CLOSE: swipe up
-      if (this.state.filtersOpen && dy < -THRESHOLD_PX && (startedFromTop || startedFromHeader)) {
-        toggleFn(false);
-      }
-
-      startY = startX = null;
-    };
-
-    // attach (passive true keeps scroll smooth)
-    window.addEventListener("touchstart", onStart, { passive: true });
-    window.addEventListener("touchend", onEnd, { passive: true });
-  },
-
-
-  /* =========================
-     ✅ Swipe to open/close filters (luxury feel)
-     - Swipe down from top edge (or on filters header) => open
-     - Swipe up on header/top => close
-  ========================= */
-  bindFiltersSwipe(toggleFn){
-    if (!this.el.filtersBody) return;
-
-    const header = this.el.filtersBody.closest(".deluxeFilters")?.querySelector(".filterHead") || null;
-
-    const TOP_EDGE_PX = 90;     // start zone from top
-    const THRESHOLD_PX = 55;    // swipe distance
-    const MAX_X_DRIFT = 80;     // ignore diagonal drags
-
-    let startY = null, startX = null, startT = 0;
-    let startedFromTop = false;
-    let startedFromHeader = false;
-
-    const isFormControl = (el) => {
-      const t = (el?.tagName || "").toLowerCase();
-      return t === "input" || t === "select" || t === "textarea" || el?.isContentEditable;
-    };
-
-    const onStart = (e) => {
-      const t = e.touches?.[0];
-      if (!t) return;
-
-      if (isFormControl(e.target)) return;
-
-      startY = t.clientY;
-      startX = t.clientX;
-      startT = Date.now();
-
-      startedFromTop = startY <= TOP_EDGE_PX;
-      startedFromHeader = !!(header && (e.target === header || header.contains(e.target)));
-
-      if (!this.state.filtersOpen && !(startedFromTop || startedFromHeader)){
-        startY = startX = null;
-        return;
-      }
-    };
-
-    const onEnd = (e) => {
-      if (startY == null || startX == null) return;
-
-      const t = (e.changedTouches?.[0]) || (e.touches?.[0]);
-      if (!t) { startY = startX = null; return; }
-
-      const dy = t.clientY - startY;
-      const dx = t.clientX - startX;
-      const dt = Math.max(1, Date.now() - startT);
-
-      if (Math.abs(dx) > Math.max(MAX_X_DRIFT, Math.abs(dy))) {
-        startY = startX = null;
-        return;
-      }
-
-      // OPEN: swipe down
-      if (!this.state.filtersOpen && dy > THRESHOLD_PX && (startedFromTop || startedFromHeader)) {
-        toggleFn(true);
-      }
-
-      // CLOSE: swipe up
-      if (this.state.filtersOpen && dy < -THRESHOLD_PX && (startedFromTop || startedFromHeader)) {
-        toggleFn(false);
-      }
-
-      startY = startX = null;
-    };
-
-    window.addEventListener("touchstart", onStart, { passive: true });
-    window.addEventListener("touchend", onEnd, { passive: true });
-  },
-
-bindDeluxeTypeControls(){
+  bindDeluxeTypeControls(){
     if (!this.el.typeFilter) return;
 
     const setType = (val) => {
@@ -479,13 +394,17 @@ bindDeluxeTypeControls(){
   },
 
   /* =========================
-     ✅ Estate filters show/hide
+     ✅ Estate/Elect/Cars/Fashion filters show/hide
   ========================= */
   normalizeCat(v){
     const s = (v || "").toString().trim().toLowerCase();
     if (s === "سيارات") return "cars";
     if (s === "عقارات") return "realestate";
     if (s === "إلكترونيات" || s === "الكترونيات") return "electronics";
+
+    // ✅ NEW: ملابس
+    if (s === "ملابس و أحذية" || s === "ملابس وأحذية" || s === "ملابس" || s === "الملابس" || s === "clothing") return "clothing";
+
     return s;
   },
 
@@ -518,6 +437,13 @@ bindDeluxeTypeControls(){
         if (this.el.yearTo) this.el.yearTo.value = "";
       }
     }
+
+    // ✅ NEW: ملابس: رجالي/نسائي/ولادي
+    if (this.el.fashionFilters){
+      const isFashion = (cat === "clothing");
+      this.el.fashionFilters.classList.toggle("hidden", !isFashion);
+      if (!isFashion && this.el.fashionGroupFilter) this.el.fashionGroupFilter.value = "";
+    }
   },
 
   resetFiltersUI(){
@@ -533,6 +459,9 @@ bindDeluxeTypeControls(){
     if (this.el.roomsFilter) this.el.roomsFilter.value = "";
 
     if (this.el.electKindFilter) this.el.electKindFilter.value = "";
+
+    // ✅ NEW
+    if (this.el.fashionGroupFilter) this.el.fashionGroupFilter.value = "";
 
     this.syncTypeButtonsUI();
     this.syncEstateFiltersVisibility();
