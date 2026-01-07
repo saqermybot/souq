@@ -366,7 +366,7 @@ function validateForm({ title, description, price, city, catId, files, extra }) 
   }
 
   // ✅ NEW
-  if (catId === "clothes" || catId === "shoes") {
+  if (catId === "clothing")
     if (!extra.fashionGroup) return "اختر القسم (رجالي / نسائي / ولادي)";
   }
 
