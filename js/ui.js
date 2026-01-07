@@ -35,7 +35,7 @@ export const UI = {
 
       // ✅ DETAILS (+ dSeller جديد)
       "detailsPage","btnBack","btnShare","dTitle","dMeta","dStats","dSeller","dPrice","dDesc","btnReadMore","dInfo",
-      "btnFav","dFavCount","btnChat","btnWhatsapp","btnDeleteListing","gImg","gDots","gPrev","gNext",
+      "btnFav","dFavCount","btnChat","btnWhatsapp","btnReportListing","btnReportWhatsapp","btnDeleteListing","gImg","gDots","gPrev","gNext",
 
       "inboxPage","btnInboxBack","btnInboxRefresh","inboxList","inboxEmpty",
 

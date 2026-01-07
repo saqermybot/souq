@@ -16,6 +16,7 @@ import {
   limit,
   orderBy,
   query,
+  where,
   startAfter,
   serverTimestamp
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
@@ -40,6 +41,26 @@ function isAdminUser(user){
 ========================= */
 
 function $id(id){ return document.getElementById(id); }
+
+// ✅ Report reasons (for listing report)
+const REPORT_REASONS = [
+  { key: "bad_ad", label: "🚫 إعلان مخالف" },
+  { key: "personal", label: "🧍 إساءة / محتوى شخصي" },
+  { key: "fake_phone", label: "📞 رقم كاذب أو غير صحيح" }
+];
+
+function askReportReason(){
+  const r = prompt(
+`سبب التبليغ:
+1 - إعلان مخالف
+2 - إساءة / محتوى شخصي
+3 - رقم كاذب أو غير صحيح
+
+اكتب رقم السبب:`
+  );
+  const map = { "1":"bad_ad", "2":"personal", "3":"fake_phone" };
+  return map[String(r || "").trim()] || null;
+}
 
 function typeToAr(typeId){
   if (typeId === "sale") return "بيع";
@@ -585,12 +606,64 @@ async function openDetails(id, data = null, fromHash = false){
     }
 
     const waBtn = UI.el.btnWhatsapp || $id("btnWhatsapp");
+    const reportListingBtn = UI.el.btnReportListing || $id("btnReportListing");
     const reportBtn = UI.el.btnReportWhatsapp || $id("btnReportWhatsapp");
 
     const waRaw = (prof?.whatsapp || "").toString().trim();
     const waNum = normalizeWhatsapp(waRaw);
 
     const listingUrl = location.href.split("#")[0] + `#listing=${encodeURIComponent(id)}`;
+
+    // ==== Report listing (reasons) ====
+    if (reportListingBtn){
+      reportListingBtn.onclick = async () => {
+        // بلاغ فقط للمسجل (حتى نعرف مين)
+        if (!auth.currentUser){
+          UI.actions.openAuth?.();
+          return;
+        }
+
+        const reasonKey = askReportReason();
+        if (!reasonKey) return;
+        const reasonLabel = (REPORT_REASONS.find(x => x.key === reasonKey)?.label) || reasonKey;
+
+        reportListingBtn.disabled = true;
+        try{
+          // ✅ منع تكرار البلاغ من نفس المستخدم على نفس الإعلان
+          const qy = query(
+            collection(db, "reports"),
+            where("type", "==", "listing_report"),
+            where("listingId", "==", id),
+            where("reporterUid", "==", auth.currentUser.uid),
+            limit(1)
+          );
+          const ex = await getDocs(qy);
+          if (!ex.empty){
+            alert("سبق وأرسلت بلاغاً لهذا الإعلان ✅");
+            return;
+          }
+
+          await addDoc(collection(db, "reports"), {
+            type: "listing_report",
+            listingId: id,
+            listingTitle: (data.title || "").toString().trim(),
+            listingOwnerId: ownerId || null,
+            reason: reasonKey,
+            reasonLabel,
+            reporterUid: auth.currentUser.uid,
+            reporterEmail: auth.currentUser.email || null,
+            createdAt: serverTimestamp(),
+            url: listingUrl
+          });
+
+          alert("تم إرسال البلاغ ✅ شكراً لك");
+        }catch(e){
+          alert(e?.message || "فشل إرسال البلاغ");
+        }finally{
+          reportListingBtn.disabled = false;
+        }
+      };
+    }
 
     // ==== WhatsApp button (ممنوع للزائر) ====
     if (waBtn){
@@ -634,6 +707,60 @@ ${listingUrl}
         // ما في رقم: خليه مخفي وما في onclick
         waBtn.onclick = null;
       }
+    }
+
+    // ==== Report Listing (واضح داخل صفحة الإعلان) ====
+    if (reportListingBtn){
+      reportListingBtn.classList.remove("hidden");
+      reportListingBtn.disabled = false;
+
+      reportListingBtn.onclick = async () => {
+        if (!auth.currentUser){
+          UI.actions.openAuth?.();
+          return;
+        }
+
+        const reasonKey = askReportReason();
+        if (!reasonKey) return;
+
+        const reasonLabel = (REPORT_REASONS.find(r => r.key === reasonKey)?.label) || reasonKey;
+
+        reportListingBtn.disabled = true;
+        try{
+          // ✅ prevent duplicate report by same user for same listing
+          const qy = query(
+            collection(db, "reports"),
+            where("type", "==", "listing_report"),
+            where("listingId", "==", id),
+            where("reporterUid", "==", (auth.currentUser.uid || "")),
+            limit(1)
+          );
+          const ex = await getDocs(qy);
+          if (!ex.empty){
+            alert("سبق وأن أرسلت بلاغاً عن هذا الإعلان ✅");
+            return;
+          }
+
+          await addDoc(collection(db, "reports"), {
+            type: "listing_report",
+            listingId: id,
+            listingTitle: (data.title || "").toString().trim(),
+            listingOwnerId: ownerId || null,
+            reason: reasonKey,
+            reasonLabel,
+            reporterUid: auth.currentUser?.uid || null,
+            reporterEmail: auth.currentUser?.email || null,
+            createdAt: serverTimestamp(),
+            source: location.hostname || "web"
+          });
+
+          alert("تم إرسال البلاغ ✅ شكراً لمساعدتك");
+        }catch(e){
+          alert(e?.message || "فشل إرسال البلاغ");
+        }finally{
+          reportListingBtn.disabled = false;
+        }
+      };
     }
 
     // ==== Report (يُفضّل يكون أيضاً لمستخدم مسجل حتى نعرف مين بلّغ) ====
