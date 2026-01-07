@@ -1,3 +1,4 @@
+ 
 // listings.js (Deluxe: typeFilter hidden + yearFrom/yearTo + عقارات + ميتا + مراسلة/Inbox + WhatsApp + Report)
 
 import { db, auth } from "./firebase.js";
@@ -82,10 +83,6 @@ function normalizeCat(v){
   if (s === "سيارات") return "cars";
   if (s === "عقارات") return "realestate";
   if (s === "إلكترونيات" || s === "الكترونيات") return "electronics";
-
-  // ✅ NEW: ملابس و أحذية
-  if (s === "ملابس و أحذية" || s === "ملابس وأحذية" || s === "ملابس" || s === "ألبسة" || s === "البسة") return "clothing";
-
   return s;
 }
 
@@ -204,16 +201,6 @@ function getElectKind(data){
   return (data.elect?.kind ?? data.electKind ?? data.electronicsKind ?? data.kind ?? "").toString().trim();
 }
 
-// ✅ NEW: Clothing
-function isClothingCategory(data){ return getCatId(data) === "clothing"; }
-
-function getFashionGender(data){
-  // ✅ يدعم الإعلانات الجديدة والقديمة (احتياط)
-  return (data.gender ?? data.fashion?.gender ?? data.fashionGender ?? data.fashionGroup ?? data.fashion?.group ?? "")
-    .toString()
-    .trim();
-}
-
 function getEstateKind(data){
   return (data.estate?.kind ?? data.estateKind ?? data.kind ?? data.subType ?? "").toString().trim();
 }
@@ -313,11 +300,6 @@ function readYearRange(){
   const yt = Number(($id("yearTo")?.value || "").toString().trim() || 0) || 0;
   if (yf && yt && yf > yt) return { from: yt, to: yf };
   return { from: yf, to: yt };
-}
-
-// ✅ NEW: قراءة فلتر الملابس (رجالي/نسائي/ولادي)
-function readFashionGenderFilter(){
-  return (($id("fashionGenderFilter")?.value || "").toString().trim());
 }
 
 /* =========================
@@ -506,7 +488,7 @@ async function deleteCurrentListing(){
     const isAdmin = isAdminUser(auth.currentUser);
 
     if (!isOwner && !isAdmin) return alert("لا يمكنك حذف هذا الإعلان");
-    const ok = confirm("هل أنت متأكد أنك تريد حذف الإعلان نهائياً؟");
+const ok = confirm("هل أنت متأكد أنك تريد حذف الإعلان نهائياً؟");
     if (!ok) return;
 
     if (UI.el.btnDeleteListing) UI.el.btnDeleteListing.disabled = true;
@@ -611,7 +593,241 @@ async function openDetails(id, data = null, fromHash = false){
       };
     }
 
-    // ... (باقي openDetails كما هو عندك)
+    // 3) Seller + WhatsApp + Report
+    const ownerId = getSellerUid(data);
+
+    let prof = ownerId ? await getUserProfile(ownerId) : null;
+    const waTry = (prof?.whatsapp || "").toString().trim();
+    if (ownerId && !waTry){
+      prof = await getUserProfile(ownerId, { force: true });
+    }
+
+    // Seller line
+    if (UI.el.dSeller){
+      if (!ownerId){
+        UI.el.dSeller.classList.add("hidden");
+        UI.el.dSeller.innerHTML = "";
+      } else {
+        const sellerName = escapeHtml(pickBestSellerName(data, prof));
+        UI.el.dSeller.innerHTML =
+          `البائع: <a class="sellerLink" href="${buildStoreUrl(ownerId)}">${sellerName}</a>`;
+        UI.el.dSeller.classList.remove("hidden");
+      }
+    }
+
+    const waBtn = UI.el.btnWhatsapp || $id("btnWhatsapp");
+    const reportListingBtn = UI.el.btnReportListing || $id("btnReportListing");
+    const reportBtn = UI.el.btnReportWhatsapp || $id("btnReportWhatsapp");
+
+    const waRaw = (prof?.whatsapp || "").toString().trim();
+    const waNum = normalizeWhatsapp(waRaw);
+
+    const listingUrl = location.href.split("#")[0] + `#listing=${encodeURIComponent(id)}`;
+
+    // ==== Report listing (reasons) ====
+    if (reportListingBtn){
+      reportListingBtn.onclick = async () => {
+        // بلاغ فقط للمسجل (حتى نعرف مين)
+        if (!auth.currentUser){
+          UI.actions.openAuth?.();
+          return;
+        }
+
+        const reasonKey = askReportReason();
+        if (!reasonKey) return;
+        const reasonLabel = (REPORT_REASONS.find(x => x.key === reasonKey)?.label) || reasonKey;
+
+        reportListingBtn.disabled = true;
+        try{
+          // ✅ منع تكرار البلاغ من نفس المستخدم على نفس الإعلان
+          const qy = query(
+            collection(db, "reports"),
+            where("type", "==", "listing_report"),
+            where("listingId", "==", id),
+            where("reporterUid", "==", auth.currentUser.uid),
+            limit(1)
+          );
+          const ex = await getDocs(qy);
+          if (!ex.empty){
+            alert("سبق وأرسلت بلاغاً لهذا الإعلان ✅");
+            return;
+          }
+
+          await addDoc(collection(db, "reports"), {
+            type: "listing_report",
+            listingId: id,
+            listingTitle: (data.title || "").toString().trim(),
+            listingOwnerId: ownerId || null,
+            reason: reasonKey,
+            reasonLabel,
+            reporterUid: auth.currentUser.uid,
+            reporterEmail: auth.currentUser.email || null,
+            createdAt: serverTimestamp(),
+            url: listingUrl
+          });
+
+          alert("تم إرسال البلاغ ✅ شكراً لك");
+        }catch(e){
+          alert(e?.message || "فشل إرسال البلاغ");
+        }finally{
+          reportListingBtn.disabled = false;
+        }
+      };
+    }
+
+    // ==== WhatsApp button (ممنوع للزائر) ====
+    if (waBtn){
+      waBtn.classList.add("hidden");
+      waBtn.removeAttribute("href");
+      waBtn.textContent = "واتساب"; // خلي النص ثابت
+
+      // لو ما في رقم: ضل مخفي
+      if (ownerId && waNum){
+        const msg = encodeURIComponent(
+`مرحباً 👋
+أنا مهتم بالإعلان:
+
+📌 ${data.title || ""}
+🆔 رقم الإعلان: ${id}
+
+رابط الإعلان:
+${listingUrl}
+
+⚠️ تنبيه:
+إذا لم تكن أنت صاحب هذا الإعلان أو وصلتك الرسالة بالخطأ، يرجى تجاهلها.
+للمراسلة الرسمية استخدم زر "مراسلة" داخل الموقع.`
+        );
+
+        const href = `https://wa.me/${waNum}?text=${msg}`;
+        waBtn.href = href;
+        waBtn.classList.remove("hidden");
+
+        // ✅ منع الفتح للزائر حتى لو ضغط
+        waBtn.onclick = (e) => {
+          if (!auth.currentUser){
+            e.preventDefault();
+            e.stopPropagation();
+            UI.actions.openAuth?.();
+            return false;
+          }
+          // مسجل: خليه يفتح طبيعي
+          return true;
+        };
+      } else {
+        // ما في رقم: خليه مخفي وما في onclick
+        waBtn.onclick = null;
+      }
+    }
+
+    // ==== Report Listing (واضح داخل صفحة الإعلان) ====
+    if (reportListingBtn){
+      reportListingBtn.classList.remove("hidden");
+      reportListingBtn.disabled = false;
+
+      reportListingBtn.onclick = async () => {
+        if (!auth.currentUser){
+          UI.actions.openAuth?.();
+          return;
+        }
+
+        const reasonKey = askReportReason();
+        if (!reasonKey) return;
+
+        const reasonLabel = (REPORT_REASONS.find(r => r.key === reasonKey)?.label) || reasonKey;
+
+        reportListingBtn.disabled = true;
+        try{
+          // ✅ prevent duplicate report by same user for same listing
+          const qy = query(
+            collection(db, "reports"),
+            where("type", "==", "listing_report"),
+            where("listingId", "==", id),
+            where("reporterUid", "==", (auth.currentUser.uid || "")),
+            limit(1)
+          );
+          const ex = await getDocs(qy);
+          if (!ex.empty){
+            alert("سبق وأن أرسلت بلاغاً عن هذا الإعلان ✅");
+            return;
+          }
+
+          await addDoc(collection(db, "reports"), {
+            type: "listing_report",
+            listingId: id,
+            listingTitle: (data.title || "").toString().trim(),
+            listingOwnerId: ownerId || null,
+            reason: reasonKey,
+            reasonLabel,
+            reporterUid: auth.currentUser?.uid || null,
+            reporterEmail: auth.currentUser?.email || null,
+            createdAt: serverTimestamp(),
+            source: location.hostname || "web"
+          });
+
+          alert("تم إرسال البلاغ ✅ شكراً لمساعدتك");
+        }catch(e){
+          alert(e?.message || "فشل إرسال البلاغ");
+        }finally{
+          reportListingBtn.disabled = false;
+        }
+      };
+    }
+
+    // ==== Report (يُفضّل يكون أيضاً لمستخدم مسجل حتى نعرف مين بلّغ) ====
+    if (reportBtn){
+      reportBtn.classList.add("hidden");
+      reportBtn.onclick = null;
+
+      if (ownerId && waNum){
+        reportBtn.classList.remove("hidden");
+
+        reportBtn.onclick = async () => {
+          // ✅ بلاغ فقط للمسجل
+          if (!auth.currentUser){
+            UI.actions.openAuth?.();
+            return;
+          }
+
+          const ok = confirm("هل تريد الإبلاغ أن رقم واتساب هذا غير صحيح أو يسبب إزعاج؟");
+          if (!ok) return;
+
+          reportBtn.disabled = true;
+
+          try{
+            await addDoc(collection(db, "reports"), {
+              type: "wrong_whatsapp",
+              listingId: id,
+              listingTitle: (data.title || "").toString().trim(),
+              listingOwnerId: ownerId,
+              whatsapp: waNum,
+              reporterUid: auth.currentUser?.uid || null,
+              reporterEmail: auth.currentUser?.email || null,
+              createdAt: serverTimestamp()
+            });
+
+            alert("تم إرسال البلاغ ✅ شكراً لمساعدتك");
+          }catch(e){
+            alert(e?.message || "فشل إرسال البلاغ");
+          }finally{
+            reportBtn.disabled = false;
+          }
+        };
+      }
+    }
+
+    // 4) Delete button for owner OR admin
+    const me = auth.currentUser?.uid || "";
+    const isOwner = !!(me && ownerId && me === ownerId);
+    const isAdmin = isAdminUser(auth.currentUser);
+
+    UI.el.btnDeleteListing?.classList.toggle("hidden", !(isOwner || isAdmin));
+if (UI.el.btnDeleteListing) UI.el.btnDeleteListing.disabled = false;
+
+    // 5) Update hash
+    if (!fromHash){
+      const newHash = `#listing=${encodeURIComponent(id)}`;
+      if (location.hash !== newHash) history.replaceState(null, "", newHash);
+    }
 
   }catch(e){
     console.error(e);
@@ -716,6 +932,8 @@ async function loadListings(reset = true){
   if (snap.docs.length){
     UI.state.lastDoc = snap.docs[snap.docs.length - 1];
 
+    // ✅ زر "تحميل المزيد" يظهر فقط إذا في احتمال صفحات إضافية
+    // (إذا رجع أقل من limit غالباً ما في المزيد)
     if (UI.el.btnMore){
       const hasMoreLikely = snap.docs.length >= 12;
       UI.el.btnMore.classList.toggle("hidden", !hasMoreLikely);
@@ -739,9 +957,6 @@ async function loadListings(reset = true){
   const estateKindVal = useFilters ? (($id("estateKindFilter")?.value || "").toString().trim()) : "";
   const roomsVal = useFilters ? Number(($id("roomsFilter")?.value || "").toString().trim() || 0) : 0;
   const electKindVal = useFilters ? (($id("electKindFilter")?.value || "").toString().trim()) : "";
-
-  // ✅ NEW: فلتر الملابس (رجالي/نسائي/ولادي)
-  const fashionGenderVal = useFilters ? readFashionGenderFilter() : "";
 
   const frag = document.createDocumentFragment();
 
@@ -796,14 +1011,6 @@ async function loadListings(reset = true){
       }
     }
 
-    // ✅ NEW: فلاتر الملابس
-    if (isClothingCategory(data)){
-      if (fashionGenderVal){
-        const g = getFashionGender(data);
-        if (g !== fashionGenderVal) return;
-      }
-    }
-
     if (keyword){
       const t = String(data.title || "").toLowerCase();
       const d = String(data.description || "").toLowerCase();
@@ -841,8 +1048,9 @@ async function loadListings(reset = true){
         ${extraMeta ? `<div class="carMeta">${escapeHtml(extraMeta)}</div>` : ``}
         <div class="m">${cityTxt}${(cityTxt && catTxt) ? " • " : ""}${catTxt}</div>
         ${sellerHtml}
-
-        <div class="pr">${escapeHtml(formatPrice(data.price, data.currency))}</div>
+        
+        
+<div class="pr">${escapeHtml(formatPrice(data.price, data.currency))}</div>
 
         <div class="cardStats">
           <span class="muted">♥ <span class="favCount">${favC}</span></span>
@@ -876,6 +1084,7 @@ async function loadListings(reset = true){
         }
       });
     }
+
 
     // ✅ "قراءة المزيد" (stop propagation)
     const rmBtn = card.querySelector(".readMoreBtn");
