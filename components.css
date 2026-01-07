@@ -43,6 +43,45 @@ html, body{
   will-change: transform;
 }
 
+/* =========================
+   ✅ Floating Inbox Bubble (Messenger-like)
+========================= */
+.inboxFloat{
+  position: fixed;
+  bottom: 16px;
+  left: 16px;              /* RTL: الأفضل تكون يسار لتبعد عن أزرار الواتس */
+  z-index: 99999;
+}
+.inboxFloat.hidden{ display:none !important; }
+
+.inboxFloatBtn{
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(15,23,42,.92);
+  color: #fff;
+  border-radius: 999px;
+  padding: 10px 12px;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-shadow: 0 16px 40px rgba(0,0,0,.35);
+}
+.inboxFloatBtn:active{ transform: scale(.98); }
+
+.inboxFloatCount{
+  min-width: 22px;
+  height: 22px;
+  padding: 0 6px;
+  border-radius: 999px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 12px;
+  font-weight: 900;
+  background: rgba(239,68,68,.95);
+  color: #fff;
+}
+
 /* شعار */
 .brand{ font-weight:900; letter-spacing:.2px; }
 .brand::after{
