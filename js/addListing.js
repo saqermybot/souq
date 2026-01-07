@@ -24,9 +24,8 @@ function catToAr(catId){
   if (catId === "electronics") return "إلكترونيات";
 
   // ✅ NEW
-  if (catId === "clothes") return "ملابس";
-  if (catId === "shoes") return "أحذية";
-
+  if (catId === "clothing") return "ملابس و أحذية";
+  
   return "";
 }
 
