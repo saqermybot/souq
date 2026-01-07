@@ -1089,13 +1089,13 @@ button.sm{
   left: auto !important;
 
   /* ✅ إذا بدك تزحزحها أكتر لليمين/اليسار عدّل الرقم هون */
-  transform: translateX(30px) !important;  /* -10 = تتحرك شوي يمين */
+  transform: translateX(40px) !important;  /* -10 = تتحرك شوي يمين */
   /* إذا بدكها يمين أكتر: -20 / -30 …  إذا بدكها ترجع يسار: -5 أو 0 */
 
   direction: rtl !important;
   text-align: right !important;
 
-  min-width: 190px !important;
+  min-width: 150px !important;
   background: var(--card) !important;
   border: 1px solid var(--border) !important;
   border-radius: 12px !important;
