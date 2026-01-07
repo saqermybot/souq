@@ -395,7 +395,7 @@ if (btnShare) {
       try {
         await navigator.share({
           title,
-          text: `شوف إعلانات ${title} على سوق سوريا`,
+          text: `شوف ${title} على سوق سوريا`,
           url
         });
       } catch (e) {}
