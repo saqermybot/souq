@@ -275,6 +275,39 @@ html, body{
 /* =========================
    CHAT
 ========================= */
+
+/* ✅ Chat as overlay (keeps details behind) */
+#chatBox.page{
+  position: fixed;
+  inset: 0;
+  z-index: 120;
+  padding: 14px;
+  overflow: auto;
+  background: rgba(2,6,23,.72);
+  -webkit-backdrop-filter: blur(10px);
+  backdrop-filter: blur(10px);
+}
+
+#chatBox .pageInner{
+  max-width: 760px;
+  margin: 76px auto 22px;
+}
+
+.chatCloseBtn{
+  width: 42px;
+  height: 42px;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.07);
+  color: #fff;
+  font-size: 18px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+.chatCloseBtn:active{ transform: scale(.98); }
+
 .chatmsgs{
   height:320px;
   overflow:auto;
