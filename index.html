@@ -319,7 +319,14 @@
       <div class="pageInner card">
         <div class="pageHead">
           <button id="btnChatBack" class="ghost" type="button">رجوع</button>
-          <h3 id="chatTitle" style="margin:0">محادثة</h3>
+          <div class="chatHeadText">
+            <h3 id="chatTitle" style="margin:0">محادثة</h3>
+            <div class="chatMeta" aria-label="معلومات المحادثة">
+              <a id="chatUserLink" class="chatMetaLink" href="#" rel="noopener">المستخدم</a>
+              <span class="chatMetaSep">•</span>
+              <a id="chatListingLink" class="chatMetaLink" href="#" rel="noopener">الإعلان</a>
+            </div>
+          </div>
         </div>
 
         <div id="chatMsgs" class="chatmsgs"></div>
