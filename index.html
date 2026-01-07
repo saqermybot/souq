@@ -127,7 +127,7 @@
         </div>
 
         <!-- ✅ سنة السيارات (من/إلى) -->
-        <div class="field span2">
+        <div id="carFilters" class="field span2 hidden">
           <label class="flabel">سنة (سيارات)</label>
           <div class="range2">
             <input id="yearFrom" type="number" min="1950" max="2035" placeholder="من" />
@@ -149,6 +149,18 @@
 
             <input id="roomsFilter" type="number" min="0" max="20" placeholder="غرف" />
           </div>
+        </div>
+
+        <!-- ✅ تفاصيل الإلكترونيات (نوع الجهاز) -->
+        <div id="electFilters" class="field span2 hidden">
+          <label class="flabel">نوع الإلكترونيات</label>
+          <select id="electKindFilter">
+            <option value="">كل الأنواع</option>
+            <option value="موبايل">موبايل</option>
+            <option value="تلفزيون">تلفزيون</option>
+            <option value="كمبيوتر">كمبيوتر</option>
+            <option value="ألعاب">ألعاب (بلايستيشن)</option>
+          </select>
         </div>
 
         <div class="muted small span2" style="margin-top:2px">
