@@ -22,6 +22,11 @@ function catToAr(catId){
   if (catId === "cars") return "سيارات";
   if (catId === "realestate") return "عقارات";
   if (catId === "electronics") return "إلكترونيات";
+
+  // ✅ NEW
+  if (catId === "clothes") return "ملابس";
+  if (catId === "shoes") return "أحذية";
+
   return "";
 }
 
@@ -156,6 +161,21 @@ function ensureDynamicFields(){
         </div>
       </div>
     </div>
+
+    <!-- ✅ NEW: ملابس + أحذية (رجالي/نسائي/ولادي فقط) -->
+    <div id="fashionFields" class="hidden">
+      <div class="formGrid">
+        <div class="field span2">
+          <label class="flabel">القسم</label>
+          <select id="aFashionGroup">
+            <option value="">اختر القسم</option>
+            <option value="رجالي">رجالي</option>
+            <option value="نسائي">نسائي</option>
+            <option value="ولادي">ولادي</option>
+          </select>
+        </div>
+      </div>
+    </div>
   `;
 
   // أدخل wrap قبل input الصور
@@ -174,6 +194,9 @@ function ensureDynamicFields(){
   UI.el.aRooms = document.getElementById("aRooms");
 
   UI.el.aElectKind = document.getElementById("aElectKind");
+
+  // ✅ NEW
+  UI.el.aFashionGroup = document.getElementById("aFashionGroup");
 }
 
 function syncDynamicFieldsVisibility(){
@@ -182,10 +205,15 @@ function syncDynamicFieldsVisibility(){
   const carBox = document.getElementById("carFields");
   const estBox = document.getElementById("estateFields");
   const eleBox = document.getElementById("electFields");
+  const fashBox = document.getElementById("fashionFields");
 
   if (carBox) carBox.classList.toggle("hidden", catId !== "cars");
   if (estBox) estBox.classList.toggle("hidden", catId !== "realestate");
   if (eleBox) eleBox.classList.toggle("hidden", catId !== "electronics");
+
+  // ✅ NEW: تظهر للملابس + الأحذية
+  const isFashion = (catId === "clothes" || catId === "shoes");
+  if (fashBox) fashBox.classList.toggle("hidden", !isFashion);
 }
 
 /* =========================
@@ -223,6 +251,9 @@ function clearForm() {
   if (UI.el.aRooms) UI.el.aRooms.value = "";
 
   if (UI.el.aElectKind) UI.el.aElectKind.value = "";
+
+  // ✅ NEW
+  if (UI.el.aFashionGroup) UI.el.aFashionGroup.value = "";
 
   syncDynamicFieldsVisibility();
 }
@@ -302,6 +333,15 @@ function collectExtraFields(catId){
     return { electronics: { kind }, electKind: kind };
   }
 
+  // ✅ NEW: ملابس + أحذية (رجالي/نسائي/ولادي)
+  if (catId === "clothes" || catId === "shoes") {
+    const group = (UI.el.aFashionGroup?.value || "").trim();
+    return {
+      fashionGroup: group,
+      fashion: { group }
+    };
+  }
+
   return {};
 }
 
@@ -324,6 +364,11 @@ function validateForm({ title, description, price, city, catId, files, extra }) 
   if (catId === "realestate") {
     if (!extra.typeId) return "اختر (بيع/إيجار) للعقار";
     if (!extra.estateKind) return "اختر نوع العقار";
+  }
+
+  // ✅ NEW
+  if (catId === "clothes" || catId === "shoes") {
+    if (!extra.fashionGroup) return "اختر القسم (رجالي / نسائي / ولادي)";
   }
 
   return null;
