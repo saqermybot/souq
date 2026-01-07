@@ -990,35 +990,33 @@ button.sm{
   display:flex !important;
 }
 /* =========================
-   FINAL PATCH for YOUR HTML:
-   #userMenuWrap + #userMenu.userMenu + buttons
+/* =========================
+   ✅ USER MENU (FIXED) - no clipping / no weird offsets
 ========================= */
 
-/* خلي wrapper مرجع للمنيو */
 #userMenuWrap.userMenuWrap{
-  position: relative !important;
+  position: static !important;          /* بدل relative */
   display: flex !important;
   align-items: center !important;
 }
 
 /* المنيو نفسها (اسمها userMenu عندك) */
 #userMenu.userMenu{
-  position: absolute !important;
-  top: 46px !important;
-
-  right: 0 !important;
+  position: fixed !important;           /* بدل absolute */
+  top: 70px !important;                 /* تحت التوب بار */
+  right: 12px !important;               /* ثابتة يمين */
   left: auto !important;
 
-  min-width: 180px !important;
+  min-width: 190px !important;
   background: var(--card) !important;
   border: 1px solid var(--border) !important;
   border-radius: 12px !important;
   padding: 6px !important;
 
-  z-index: 99999 !important;
+  z-index: 999999 !important;
   box-shadow: 0 16px 40px rgba(0,0,0,.35) !important;
 
-  max-width: calc(100vw - 16px) !important;
+  max-width: calc(100vw - 24px) !important;
 }
 
 /* أزرار المنيو عندك بدون menuItem */
@@ -1062,11 +1060,8 @@ button.sm{
   display: flex !important;
 }
 
-
 /* Card description/read more disabled on home cards */
 .cardDesc,.readMoreBtn{display:none !important;}
-
-
 /* === Compact details action buttons (fix long boring buttons) === */
 #detailsPage .row.actions{flex-wrap:nowrap;}
 #detailsPage .row.actions > button,
