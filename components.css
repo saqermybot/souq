@@ -1089,7 +1089,7 @@ button.sm{
   left: auto !important;
 
   /* ✅ إذا بدك تزحزحها أكتر لليمين/اليسار عدّل الرقم هون */
-  transform: translateX(-30px) !important;  /* -10 = تتحرك شوي يمين */
+  transform: translateX(30px) !important;  /* -10 = تتحرك شوي يمين */
   /* إذا بدكها يمين أكتر: -20 / -30 …  إذا بدكها ترجع يسار: -5 أو 0 */
 
   direction: rtl !important;
