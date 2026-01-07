@@ -72,8 +72,6 @@ export function initAddListing() {
    ✅ DYNAMIC FIELDS (DELUXE)
 ========================= */
 function ensureDynamicFields(){
-  // نحط الديف بعد اختيار المدينة/القسم وقبل الصور
-  // نحاول نلقط مكان ثابت: قبل aImages مباشرة
   const imagesEl = UI.el.aImages;
   if (!imagesEl) return;
 
@@ -82,10 +80,8 @@ function ensureDynamicFields(){
 
   const wrap = document.createElement("div");
   wrap.id = "dynamicFieldsWrap";
-  // إذا addBox صار deluxe formGrid، هاد بيساعد ينسجم. وإذا لا، ما بيضر.
   wrap.className = "deluxeDyn";
 
-  // نستخدم نفس كلاسات الديلوكس: formGrid/field/flabel/span2
   wrap.innerHTML = `
     <div class="muted small" style="margin:6px 2px 10px">
       معلومات إضافية حسب الصنف
@@ -161,12 +157,12 @@ function ensureDynamicFields(){
       </div>
     </div>
 
-    <!-- ✅ NEW: ملابس و أحذية (رجالي/نسائي/ولادي فقط) -->
+    <!-- ✅ NEW: ملابس و أحذية (القسم إلزامي) -->
     <div id="fashionFields" class="hidden">
       <div class="formGrid">
         <div class="field span2">
-          <label class="flabel">القسم</label>
-          <select id="aFashionGroup">
+          <label class="flabel">القسم (إجباري)</label>
+          <select id="aFashionGender" required>
             <option value="">اختر القسم</option>
             <option value="رجالي">رجالي</option>
             <option value="نسائي">نسائي</option>
@@ -177,7 +173,6 @@ function ensureDynamicFields(){
     </div>
   `;
 
-  // أدخل wrap قبل input الصور
   const parent = imagesEl.parentElement;
   if (!parent) return;
 
@@ -194,8 +189,8 @@ function ensureDynamicFields(){
 
   UI.el.aElectKind = document.getElementById("aElectKind");
 
-  // ✅ NEW
-  UI.el.aFashionGroup = document.getElementById("aFashionGroup");
+  // ✅ NEW (إجباري للملابس)
+  UI.el.aFashionGender = document.getElementById("aFashionGender");
 }
 
 function syncDynamicFieldsVisibility(){
@@ -210,7 +205,6 @@ function syncDynamicFieldsVisibility(){
   if (estBox) estBox.classList.toggle("hidden", catId !== "realestate");
   if (eleBox) eleBox.classList.toggle("hidden", catId !== "electronics");
 
-  // ✅ NEW: تظهر فقط لقسم الملابس
   const isFashion = (catId === "clothing");
   if (fashBox) fashBox.classList.toggle("hidden", !isFashion);
 }
@@ -252,7 +246,7 @@ function clearForm() {
   if (UI.el.aElectKind) UI.el.aElectKind.value = "";
 
   // ✅ NEW
-  if (UI.el.aFashionGroup) UI.el.aFashionGroup.value = "";
+  if (UI.el.aFashionGender) UI.el.aFashionGender.value = "";
 
   syncDynamicFieldsVisibility();
 }
@@ -332,12 +326,12 @@ function collectExtraFields(catId){
     return { electronics: { kind }, electKind: kind };
   }
 
-  // ✅ NEW: ملابس و أحذية (رجالي/نسائي/ولادي)
+  // ✅ NEW: ملابس و أحذية (القسم إلزامي) -> نخزنها باسم gender للفلترة
   if (catId === "clothing") {
-    const group = (UI.el.aFashionGroup?.value || "").trim();
+    const gender = (UI.el.aFashionGender?.value || "").trim();
     return {
-      fashionGroup: group,
-      fashion: { group }
+      gender,
+      fashion: { gender }
     };
   }
 
@@ -365,9 +359,9 @@ function validateForm({ title, description, price, city, catId, files, extra }) 
     if (!extra.estateKind) return "اختر نوع العقار";
   }
 
-  // ✅ NEW
+  // ✅ NEW (إجباري فعلياً)
   if (catId === "clothing") {
-    if (!extra.fashionGroup) return "اختر القسم (رجالي / نسائي / ولادي)";
+    if (!extra.gender) return "اختر القسم (رجالي / نسائي / ولادي)";
   }
 
   return null;
@@ -413,7 +407,6 @@ async function publish() {
 
     const expiresAt = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000);
 
-    // ✅ NEW: seller fields (safe, does not break old code)
     const sellerName = getSafeSellerName();
     const sellerEmail = (auth.currentUser?.email || "").trim() || null;
 
@@ -432,12 +425,10 @@ async function publish() {
 
       images: urls,
 
-      // ✅ NEW: for store/profile + easy filtering
       sellerName,
       sellerEmail,
       uid: auth.currentUser.uid,
 
-      // ✅ keep old field as-is
       ownerId: auth.currentUser.uid,
 
       isActive: true,
