@@ -119,6 +119,8 @@ async function loadInbox() {
 
     item.onclick = () => {
       if (typeof UI.actions.openChat === "function") {
+        // ✅ سياق: فتحت الدردشة من قائمة المحادثات
+        UI.state.chatReturnTo = { from: "inbox" };
         UI.actions.openChat(c.listingId, c.listingTitle || "إعلان", otherId);
       }
     };

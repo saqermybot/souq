@@ -11,7 +11,10 @@ export const UI = {
     filtersActive: false,
 
     // ✅ للـ toggle
-    filtersOpen: false
+    filtersOpen: false,
+
+    // ✅ سياق الرجوع للدردشة (من وين انفتحت)
+    chatReturnTo: null
   },
   actions: {
     openAuth: () => {},
@@ -510,10 +513,34 @@ bindDeluxeTypeControls(){
   ========================= */
   handleHash(){
     const h = location.hash || "";
-    if (!h.startsWith("#listing=")) return;
-    const id = decodeURIComponent(h.replace("#listing=",""));
-    if (typeof this.actions.openDetails === "function") {
-      this.actions.openDetails(id, null, true);
+    // ✅ فتح إعلان
+    if (h.startsWith("#listing=")){
+      const id = decodeURIComponent(h.replace("#listing=",""));
+      if (typeof this.actions.openDetails === "function") {
+        this.actions.openDetails(id, null, true);
+      }
+      return;
+    }
+
+    // ✅ رجوع للشات (من صفحة البائع مثلاً)
+    if (h.startsWith("#chat=")){
+      const qs = h.replace("#chat=", "");
+      const p = new URLSearchParams(qs);
+      const listingId = (p.get("listing") || "").trim();
+      const title = (p.get("title") || "إعلان").trim() || "إعلان";
+      const other = (p.get("other") || "").trim();
+
+      if (!listingId) return;
+
+      // خلي الإغلاق يرجع للإعلان
+      this.state.chatReturnTo = { from: "details", listingId };
+
+      // افتح الإعلان أولاً ثم الدردشة فوقه
+      Promise.resolve()
+        .then(() => this.actions.openDetails?.(listingId, null, true))
+        .then(() => this.actions.openChat?.(listingId, title, other))
+        .catch(()=>{});
+      return;
     }
   },
 

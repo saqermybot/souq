@@ -147,7 +147,9 @@ async function renderChatHeader(otherUid, listingId, listingTitle){
   const userLink = document.getElementById("chatUserLink");
   if (userLink){
     userLink.textContent = "عرض الحساب";
-    userLink.href = `./store.html?u=${encodeURIComponent(otherUid)}`;
+    // ✅ مرّر رابط رجوع سياقي حتى صفحة البائع تقدر ترجعك للشات/الإعلان
+    const ret = `./index.html#chat=1&listing=${encodeURIComponent(listingId)}&title=${encodeURIComponent(listingTitle||"")}&other=${encodeURIComponent(otherUid)}`;
+    userLink.href = `./store.html?u=${encodeURIComponent(otherUid)}&ret=${encodeURIComponent(ret)}`;
   }
 
   const listingLink = document.getElementById("chatListingLink");
@@ -198,7 +200,20 @@ function statusIconForMessage(m, me, otherId, isPending){
 async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
   try{ requireAuth(); }catch{ return; }
 
-  UI.resetOverlays();
+  // ✅ الدردشة Overlay: لا تخفي صفحة الإعلان إن كانت مفتوحة
+  // (لكن اخفي الإضافات/الإنبوكس)
+  UI.hide(UI.el.addBox);
+  UI.hide(UI.el.inboxPage);
+
+  // ✅ لو ما في سياق محفوظ، استنتجه
+  if (!UI.state.chatReturnTo){
+    const detailsOpen = UI.el?.detailsPage && !UI.el.detailsPage.classList.contains("hidden");
+    const inboxOpen = UI.el?.inboxPage && !UI.el.inboxPage.classList.contains("hidden");
+    if (detailsOpen) UI.state.chatReturnTo = { from: "details", listingId };
+    else if (inboxOpen) UI.state.chatReturnTo = { from: "inbox" };
+    else UI.state.chatReturnTo = { from: "home" };
+  }
+
   UI.show(UI.el.chatBox);
   UI.el.chatTitle.textContent = `محادثة`;
 
@@ -321,7 +336,34 @@ function closeChat(){
   if (UI.state.chatUnsub) UI.state.chatUnsub();
   UI.state.chatUnsub = null;
   UI.hide(UI.el.chatBox);
+
+  // ✅ رجوع سياقي عند الإغلاق (زر ✕)
+  const rt = UI.state.chatReturnTo;
+  const listingId = currentChat.listingId;
+
+  // صفّر الشات الحالي بعد ما نقرأ منه
   currentChat = { listingId:null, roomId:null, otherId:null, listingTitle:"" };
+
+  // من إعلان → ارجع للإعلان نفسه
+  if (rt?.from === "details" && (rt.listingId || listingId)){
+    const id = rt.listingId || listingId;
+    try{ UI.actions.openDetails?.(id, null, true); }catch{}
+    return;
+  }
+
+  // من Inbox → ارجع لصندوق المحادثات
+  if (rt?.from === "inbox"){
+    try{ UI.actions.openInbox?.(); }catch{}
+    return;
+  }
+
+  // من صفحة بائع (احتياط)
+  if (rt?.from === "seller" && rt.sellerId){
+    try{ location.href = `./store.html?u=${encodeURIComponent(rt.sellerId)}`; }catch{}
+    return;
+  }
+
+  // افتراضي: بس سكّر
 }
 
 async function sendMsg(){

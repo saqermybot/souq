@@ -332,6 +332,8 @@ export function initListings(){
       }
 
       // إذا مو إلك -> افتح الشات
+      // ✅ سياق: فتحت الدردشة من صفحة الإعلان
+      UI.state.chatReturnTo = { from: "details", listingId: l.id };
       UI.actions.openChat(l.id, l.title || "إعلان", ownerId);
     };
   }

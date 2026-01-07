@@ -29,12 +29,27 @@ const emptyBox = document.getElementById("emptyBox");
 const btnMore = document.getElementById("btnMore");
 const hint = document.getElementById("hint");
 const countBadge = document.getElementById("countBadge");
+const btnBackContext = document.getElementById("btnBackContext");
 
 function getParam(name){
   return new URLSearchParams(location.search).get(name) || "";
 }
 
 const sellerUid = getParam("u").trim();
+const retUrl = getParam("ret").trim();
+
+// ✅ رجوع سياقي: إذا اجيت من الشات/إعلان ارجع لنفس المكان
+try{
+  if (btnBackContext){
+    if (retUrl){
+      btnBackContext.href = retUrl;
+      btnBackContext.textContent = "رجوع";
+    } else {
+      btnBackContext.href = "./index.html";
+      btnBackContext.textContent = "الرجوع للسوق";
+    }
+  }
+}catch{}
 
 let lastDoc = null;
 let loading = false;
