@@ -6,16 +6,25 @@ import { db, nowMs } from "./db.js";
 
 const app = express();
 
-// ===== CORS (لـ GitHub Pages)
-const allowed = (process.env.CORS_ORIGIN || "*").split(",").map(s => s.trim()).filter(Boolean);
+// ===== CORS
+// ضع CORS_ORIGIN بقيمة الدومين تبع الواجهة (مثال):
+// CORS_ORIGIN=https://souqsyria.org,https://www.souqsyria.org
+const allowed = (process.env.CORS_ORIGIN || "")
+  .split(",")
+  .map(s => s.trim())
+  .filter(Boolean);
 
 app.use(cors({
   origin: (origin, cb) => {
+    // Allow non-browser calls (no Origin header)
     if (!origin) return cb(null, true);
-    if (allowed.includes("*") || allowed.includes(origin)) return cb(null, true);
-    return cb(new Error("CORS blocked"), false);
+
+    if (allowed.includes(origin)) return cb(null, true);
+
+    return cb(new Error(`CORS blocked: ${origin}`), false);
   },
-  credentials: true
+  credentials: true,
+  optionsSuccessStatus: 204
 }));
 
 app.use(express.json({ limit: "1mb" }));
