@@ -175,6 +175,12 @@ function setInboxIndicator(totalUnread){
     badge.textContent = totalUnread > 99 ? "99+" : String(totalUnread);
     badge.classList.toggle("hidden", !(totalUnread > 0));
   }
+
+  // ✅ Floating bubble (created by UI.init)
+  const floatWrap = document.getElementById("inboxFloat");
+  const floatCount = document.getElementById("inboxFloatCount");
+  if (floatCount) floatCount.textContent = totalUnread > 99 ? "99+" : String(totalUnread);
+  if (floatWrap) floatWrap.classList.toggle("hidden", !(totalUnread > 0));
 }
 
 // ===== helpers: delivery/read maps =====
@@ -512,6 +518,14 @@ async function loadInbox(){
       const shouldNotify = document.hidden || !inboxOpen;
 
       if (shouldNotify) {
+        // ✅ In-app toast (مثل Messenger) + صوت خفيف
+        try{
+          const firstUnread = rows.find(r => Number((r.unread && r.unread[me]) || 0) > 0) || rows[0];
+          const t = firstUnread?.listingTitle ? `📩 رسالة جديدة بخصوص: ${firstUnread.listingTitle}` : "📩 رسالة جديدة";
+          UI.toast?.(`${t}  (${totalUnread})`, 2200);
+          playBeep();
+        }catch{}
+
         try{
           Notify.show({
             title: "رسالة جديدة 💬",

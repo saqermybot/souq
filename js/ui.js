@@ -52,6 +52,9 @@ export const UI = {
       // ✅ toast
       "toast",
 
+      // ✅ Floating inbox bubble (created dynamically if missing)
+      "inboxFloat","inboxFloatBtn","inboxFloatCount",
+
       // ✅ Deluxe filters
       "btnToggleFilters","filtersBody",
       "typeFilter","typeAll","typeSale","typeRent",
@@ -65,6 +68,33 @@ export const UI = {
     ];
 
     for (const id of ids) this.el[id] = document.getElementById(id);
+
+    // ✅ Ensure floating inbox bubble exists (Messenger-like)
+    // يظهر فقط عند وجود رسائل غير مقروءة، ويقوم بفتح Inbox عند الضغط.
+    if (!this.el.inboxFloat) {
+      const wrap = document.createElement("div");
+      wrap.id = "inboxFloat";
+      wrap.className = "inboxFloat hidden";
+      wrap.innerHTML = `
+        <button id="inboxFloatBtn" class="inboxFloatBtn" type="button" aria-label="الرسائل">
+          💬 <span id="inboxFloatCount" class="inboxFloatCount">0</span>
+        </button>
+      `;
+      document.body.appendChild(wrap);
+      this.el.inboxFloat = wrap;
+      this.el.inboxFloatBtn = wrap.querySelector("#inboxFloatBtn");
+      this.el.inboxFloatCount = wrap.querySelector("#inboxFloatCount");
+    }
+
+    // فتح الـ Inbox من الفقاعة
+    if (this.el.inboxFloatBtn) {
+      this.el.inboxFloatBtn.onclick = (e) => {
+        e.preventDefault();
+        try {
+          if (typeof this.actions.openInbox === "function") this.actions.openInbox();
+        } catch {}
+      };
+    }
 
     // ✅ تعبئة المدن (إذا العناصر موجودة)
     if (this.el.cityFilter){
