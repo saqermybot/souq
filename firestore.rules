@@ -4,6 +4,17 @@ service cloud.firestore {
 
     function signedIn() { return request.auth != null; }
 
+    // ✅ Admin (مالك الموقع) by email
+    function emailLower() {
+      return request.auth.token.email != null
+        ? request.auth.token.email.toLowerCase()
+        : "";
+    }
+
+    function isAdmin() {
+      return signedIn() && emailLower() == "alhossiniabdulhalim2@gmail.com";
+    }
+
     // ============================================================
     // ✅ PATCH FOR Favorites + Views (drop-in blocks)
     //
@@ -49,5 +60,13 @@ service cloud.firestore {
 
     // NOTE:
     // Keep your existing matches below (listings, users profile, chat, reports, ...)
+
+    // -------------------------
+    // reports (listing reports / wrong whatsapp / ...)
+    // -------------------------
+    match /reports/{id} {
+      allow create: if signedIn();
+      allow read, update, delete: if isAdmin();
+    }
   }
 }

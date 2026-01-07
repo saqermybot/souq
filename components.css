@@ -990,41 +990,38 @@ button.sm{
   display:flex !important;
 }
 /* =========================
-   ✅ USER MENU (FIXED) - under avatar / no clipping / no weird offsets
+   FINAL PATCH for YOUR HTML:
+   #userMenuWrap + #userMenu.userMenu + buttons
 ========================= */
 
-/* مهم: نمنع قصّ المنيو من الهيدر */
-.topbar,
-.authbar{
-  overflow: visible !important;
-}
-
+/* خلي wrapper مرجع للمنيو */
 #userMenuWrap.userMenuWrap{
-  position: relative !important;        /* لازم relative ليرتبط drop-down فيه */
+  position: relative !important;
   display: flex !important;
   align-items: center !important;
 }
 
-/* المنيو نفسها */
+/* المنيو نفسها (اسمها userMenu عندك) */
 #userMenu.userMenu{
-  position: absolute !important;        /* بدل fixed */
-  top: calc(100% + 10px) !important;    /* تحت الصورة مباشرة */
-  right: 0 !important;                  /* ملاصقة ليمين زر الصورة */
+  position: absolute !important;
+  top: 46px !important;
+
+  right: 0 !important;
   left: auto !important;
 
-  min-width: 190px !important;
+  min-width: 180px !important;
   background: var(--card) !important;
   border: 1px solid var(--border) !important;
   border-radius: 12px !important;
   padding: 6px !important;
 
-  z-index: 999999 !important;
+  z-index: 99999 !important;
   box-shadow: 0 16px 40px rgba(0,0,0,.35) !important;
 
-  max-width: calc(100vw - 24px) !important;
+  max-width: calc(100vw - 16px) !important;
 }
 
-/* أزرار المنيو */
+/* أزرار المنيو عندك بدون menuItem */
 #userMenu.userMenu > button{
   width: 100% !important;
   display: flex !important;
@@ -1042,7 +1039,6 @@ button.sm{
   border-radius: 10px !important;
   cursor: pointer !important;
 }
-
 #userMenu.userMenu > button:hover{
   background: rgba(148,163,184,.12) !important;
 }
@@ -1066,8 +1062,11 @@ button.sm{
   display: flex !important;
 }
 
+
 /* Card description/read more disabled on home cards */
 .cardDesc,.readMoreBtn{display:none !important;}
+
+
 /* === Compact details action buttons (fix long boring buttons) === */
 #detailsPage .row.actions{flex-wrap:nowrap;}
 #detailsPage .row.actions > button,
