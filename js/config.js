@@ -16,7 +16,7 @@ export const MAX_IMAGES = 3;
 // ضع رابط الـ API الحقيقي بعد ما تنشره (مثال: https://api.souqsy.org)
 // أثناء التطوير المحلي: http://localhost:3000
 // =========================
-export const API_BASE = "http://localhost:3000";
+export const API_BASE = "https://api.souqsyria.org";
 
 // ✅ أصناف ثابتة (بدل Firestore) لتفادي مشاكل الوصول داخل سوريا
 export const CATEGORIES = [
