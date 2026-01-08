@@ -55,6 +55,9 @@ export const UI = {
       // ✅ Floating inbox bubble (created dynamically if missing)
       "inboxFloat","inboxFloatBtn","inboxFloatCount",
 
+      // ✅ Floating add listing button (created dynamically if missing)
+      "addFloat","btnAddFloat",
+
       // ✅ Deluxe filters
       "btnToggleFilters","filtersBody",
       "typeFilter","typeAll","typeSale","typeRent",
@@ -84,6 +87,31 @@ export const UI = {
       this.el.inboxFloat = wrap;
       this.el.inboxFloatBtn = wrap.querySelector("#inboxFloatBtn");
       this.el.inboxFloatCount = wrap.querySelector("#inboxFloatCount");
+    }
+
+    // ✅ Ensure floating add button exists (always visible)
+    // يفتح صفحة إضافة إعلان، وإذا كان هناك تحقق/تسجيل دخول سيتم التعامل معه داخل openAdd.
+    if (!this.el.addFloat) {
+      const wrap = document.createElement("div");
+      wrap.id = "addFloat";
+      wrap.className = "addFloat";
+      wrap.innerHTML = `
+        <button id="btnAddFloat" class="addFloatBtn" type="button" aria-label="إضافة إعلان">
+          ＋ <span class="addFloatText">إضافة إعلان</span>
+        </button>
+      `;
+      document.body.appendChild(wrap);
+      this.el.addFloat = wrap;
+      this.el.btnAddFloat = wrap.querySelector("#btnAddFloat");
+    }
+
+    if (this.el.btnAddFloat) {
+      this.el.btnAddFloat.onclick = (e) => {
+        e.preventDefault();
+        try {
+          if (typeof this.actions.openAdd === "function") this.actions.openAdd();
+        } catch {}
+      };
     }
 
     // فتح الـ Inbox من الفقاعة
