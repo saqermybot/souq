@@ -61,6 +61,19 @@
 
 </style>
 
+
+<style>
+  /* ✅ Logout hidden by default so visitors don't lose access to their anonymous UID.
+     It will only appear for admin accounts (JS adds body.is-admin). */
+  #logoutBtn,
+  [data-act="logout"]{
+    display:none !important;
+  }
+  body.is-admin #logoutBtn,
+  body.is-admin [data-act="logout"]{
+    display:inline-flex !important;
+  }
+</style>
 </head>
 
 <body>
