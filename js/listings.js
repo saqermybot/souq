@@ -521,7 +521,7 @@ async function deleteCurrentListing(){
 
     if (!me) return alert("لا يمكن حذف الإعلان بدون تسجيل حالياً. (النشر متاح للجميع)\nإذا هذا إعلانك وتريد حذفه: تواصل معنا عبر الشات.");
     const isOwner = !!(ownerId && ownerId === me);
-    const isAdmin = isAdminUser(auth.currentUser);
+    const isAdmin = document.body.classList.contains("is-admin");
 
     if (!isOwner && !isAdmin) return alert("لا يمكنك حذف هذا الإعلان");
 const ok = confirm("هل أنت متأكد أنك تريد حذف الإعلان نهائياً؟");
@@ -873,7 +873,7 @@ ${listingUrl}
     // 4) Delete button for owner OR admin
     const me = auth.currentUser?.uid || "";
     const isOwner = !!(me && ownerId && me === ownerId);
-    const isAdmin = isAdminUser(auth.currentUser);
+    const isAdmin = document.body.classList.contains("is-admin");
 
     UI.el.btnDeleteListing?.classList.toggle("hidden", !(isOwner || isAdmin));
 if (UI.el.btnDeleteListing) UI.el.btnDeleteListing.disabled = false;
