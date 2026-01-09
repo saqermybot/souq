@@ -585,4 +585,9 @@ async function uploadToCloudinary(file) {
   if (!res.ok) throw new Error(data?.error?.message || "Cloudinary upload failed");
   return data.secure_url;
 }
-document.addEventListener('DOMContentLoaded', initPhoneInput);
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initPhoneInput);
+} else {
+  initPhoneInput();
+}
+
