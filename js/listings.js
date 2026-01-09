@@ -25,6 +25,46 @@ import {
   increment
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
+// =========================
+// Location helpers (approx + distance)
+// =========================
+function readMyLoc(){
+  try {
+    const raw = localStorage.getItem("my_loc");
+    if (!raw) return null;
+    const j = JSON.parse(raw);
+    if (!j || typeof j.lat !== "number" || typeof j.lng !== "number") return null;
+    return j;
+  } catch { return null; }
+}
+
+function kmBetween(lat1, lng1, lat2, lng2){
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLng = (lng2 - lng1) * Math.PI / 180;
+  const a =
+    Math.sin(dLat/2) * Math.sin(dLat/2) +
+    Math.cos(lat1 * Math.PI/180) * Math.cos(lat2 * Math.PI/180) *
+    Math.sin(dLng/2) * Math.sin(dLng/2);
+  return R * (2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a)));
+}
+
+function prettyDistanceAr(km){
+  if (!isFinite(km)) return "";
+  if (km < 1) return `${Math.round(km*1000)} م`;
+  if (km < 10) return `${km.toFixed(1)} كم`;
+  return `${Math.round(km)} كم`;
+}
+
+function getDistanceTextForListing(listing){
+  const my = readMyLoc();
+  const loc = listing?.location;
+  if (!my || !loc || typeof loc.lat !== "number" || typeof loc.lng !== "number") return "";
+  const km = kmBetween(my.lat, my.lng, loc.lat, loc.lng);
+  const dist = prettyDistanceAr(km);
+  return dist ? `يبعد عنك ${dist}` : "";
+}
+
 // ✅ Performance tuning
 const LIST_PAGE_SIZE = 12;
 const FAV_PAGE_SIZE = 30;
@@ -406,6 +446,9 @@ async function loadFavorites(){
     const cityTxt = escapeHtml(data.city || "");
     const catTxt  = escapeHtml(data.category || data.categoryNameAr || data.categoryId || "");
 
+    const distTxt = escapeHtml(getDistanceTextForListing(data));
+    const locLabel = escapeHtml((data.location && data.location.label) ? String(data.location.label) : "");
+
     const sellerUid = getSellerUid(data);
     const sellerName = escapeHtml(getSellerNameFallback(data));
     const sellerHtml = sellerUid
@@ -427,6 +470,7 @@ async function loadFavorites(){
         <div class="t">${escapeHtml(data.title || "بدون عنوان")}</div>
         ${extraMeta ? `<div class="carMeta">${escapeHtml(extraMeta)}</div>` : ``}
         <div class="m">${cityTxt}${(cityTxt && catTxt) ? " • " : ""}${catTxt}</div>
+        ${(distTxt || locLabel) ? `<div class="m muted small">${distTxt ? `📏 ${distTxt}` : ""}${(distTxt && locLabel) ? " • " : ""}${locLabel ? `📍 ${locLabel} (تقريبي)` : ""}</div>` : ""}
         ${sellerHtml}
         <div class="pr">${escapeHtml(formatPrice(data.price, data.currency))}</div>
         <div class="cardStats">
@@ -527,7 +571,26 @@ async function openDetails(id, data = null, fromHash = false){
       isEstateCategory(data) ? estateLine(data) :
       "";
 
-    UI.el.dMeta && (UI.el.dMeta.textContent = extraMeta ? `${baseMeta} • ${extraMeta}` : baseMeta);
+    // ✅ Distance + approximate location (if available)
+    const distInfo = getDistanceTextForListing(data);
+    const locLabel = (data.location && data.location.label) ? String(data.location.label) : "";
+
+    let metaLine = extraMeta ? `${baseMeta} • ${extraMeta}` : baseMeta;
+    if (distInfo) metaLine = `${metaLine} • ${distInfo}`;
+    UI.el.dMeta && (UI.el.dMeta.textContent = metaLine);
+
+    // show approximate label near seller (does not override city)
+    if (UI.el.dSeller && locLabel) {
+      const line = document.createElement("div");
+      line.className = "muted small";
+      line.textContent = `📍 ${locLabel} (تقريبي)`;
+      // avoid duplicates
+      const exists = UI.el.dSeller.querySelector(".muted.small[data-loc='1']");
+      if (!exists){
+        line.setAttribute("data-loc","1");
+        UI.el.dSeller.appendChild(line);
+      }
+    }
 
     UI.el.dPrice && (UI.el.dPrice.textContent = formatPrice(data.price, data.currency));
 
@@ -1016,10 +1079,13 @@ async function loadListings(reset = true){
       isEstateCategory(data) ? estateLine(data) :
       "";
 
-    const cityTxt = escapeHtml(data.city || "");
-    const catTxt  = escapeHtml(data.category || data.categoryNameAr || data.categoryId || "");
+	    const cityTxt = escapeHtml(data.city || "");
+	    const catTxt  = escapeHtml(data.category || data.categoryNameAr || data.categoryId || "");
 
-    const sellerUid = getSellerUid(data);
+	    const distTxt = escapeHtml(getDistanceTextForListing(data));
+	    const locLabel = escapeHtml((data.location && data.location.label) ? String(data.location.label) : "");
+
+	    const sellerUid = getSellerUid(data);
     const sellerName = escapeHtml(getSellerNameFallback(data));
     const sellerHtml = sellerUid
       ? `<div class="sellerLine">البائع: <a class="sellerLink" href="${buildStoreUrl(sellerUid)}">${sellerName}</a></div>`
@@ -1039,6 +1105,7 @@ async function loadListings(reset = true){
         <div class="t">${escapeHtml(data.title || "بدون عنوان")}</div>
         ${extraMeta ? `<div class="carMeta">${escapeHtml(extraMeta)}</div>` : ``}
         <div class="m">${cityTxt}${(cityTxt && catTxt) ? " • " : ""}${catTxt}</div>
+        ${(distTxt || locLabel) ? `<div class="m muted small">${distTxt ? `📏 ${distTxt}` : ""}${(distTxt && locLabel) ? " • " : ""}${locLabel ? `📍 ${locLabel} (تقريبي)` : ""}</div>` : ""}
         ${sellerHtml}
         
         

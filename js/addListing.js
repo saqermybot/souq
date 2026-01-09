@@ -10,6 +10,22 @@ function initPhoneInput(){
   if(!el || !out) return;
   if(!window.intlTelInput) return;
 
+  // ✅ Inline validation hint (creates a small line under the input)
+  let hint = document.getElementById("aPhoneHint");
+  if(!hint){
+    hint = document.createElement("div");
+    hint.id = "aPhoneHint";
+    hint.className = "muted small";
+    hint.style.marginTop = "6px";
+    hint.style.direction = "rtl";
+    // insert right after the hidden e164 input if possible, else after phone input
+    try {
+      out.insertAdjacentElement("afterend", hint);
+    } catch {
+      el.insertAdjacentElement("afterend", hint);
+    }
+  }
+
   if(phoneIti) return; // already
   phoneIti = window.intlTelInput(el, {
     separateDialCode: true,
@@ -23,18 +39,42 @@ function initPhoneInput(){
         .then(r => r.json())
         .then(d => callback(((d && d.country_code) ? d.country_code : "SY").toLowerCase()))
         .catch(() => callback("sy"));
-    }
+    },
+    // ✅ ensures validation works even if utils.js loads a bit later
+    utilsScript: "https://cdn.jsdelivr.net/npm/intl-tel-input@23.8.0/build/js/utils.js"
   });
 
   const sync = () => {
-    try{
-      const ok = phoneIti.isValidNumber();
-      out.value = ok ? phoneIti.getNumber() : "";
-      el.dataset.valid = ok ? "1" : "0";
-    }catch(e){
-      // utils may not be ready; accept raw for now
+    const raw = (el.value || "").trim();
+    // empty is OK (whatsapp optional)
+    if(!raw){
       out.value = "";
       el.dataset.valid = "0";
+      el.classList.remove("ok","bad");
+      hint.textContent = "";
+      return;
+    }
+
+    // Try strict validation first
+    try {
+      const ok = phoneIti.isValidNumber();
+      out.value = ok ? phoneIti.getNumber() : phoneIti.getNumber();
+      el.dataset.valid = ok ? "1" : "0";
+      el.classList.toggle("ok", ok);
+      el.classList.toggle("bad", !ok);
+      hint.textContent = ok ? "✅ رقم صحيح" : "❌ رقم غير صحيح";
+      return;
+    } catch (e) {
+      // utils may not be ready on some mobiles; fallback to a simple sanity check
+      let e164 = "";
+      try { e164 = (phoneIti.getNumber() || "").trim(); } catch {}
+      const digits = (e164 || raw).replace(/\D/g, "");
+      const okLoose = digits.length >= 8;
+      out.value = okLoose && e164 ? e164 : "";
+      el.dataset.valid = okLoose && e164 ? "1" : "0";
+      el.classList.toggle("ok", okLoose);
+      el.classList.toggle("bad", !okLoose);
+      hint.textContent = okLoose ? "✅ يبدو رقم صحيح" : "❌ رقم غير صحيح";
     }
   };
 
@@ -43,7 +83,10 @@ function initPhoneInput(){
 
   el.addEventListener("blur", sync);
   el.addEventListener("change", sync);
-  el.addEventListener("keyup", () => { if((el.value||"").length >= 6) sync(); });
+  el.addEventListener("input", () => { if((el.value||"").length >= 3) sync(); });
+
+  // run once
+  setTimeout(sync, 50);
 }
 
 
@@ -596,8 +639,8 @@ await addDoc(collection(db, "listings"), {
 
       images: urls,
 
-      // ✅ optional contact
-      contact: finalPhone ? { phone: finalPhone, whatsapp: finalPhone } : { },
+      // ✅ optional contact (keep keys to avoid any edge-case rule stripping)
+      contact: { phone: finalPhone || null, whatsapp: finalPhone || null },
 
 
       sellerName,
@@ -621,7 +664,14 @@ await addDoc(collection(db, "listings"), {
     await reloadListingsWithRetry();
 
   } catch (e) {
-    alert(e?.message || "فشل النشر");
+    // friendlier errors for users
+    const msgRaw = (e && (e.message || e.code)) ? String(e.message || e.code) : "";
+    const isPerm = msgRaw.toLowerCase().includes("permission") || String(e?.code||"").includes("permission-denied");
+    if (isPerm) {
+      alert("فشل النشر بسبب صلاحيات (Permissions).\n\nإذا أنت زائر: جرّب تحديث الصفحة ثم أعد المحاولة.\nوإذا استمرت المشكلة: أخبر الإدارة.");
+    } else {
+      alert(e?.message || "فشل النشر");
+    }
     console.error("publish error:", e);
   } finally {
     publishing = false;
