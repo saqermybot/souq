@@ -33,8 +33,31 @@ function favDocRef(uid, listingId){
   return doc(db, "users", uid, "favorites", listingId);
 }
 
-function listingRef(listingId){
-  return doc(db, "listings", listingId);
+function statsRef(listingId){
+  return doc(db, "listingStats", listingId);
+}
+
+async function ensureStatsDoc(listingId){
+  const ref = statsRef(listingId);
+  try{
+    // create doc with defaults if missing (merge keeps existing)
+    await setDoc(ref, { favCount: 0, viewCount: 0, updatedAt: Date.now() }, { merge: true });
+  }catch{}
+  return ref;
+}
+
+export async function getListingStats(listingId){
+  if (!listingId) return { favCount: 0, viewCount: 0 };
+  try{
+    const snap = await getDoc(statsRef(listingId));
+    const data = snap.exists() ? (snap.data() || {}) : {};
+    return {
+      favCount: Number(data.favCount || 0) || 0,
+      viewCount: Number(data.viewCount || 0) || 0,
+    };
+  }catch{
+    return { favCount: 0, viewCount: 0 };
+  }
 }
 
 export async function requireUserForFav(){
@@ -74,13 +97,11 @@ export async function toggleFavorite(listingId){
 
   const uid = auth.currentUser.uid;
   const favRef = favDocRef(uid, listingId);
-  const lRef = listingRef(listingId);
+  const sRef = await ensureStatsDoc(listingId);
 
   return await runTransaction(db, async (tx) => {
     const favSnap = await tx.get(favRef);
-    const lSnap = await tx.get(lRef);
-
-    if (!lSnap.exists()) throw new Error("الإعلان غير موجود");
+    const sSnap = await tx.get(sRef);
 
     const wasFav = favSnap.exists();
     const delta = wasFav ? -1 : 1;
@@ -88,10 +109,10 @@ export async function toggleFavorite(listingId){
     if (wasFav) tx.delete(favRef);
     else tx.set(favRef, { listingId, createdAt: serverTimestamp() }, { merge: true });
 
-    tx.set(lRef, { favCount: increment(delta) }, { merge: true });
-
-    const prev = Number(lSnap.data()?.favCount || 0) || 0;
+    const prev = Number(sSnap.data()?.favCount || 0) || 0;
     const next = Math.max(0, prev + delta);
+    // ✅ global counter lives in listingStats (not in listings)
+    tx.set(sRef, { favCount: next, updatedAt: Date.now() }, { merge: true });
 
     return { ok:true, isFav: !wasFav, favCount: next };
   });
@@ -122,6 +143,7 @@ export async function bumpViewCount(listingId){
   }catch{}
 
   try{
-    await setDoc(listingRef(listingId), { viewsCount: increment(1) }, { merge: true });
+    const ref = await ensureStatsDoc(listingId);
+    await setDoc(ref, { viewCount: increment(1), updatedAt: Date.now() }, { merge: true });
   }catch{}
 }

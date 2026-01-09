@@ -4,7 +4,7 @@
 import { db, auth } from "./firebase.js";
 import { UI } from "./ui.js";
 import { escapeHtml, formatPrice } from "./utils.js";
-import { getFavoriteSet, toggleFavorite, bumpViewCount, requireUserForFav } from "./favorites.js";
+import { getFavoriteSet, toggleFavorite, bumpViewCount, getListingStats, requireUserForFav } from "./favorites.js";
 import { ADMIN_UIDS, ADMIN_EMAILS } from "./config.js";
 
 import {
@@ -600,12 +600,11 @@ async function openDetails(id, data = null, fromHash = false){
     // ✅ Description: show limited + "Read more"
     renderDescriptionWithReadMore(data.description || "");
 
-    // ✅ Views counter (ضغطة حقيقية)
-    bumpViewCount(id);
-
-    // ✅ Stats line (views + favs)
-    const viewsNow = Number(data.viewsCount || 0) || 0;
-    const favNow = Number(data.favCount || 0) || 0;
+    // ✅ Views counter + stats (stored in listingStats, not in listings)
+    await bumpViewCount(id);
+    const statsNow = await getListingStats(id);
+    const viewsNow = Number(statsNow.viewCount || 0) || 0;
+    const favNow = Number(statsNow.favCount || 0) || 0;
     if (UI.el.dStats) UI.el.dStats.textContent = `👁️ ${viewsNow} • ❤️ ${favNow}`;
     if (UI.el.dFavCount) UI.el.dFavCount.textContent = String(favNow);
 
@@ -638,7 +637,7 @@ async function openDetails(id, data = null, fromHash = false){
             UI.state.currentListing.favCount = res.favCount ?? 0;
           }
 
-          // ✅ تحديث كروت المعلومات (المفضلة)
+          // ✅ تحديث كروت المعلومات (المفضلة/المشاهدات من listingStats)
           renderInfoCards({ ...data, favCount: (res.favCount ?? 0), viewsCount: viewsNow });
         }catch(e){
           alert(e?.message || "فشل تحديث المفضلة");
