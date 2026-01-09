@@ -16,6 +16,9 @@ import { UI } from "./ui.js";
 
 let globalOutsideClickInstalled = false;
 
+// ✅ Admin email (must match your firestore.rules isAdmin())
+const ADMIN_EMAIL = "alhossiniabdulhalim2@gmail.com";
+
 
 export async function ensureUser() {
   // Ensures we always have a Firebase user (anonymous by default)
@@ -33,9 +36,7 @@ export async function ensureUser() {
 
 
 export function initAuth() {
-  // ✅ تثبيت الوضع الداكن دائماً
-  document.documentElement.setAttribute("data-theme", "dark");
-  try { localStorage.setItem("theme", "dark"); } catch {}
+  // ✅ Theme is handled once in app.js (avoid duplicates)
 
   // ===== Modal open/close =====
   UI.actions.openAuth = () => {
@@ -160,6 +161,13 @@ export function initAuth() {
 
   // ===== Auth state =====
   onAuthStateChanged(auth, (user) => {
+    // ✅ UI flags on <body>
+    const email = (user?.email || "").toLowerCase();
+    const isAdmin = !!email && email === ADMIN_EMAIL;
+    const isGuest = !!user && user.isAnonymous === true;
+    document.body.classList.toggle("is-admin", isAdmin);
+    document.body.classList.toggle("is-guest", isGuest);
+
     renderTopbar(user);
 
     // ✅ تحديث القوائم لتحديث حالة المفضلة بعد تسجيل/خروج
@@ -218,6 +226,9 @@ function renderTopbar(user) {
 
   // ✅ لو مو مسجل دخول
   if (!user) {
+    // ✅ لا يوجد مستخدم: اعتبره زائر (Guest UI)
+    document.body.classList.remove("is-admin");
+    document.body.classList.add("is-guest");
     if (wrap) wrap.style.display = "none";
     if (menu) menu.classList.add("hidden");
 
@@ -256,11 +267,9 @@ function renderTopbar(user) {
     const btnProf = actBtn("profile");
     const btnLogout = actBtn("logout");
 
-    // ✅ لا تُظهر تسجيل الخروج للزوار (Anonymous)
-    // لأن تسجيل الخروج يمسح الـ UID ويضيع وصوله لإعلاناته.
-    if (btnLogout) {
-      btnLogout.style.display = user.isAnonymous ? "none" : "";
-    }
+    // ✅ Logout is ONLY for admin accounts.
+    const isAdminUser = !user.isAnonymous && ((user.email || "").toLowerCase() === ADMIN_EMAIL);
+    if (btnLogout) btnLogout.style.display = isAdminUser ? "" : "none";
 
     // ✅ FAVORITES
     if (btnFav) {
@@ -297,12 +306,11 @@ function renderTopbar(user) {
       };
     }
 
-    if (btnLogout) {
+    if (btnLogout && isAdminUser) {
       btnLogout.onclick = async (e) => {
         e.stopPropagation();
         menu.classList.add("hidden");
         try { await signOut(auth); } catch {}
-
         const badge = document.getElementById("inboxBadge");
         if (badge) badge.classList.add("hidden");
       };
