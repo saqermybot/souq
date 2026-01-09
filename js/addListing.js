@@ -1,3 +1,40 @@
+
+// =========================
+// Guest phone input (intl-tel-input)
+// =========================
+let phoneIti = null;
+function initPhoneInput(){
+  const el = document.getElementById("aPhone");
+  const out = document.getElementById("aPhoneE164");
+  if(!el || !out) return;
+  if(!window.intlTelInput) return;
+
+  if(phoneIti) return; // already
+  phoneIti = window.intlTelInput(el, {
+    separateDialCode: true,
+    nationalMode: true,
+    preferredCountries: ["sy","tr","lb","jo","sa","ae","iq","eg","nl","de"],
+    initialCountry: "sy"
+  });
+
+  const sync = () => {
+    try{
+      const ok = phoneIti.isValidNumber();
+      out.value = ok ? phoneIti.getNumber() : "";
+      el.dataset.valid = ok ? "1" : "0";
+    }catch(e){
+      // utils may not be ready; accept raw for now
+      out.value = "";
+      el.dataset.valid = "0";
+    }
+  };
+
+  el.addEventListener("blur", sync);
+  el.addEventListener("change", sync);
+  el.addEventListener("keyup", () => { if((el.value||"").length >= 6) sync(); });
+}
+
+
 // addListing.js (Deluxe UI + dynamic fields + organized saving)
 
 import { db, auth } from "./firebase.js";
@@ -412,7 +449,16 @@ async function publish() {
     const sellerName = isAuthed ? getSafeSellerName() : "زائر";
     const sellerEmail = isAuthed ? ((auth.currentUser?.email || "").trim() || null) : null;
 
-    await addDoc(collection(db, "listings"), {
+    
+    // ✅ Require phone/WhatsApp for guests + authed users (for contact)
+    const phoneE164 = (document.getElementById("aPhoneE164")?.value || "").trim();
+    const phoneValid = document.getElementById("aPhone")?.dataset?.valid === "1";
+    if (!phoneValid || !phoneE164) {
+      alert("رجاءً اختر بلدك واكتب رقم هاتف/واتساب صحيح للتواصل.");
+      return;
+    }
+
+await addDoc(collection(db, "listings"), {
       title,
       description,
       price,
@@ -426,6 +472,9 @@ async function publish() {
       ...extra,
 
       images: urls,
+
+      contact: { phone: phoneE164, whatsapp: phoneE164 },
+
 
       sellerName,
       sellerEmail,
@@ -505,3 +554,4 @@ async function uploadToCloudinary(file) {
   if (!res.ok) throw new Error(data?.error?.message || "Cloudinary upload failed");
   return data.secure_url;
 }
+document.addEventListener('DOMContentLoaded', initPhoneInput);
