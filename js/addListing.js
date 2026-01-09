@@ -3,6 +3,7 @@
 // Guest phone input (intl-tel-input)
 // =========================
 let phoneIti = null;
+let syncPhoneNow = null;
 function initPhoneInput(){
   const el = document.getElementById("aPhone");
   const out = document.getElementById("aPhoneE164");
@@ -13,8 +14,16 @@ function initPhoneInput(){
   phoneIti = window.intlTelInput(el, {
     separateDialCode: true,
     nationalMode: true,
-    preferredCountries: ["sy","tr","lb","jo","sa","ae","iq","eg","nl","de"],
-    initialCountry: "sy"
+    preferredCountries: ["sy","nl","tr","lb","jo","de","sa","ae","iq","eg"],
+    // ✅ يقترح بلد المستخدم تلقائياً (مثل المواقع الكبيرة)
+    initialCountry: "auto",
+    geoIpLookup: (callback) => {
+      // ipapi.co خفيف وبسيط — مع fallback لسوريا إذا فشل
+      fetch("https://ipapi.co/json/")
+        .then(r => r.json())
+        .then(d => callback(((d && d.country_code) ? d.country_code : "SY").toLowerCase()))
+        .catch(() => callback("sy"));
+    }
   });
 
   const sync = () => {
@@ -28,6 +37,9 @@ function initPhoneInput(){
       el.dataset.valid = "0";
     }
   };
+
+  // expose for publish button (حتى لو المستخدم ما عمل blur)
+  syncPhoneNow = sync;
 
   el.addEventListener("blur", sync);
   el.addEventListener("change", sync);
@@ -453,6 +465,9 @@ async function publish() {
     const sellerEmail = auth.currentUser?.isAnonymous ? null : ((auth.currentUser?.email || "").trim() || null);
 
     
+    // ✅ تأكد من مزامنة رقم الهاتف قبل التحقق (حتى لو المستخدم ضغط نشر بدون blur)
+    try { if (typeof syncPhoneNow === "function") syncPhoneNow(); } catch {}
+
     // ✅ Require phone/WhatsApp for guests + authed users (for contact)
     const phoneE164 = (document.getElementById("aPhoneE164")?.value || "").trim();
     const phoneValid = document.getElementById("aPhone")?.dataset?.valid === "1";

@@ -256,6 +256,12 @@ function renderTopbar(user) {
     const btnProf = actBtn("profile");
     const btnLogout = actBtn("logout");
 
+    // ✅ لا تُظهر تسجيل الخروج للزوار (Anonymous)
+    // لأن تسجيل الخروج يمسح الـ UID ويضيع وصوله لإعلاناته.
+    if (btnLogout) {
+      btnLogout.style.display = user.isAnonymous ? "none" : "";
+    }
+
     // ✅ FAVORITES
     if (btnFav) {
       btnFav.onclick = (e) => {
