@@ -6,6 +6,7 @@ import { initAuth } from "./js/auth.js";
 import { initCategories } from "./js/categories.js";
 import { initChat } from "./js/chat.js";
 import { Notify } from "./js/notify.js";
+import { PlacePicker } from "./js/placePicker.js";
 
 // ✅ ثبّت الوضع الداكن دائماً
 document.documentElement.setAttribute("data-theme", "dark");
@@ -31,6 +32,8 @@ safe(() => Notify.ensurePermission());
 // ✅ جهّز actions أولاً
 initListings();
 initAddListing();
+// Place picker for add listing (map / my location)
+safe(() => PlacePicker.init());
 
 // ✅ مهم جداً: اربط chat/inbox actions قبل auth
 initChat();

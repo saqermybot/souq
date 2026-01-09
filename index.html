@@ -59,6 +59,21 @@
   .iti input{ width:100%; }
   .iti__country-list{ direction:ltr; }
 
+  /* ===== Place picker (Add Listing) ===== */
+  .placeRow{ display:flex; gap:10px; margin-top:10px; }
+  .placeRow button{ flex:1; height:44px; border-radius:14px; }
+  .placePreview{ margin-top:8px; padding:10px 12px; border-radius:14px; background: rgba(255,255,255,.04); border:1px solid rgba(255,255,255,.06); }
+
+  /* ===== Map modal (lazy loaded Leaflet) ===== */
+  .mapModal{ position:fixed; inset:0; z-index:10000; background: rgba(0,0,0,.55); display:flex; align-items:flex-end; justify-content:center; padding:12px; }
+  .mapModal.hidden{ display:none; }
+  .mapCard{ width:min(720px, 100%); background: rgba(10,14,22,.98); border:1px solid rgba(255,255,255,.12); border-radius:18px; overflow:hidden; }
+  .mapHead{ display:flex; align-items:center; justify-content:space-between; padding:12px 12px; }
+  .mapHead .title{ font-weight:900; }
+  #pickMap{ height: 52vh; width:100%; }
+  .mapFoot{ display:flex; gap:10px; padding:12px; }
+  .mapFoot button{ flex:1; height:46px; border-radius:14px; }
+
   /* =========================
      Admin-only UI
      Guests should never see Logout / Google login buttons
@@ -231,10 +246,13 @@
           <div class="detailsHero">
             <img id="gImg" class="gimg" alt="image" />
 
-            <div class="heroTop">
-              <div id="heroCounter" class="heroBadge">1/1</div>
+            <div id="heroCounter" class="heroBadge">1/1</div>
 
-              <button id="btnFav" class="heroFav" type="button" aria-label="إضافة للمفضلة">
+            <button id="btnFav" class="heroFav" type="button" aria-label="إضافة للمفضلة">
+              <span class="heartIcon" aria-hidden="true">♥</span>
+              <span id="dFavCount" class="favCountBadge">0</span>
+            </button>
+<button id="btnFav" class="heroFav" type="button" aria-label="إضافة للمفضلة">
                 <span class="heartIcon" aria-hidden="true">♥</span>
                 <span id="dFavCount" class="favCountBadge">0</span>
               </button>
@@ -301,6 +319,7 @@
     </section>
 
     <!-- ADD LISTING -->
+    
     <section id="addBox" class="page hidden">
       <div class="pageInner card">
         <div class="pageHead">
@@ -313,12 +332,19 @@
         <input id="aTitle" placeholder="ماذا تبيع؟ (مثال: موبايل سامسونغ A51)" />
         <textarea id="aDesc" placeholder="الوصف" rows="4"></textarea>
 
+        <!-- ✅ صور الإعلان (من فوق) -->
+        <label class="lbl">صور الإعلان</label>
+        <div class="muted small" style="margin-top:-6px;margin-bottom:8px">اختر من 1 إلى 3 صور (حد أقصى 3)</div>
+        <input id="aImages" type="file" accept="image/*" multiple />
+        <div id="imgPreview" class="preview" style="margin-top:10px"></div>
+
         <label class="lbl" for="aPhone">رقم الهاتف / واتساب (اختياري)</label>
         <input id="aPhone" type="tel" placeholder="اختياري: اختر البلد ثم اكتب رقمك" autocomplete="tel" />
         <input id="aPhoneE164" type="hidden" />
         <div class="muted small" style="margin-top:6px">اختياري: إذا وضعت رقمك سيظهر داخل الإعلان للتواصل عبر واتساب/اتصال. يمكنك أيضاً الاعتماد على المراسلة داخل الموقع.</div>
 
-        <div class="grid">
+        <!-- ✅ السعر + العملة بنفس السطر -->
+        <div class="grid priceRow">
           <input id="aPrice" type="number" placeholder="السعر" />
           <select id="aCurrency">
             <option value="ل.س">SYP</option>
@@ -327,14 +353,22 @@
           </select>
         </div>
 
-        <div class="grid">
-          <select id="aCity"></select>
+        <!-- ✅ مكان الإعلان (إجباري) -->
+        <label class="lbl">مكان الإعلان (إجباري)</label>
+        <div class="muted small" style="margin-top:-6px">حدد مكان السلعة/العقار على الخريطة. هذا المكان يمكن أن يكون مختلفاً عن مكانك الحالي.</div>
+        <div class="placeRow">
+          <button id="btnUseMyLocPlace" class="secondary" type="button">📍 استخدم موقعي</button>
+          <button id="btnPickPlace" type="button">🗺️ اختيار على الخريطة</button>
+        </div>
+        <div id="placePreview" class="placePreview muted small">لم يتم تحديد مكان الإعلان بعد.</div>
+        <!-- نخزن المدينة كنص تقريبي للتوافق مع النظام الحالي، لكن المستخدم ما بيختارها يدوياً -->
+        <input id="aCity" type="hidden" value="" />
+        <input id="aLat" type="hidden" value="" />
+        <input id="aLng" type="hidden" value="" />
+
+        <div class="grid" style="margin-top:10px">
           <select id="aCat"></select>
         </div>
-
-        <div class="muted small">اختر من 1 إلى 3 صور (حد أقصى 3)</div>
-        <input id="aImages" type="file" accept="image/*" multiple />
-        <div id="imgPreview" class="preview"></div>
 
         <div class="row actions">
           <button id="btnPublish" type="button">نشر</button>
@@ -342,6 +376,7 @@
         </div>
       </div>
     </section>
+
 
     <!-- CHAT -->
     <section id="chatBox" class="page hidden">
@@ -409,21 +444,52 @@
     <button id="imgNext" class="imgNav" type="button">›</button>
   </div>
 
+  <!-- MAP PICKER MODAL (lazy loads Leaflet only when opened) -->
+  <div id="mapModal" class="mapModal hidden" aria-hidden="true">
+    <div class="mapCard">
+      <div class="mapHead">
+        <div class="title">🗺️ اختر مكان الإعلان</div>
+        <button id="btnCloseMap" class="ghost" type="button">إغلاق</button>
+      </div>
+      <div id="pickMap"></div>
+      <div class="mapFoot">
+        <button id="btnMapUseMyLoc" class="secondary" type="button">📍 موقعي</button>
+        <button id="btnMapConfirm" type="button">تأكيد المكان</button>
+      </div>
+    </div>
+  </div>
+
   <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@23.8.0/build/js/intlTelInput.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@23.8.0/build/js/utils.js"></script>
 
-  <script type="module" src="./app.js?v=20260109_20"></script>
+  <script type="module" src="./app.js?v=20260109_23"></script>
 
-  <!-- ✅ FAB: Add Listing (always visible) -->
+  <!-- ✅ FAB: Add Listing (home only) -->
   <button id="fabAddListing" class="fab-add" type="button" aria-label="إضافة إعلان">➕ إضافة إعلان</button>
   <script>
     (function(){
       var b = document.getElementById('fabAddListing');
       if(!b) return;
+
+      function isVisible(id){
+        var el = document.getElementById(id);
+        return !!el && !el.classList.contains('hidden');
+      }
+
+      function updateFab(){
+        // يظهر فقط بالصفحة الرئيسية (عند إخفاء صفحات: التفاصيل/الإضافة/الشات/الرسائل)
+        var show = !isVisible('detailsPage') && !isVisible('addBox') && !isVisible('chatBox') && !isVisible('inboxPage');
+        b.style.display = show ? '' : 'none';
+      }
+
       b.addEventListener('click', function(){
         try { window.UI && UI.actions && UI.actions.openAdd && UI.actions.openAdd(); }
         catch(e){}
       });
+
+      // تحديث مبدئي + مراقبة خفيفة
+      updateFab();
+      setInterval(updateFab, 400);
     })();
   </script>
 
