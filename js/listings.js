@@ -8,6 +8,11 @@ import { getFavoriteSet, toggleFavorite, bumpViewCount, requireUserForFav } from
 import { ADMIN_UIDS, ADMIN_EMAILS } from "./config.js";
 
 import {
+
+// ✅ Performance tuning
+const LIST_PAGE_SIZE = 12;
+const FAV_PAGE_SIZE = 30;
+
   collection,
   addDoc,
   getDoc,
@@ -369,7 +374,7 @@ async function loadFavorites(){
   UI.el.btnMore?.classList.add("hidden");
 
   // ✅ Read favorites list
-  const favQ = query(collection(db, "users", uid, "favorites"), orderBy("createdAt", "desc"), limit(120));
+  const favQ = query(collection(db, "users", uid, "favorites"), orderBy("createdAt", "desc"), limit(FAV_PAGE_SIZE));
   const favSnap = await getDocs(favQ);
   const favIds = favSnap.docs.map(d => d.id).filter(Boolean);
 
@@ -920,9 +925,9 @@ async function loadListings(reset = true){
     }
   }
 
-  let qy = query(collection(db, "listings"), orderBy("createdAt", "desc"), limit(12));
+  let qy = query(collection(db, "listings"), orderBy("createdAt", "desc"), limit(LIST_PAGE_SIZE));
   if (UI.state.lastDoc){
-    qy = query(collection(db, "listings"), orderBy("createdAt", "desc"), startAfter(UI.state.lastDoc), limit(12));
+    qy = query(collection(db, "listings"), orderBy("createdAt", "desc"), startAfter(UI.state.lastDoc), limit(LIST_PAGE_SIZE));
   }
 
   const snap = await getDocs(qy);

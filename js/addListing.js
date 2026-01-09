@@ -422,6 +422,85 @@ function validateForm({ title, description, price, city, catId, files, extra }) 
 /* =========================
    ✅ PUBLISH
 ========================= */
+
+/* =========================
+   📍 LOCATION (Approx) - optional
+   - Tries to capture user's approximate device location when publishing.
+   - Never blocks publishing if denied/failed.
+   - Stores ONLY approximate coords (rounded) for privacy.
+========================= */
+const LOC_CACHE_KEY = "my_loc_v1";
+const LOC_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
+
+function roundCoord(x, decimals = 2) {
+  const p = Math.pow(10, decimals);
+  return Math.round(x * p) / p;
+}
+
+function readCachedLoc() {
+  try {
+    const raw = localStorage.getItem(LOC_CACHE_KEY);
+    if (!raw) return null;
+    const obj = JSON.parse(raw);
+    if (!obj || typeof obj.lat !== "number" || typeof obj.lng !== "number") return null;
+    if (obj.ts && (Date.now() - obj.ts) > LOC_TTL_MS) return null;
+    return obj;
+  } catch {
+    return null;
+  }
+}
+
+function writeCachedLoc(obj) {
+  try { localStorage.setItem(LOC_CACHE_KEY, JSON.stringify(obj)); } catch {}
+}
+
+async function reverseGeocodeOSM(lat, lng) {
+  // One reverse call per publish at most (and cached afterwards).
+  // Note: Nominatim has usage policies; keep calls minimal.
+  const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}&zoom=12&addressdetails=1&accept-language=ar`;
+  const r = await fetch(url, { headers: { "Accept": "application/json" } });
+  if (!r.ok) throw new Error("reverse_failed");
+  const j = await r.json();
+
+  const a = j.address || {};
+  const city = a.city || a.town || a.village || a.county || "";
+  const area = a.suburb || a.neighbourhood || a.hamlet || "";
+  const label = [city, area].filter(Boolean).join(" - ");
+  return label || "";
+}
+
+async function getMyLocationApproxOptional() {
+  // 1) Cached
+  const cached = readCachedLoc();
+  if (cached) return cached;
+
+  // 2) Geolocation (optional)
+  if (!navigator.geolocation) return null;
+
+  const pos = await new Promise((resolve, reject) => {
+    navigator.geolocation.getCurrentPosition(resolve, reject, {
+      enableHighAccuracy: false,
+      timeout: 8000,
+      maximumAge: 60 * 60 * 1000
+    });
+  });
+
+  const lat = roundCoord(pos.coords.latitude, 2); // ~1km
+  const lng = roundCoord(pos.coords.longitude, 2);
+
+  let label = "";
+  try {
+    label = await reverseGeocodeOSM(lat, lng);
+  } catch {
+    label = "";
+  }
+
+  const obj = { lat, lng, label, ts: Date.now() };
+  writeCachedLoc(obj);
+  return obj;
+}
+
+
 async function publish() {
   await ensureUser();
   if (publishing) return;
@@ -459,7 +538,6 @@ async function publish() {
 
     const expiresAt = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000);
 
-    const isAuthed = true;
     const guestId = getGuestId();
     const sellerName = auth.currentUser?.isAnonymous ? "زائر" : getSafeSellerName();
     const sellerEmail = auth.currentUser?.isAnonymous ? null : ((auth.currentUser?.email || "").trim() || null);
@@ -468,33 +546,47 @@ async function publish() {
     // ✅ تأكد من مزامنة رقم الهاتف قبل التحقق (حتى لو المستخدم ضغط نشر بدون blur)
     try { if (typeof syncPhoneNow === "function") syncPhoneNow(); } catch {}
 
-    // ✅ Require phone/WhatsApp for guests + authed users (for contact)
+    // ✅ WhatsApp/Phone is OPTIONAL الآن (لأن الشات شغال)
+    // إذا المستخدم كتب رقم: لازم يكون صحيح، غير هيك نخليه فاضي.
     const phoneE164 = (document.getElementById("aPhoneE164")?.value || "").trim();
+    const phoneRaw = (document.getElementById("aPhone")?.value || "").trim();
     const phoneValid = document.getElementById("aPhone")?.dataset?.valid === "1";
-    if (!phoneValid || !phoneE164) {
-      alert("رجاءً اختر بلدك واكتب رقم هاتف/واتساب صحيح للتواصل.");
-      return;
+
+    let finalPhone = null;
+    if (phoneRaw) {
+      if (!phoneValid || !phoneE164) {
+        alert("رقم الهاتف غير صحيح. اختر بلدك ثم اكتب رقم صحيح، أو اتركه فارغاً واستخدم الشات.");
+        return;
+      }
+      finalPhone = phoneE164;
+
+      // ✅ خزّن رقم الهاتف على حساب الزائر/المستخدم (حتى لو Anonymous) فقط إذا موجود
+      try {
+        const uref = doc(db, "users", auth.currentUser.uid);
+        await setDoc(uref, {
+          displayName: sellerName,
+          phone: finalPhone,
+          whatsapp: finalPhone,
+          updatedAt: serverTimestamp(),
+          isAnonymous: !!auth.currentUser.isAnonymous
+        }, { merge: true });
+      } catch (e) {
+        console.warn("Failed to save user phone", e);
+      }
     }
 
-    // ✅ خزّن رقم الهاتف على حساب الزائر/المستخدم (حتى لو Anonymous)
-    try {
-      const uref = doc(db, "users", auth.currentUser.uid);
-      await setDoc(uref, {
-        displayName: sellerName,
-        phone: phoneE164,
-        updatedAt: serverTimestamp(),
-        isAnonymous: !!auth.currentUser.isAnonymous
-      }, { merge: true });
-    } catch (e) {
-      console.warn("Failed to save user phone", e);
-    }
-
+    
+    // 📍 Optional approximate location (does NOT block publishing)
+    let loc = null;
+    try { loc = await getMyLocationApproxOptional(); } catch (e) { loc = null; }
 await addDoc(collection(db, "listings"), {
       title,
       description,
       price,
       currency,
       city,
+      // 📍 Location is approximate and optional (user may be elsewhere than item location)
+      location: loc ? { lat: loc.lat, lng: loc.lng, acc: "approx", label: loc.label || "", capturedAt: serverTimestamp() } : null,
 
       categoryId,
       categoryNameAr,
@@ -504,7 +596,8 @@ await addDoc(collection(db, "listings"), {
 
       images: urls,
 
-      contact: { phone: phoneE164, whatsapp: phoneE164 },
+      // ✅ optional contact
+      contact: finalPhone ? { phone: finalPhone, whatsapp: finalPhone } : { },
 
 
       sellerName,

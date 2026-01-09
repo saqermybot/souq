@@ -47,7 +47,7 @@ export const UI = {
 
       "chatBox","btnChatBack","chatTitle","chatMsgs","chatInput","btnSend",
 
-      "authModal","btnCloseAuth","email","password","btnLogin","btnRegister","btnGoogle",
+      "authModal","btnCloseAuth","email","password","btnLogin",
 
       // ✅ toast
       "toast",
