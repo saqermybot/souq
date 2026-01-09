@@ -220,72 +220,62 @@
 
     <!-- DETAILS PAGE -->
     <section id="detailsPage" class="page hidden">
-      <div class="pageInner card">
-        <div class="pageHead">
+      <div class="pageInner">
+
+        <div class="pageHead card" style="margin:0 0 10px;">
           <button id="btnBack" class="ghost" type="button">رجوع</button>
           <button id="btnShare" class="secondary" type="button">مشاركة</button>
         </div>
 
-        <div class="gallery">
-          <button id="gPrev" class="gbtn" type="button">‹</button>
-          <img id="gImg" class="gimg" alt="image" />
-          <button id="gNext" class="gbtn" type="button">›</button>
-        </div>
+        <div class="detailsWrap">
+          <div class="detailsHero">
+            <img id="gImg" class="gimg" alt="image" />
 
-        <div id="gDots" class="dots"></div>
+            <div class="heroTop">
+              <div id="heroCounter" class="heroBadge">1/1</div>
 
-        <h2 id="dTitle"></h2>
-        <div class="muted" id="dMeta"></div>
+              <button id="btnFav" class="heroFav" type="button" aria-label="إضافة للمفضلة">
+                <span class="heartIcon" aria-hidden="true">♥</span>
+                <span id="dFavCount" class="favCountBadge">0</span>
+              </button>
+            </div>
 
-        <!-- ✅ Stats (views + favorites) -->
-        <div id="dStats" class="statsLine muted small"></div>
+            <button id="gPrev" class="gbtn" type="button">‹</button>
+            <button id="gNext" class="gbtn" type="button">›</button>
+          </div>
 
-        <div id="dSeller" class="sellerLine"></div>
+          <!-- keep dots for existing JS (hidden visually) -->
+          <div id="gDots" class="dots hidden"></div>
 
-        <div class="price" id="dPrice"></div>
+          <div class="detailsBody">
+            <div id="dStats" class="detailsMeta"></div>
+            <h2 id="dTitle" class="detailsTitle"></h2>
+            <div id="dMeta" class="detailsMeta"></div>
+            <div id="dSeller" class="detailsMeta"></div>
+            <div id="dPrice" class="detailsPrice"></div>
 
-        <!-- ✅ Description (Read more) -->
-        <div class="descBox">
-          <p id="dDesc" class="descText"></p>
-          <button id="btnReadMore" class="linkBtn hidden" type="button">قراءة المزيد</button>
-        </div>
+            <div class="detailsCard">
+              <h3>الوصف</h3>
+              <p id="dDesc" class="descText"></p>
+              <button id="btnReadMore" class="linkBtn hidden" type="button">قراءة المزيد</button>
+            </div>
 
-        <!-- ✅ C) معلومات الإعلان بشكل Cards مثل Marketplace -->
-        <div class="infoSection" aria-label="معلومات الإعلان">
-          <h3 class="sectionTitle">معلومات الإعلان</h3>
-          <div id="dInfo" class="infoGrid"></div>
-        </div>
+            <div class="detailsCard">
+              <h3>معلومات الإعلان</h3>
+              <div id="dInfo" class="infoGrid"></div>
+            </div>
 
-        <!-- ✅ Actions -->
-        <div class="row actions">
-          <!-- ✅ Favorite -->
-          <button id="btnFav" class="ghost" type="button" aria-label="إضافة للمفضلة">
-            <span class="heartIcon" aria-hidden="true">♥</span> <span id="dFavCount">0</span>
-          </button>
+            <!-- keep wrong whatsapp report button (hidden) for existing JS -->
+            <button id="btnReportWhatsapp" class="ghost hidden" type="button">🚫 الإبلاغ عن رقم خاطئ</button>
 
-          <button id="btnChat" type="button">مراسلة</button>
+            <button id="btnDeleteListing" class="danger hidden" type="button" style="margin-top:12px;">حذف الإعلان</button>
+          </div>
 
-          <!-- ✅ WhatsApp -->
-          <a
-            id="btnWhatsapp"
-            class="secondary hidden"
-            href="#"
-            target="_blank"
-            rel="noopener"
-            aria-label="مراسلة عبر واتساب"
-          >واتساب</a>
-
-          <!-- ✅ Report listing (Reasons: bad ad / personal / fake phone) -->
-          <button id="btnReportListing" class="ghost" type="button" aria-label="تبليغ عن الإعلان">
-            🚩 تبليغ
-          </button>
-
-          <!-- ✅ Report wrong WhatsApp number -->
-          <button id="btnReportWhatsapp" class="ghost hidden" type="button">
-            🚫 الإبلاغ عن رقم خاطئ
-          </button>
-
-          <button id="btnDeleteListing" class="danger hidden" type="button">حذف الإعلان</button>
+          <div class="actionBar">
+            <button id="btnChat" class="btnMain" type="button">مراسلة</button>
+            <a id="btnWhatsapp" class="btnMain secondary hidden" href="#" target="_blank" rel="noopener">واتساب</a>
+            <button id="btnReportListing" class="btnMini ghost" type="button">تبليغ</button>
+          </div>
         </div>
       </div>
     </section>
@@ -422,7 +412,7 @@
   <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@23.8.0/build/js/intlTelInput.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@23.8.0/build/js/utils.js"></script>
 
-  <script type="module" src="./app.js?v=20260109_02"></script>
+  <script type="module" src="./app.js?v=20260109_20"></script>
 
   <!-- ✅ FAB: Add Listing (always visible) -->
   <button id="fabAddListing" class="fab-add" type="button" aria-label="إضافة إعلان">➕ إضافة إعلان</button>
