@@ -1,7 +1,7 @@
 import { db, auth } from "./firebase.js";
 import { UI } from "./ui.js";
 import { escapeHtml } from "./utils.js";
-import { requireAuth } from "./auth.js";
+import { ensureUser } from "./auth.js";
 import { Notify } from "./notify.js";
 import {
   addDoc,
@@ -204,7 +204,7 @@ function statusIconForMessage(m, me, otherId, isPending){
  * openChat(listingId, listingTitle, ownerId?)
  */
 async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
-  try{ requireAuth(); }catch{ return; }
+  await ensureUser();
 
   // ✅ الدردشة Overlay: لا تخفي صفحة الإعلان إن كانت مفتوحة
   // (لكن اخفي الإضافات/الإنبوكس)
@@ -373,7 +373,7 @@ function closeChat(){
 }
 
 async function sendMsg(){
-  try{ requireAuth(); }catch{ return; }
+  await ensureUser();
 
   const text = UI.el.chatInput.value.trim();
   if (!text) return;
@@ -448,7 +448,7 @@ async function sendMsg(){
 ========================= */
 
 async function openInbox(){
-  try{ requireAuth(); }catch{ return; }
+  await ensureUser();
   UI.showInboxPage();
   await loadInbox();
 }
@@ -460,7 +460,7 @@ function closeInbox(){
 }
 
 async function loadInbox(){
-  try{ requireAuth(); }catch{ return; }
+  await ensureUser();
 
   const me = auth.currentUser.uid;
 

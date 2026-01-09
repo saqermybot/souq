@@ -451,7 +451,7 @@ async function loadFavorites(){
       favBtn.addEventListener("click", async (e) => {
         e.preventDefault();
         e.stopPropagation();
-        if (!requireUserForFav()) return;
+        if (!(await requireUserForFav())) return;
         favBtn.disabled = true;
         try{
           const res = await toggleFavorite(id);
@@ -568,7 +568,7 @@ async function openDetails(id, data = null, fromHash = false){
       UI.el.btnFav.classList.toggle("isFav", isFav);
 
       UI.el.btnFav.onclick = async () => {
-        if (!requireUserForFav()) return;
+        if (!(await requireUserForFav())) return;
 
         UI.el.btnFav.disabled = true;
         try{
@@ -1068,7 +1068,7 @@ async function loadListings(reset = true){
       favBtn.addEventListener("click", async (e) => {
         e.preventDefault();
         e.stopPropagation();
-        if (!requireUserForFav()) return;
+        if (!(await requireUserForFav())) return;
 
         favBtn.disabled = true;
         try{

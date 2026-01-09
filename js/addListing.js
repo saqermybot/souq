@@ -40,13 +40,16 @@ function initPhoneInput(){
 import { db, auth } from "./firebase.js";
 import { CLOUDINARY, MAX_IMAGES } from "./config.js";
 import { UI } from "./ui.js";
+import { ensureUser } from "./auth.js";
 import { fileToResizedJpeg } from "./utils.js";
 import { getGuestId } from "./guest.js";
 
 import {
   addDoc,
   collection,
-  serverTimestamp
+  serverTimestamp,
+  doc,
+  setDoc
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 let publishing = false;
@@ -408,7 +411,7 @@ function validateForm({ title, description, price, city, catId, files, extra }) 
    ✅ PUBLISH
 ========================= */
 async function publish() {
-  try { requireAuth(); } catch { return; }
+  await ensureUser();
   if (publishing) return;
 
   const title = (UI.el.aTitle?.value || "").trim();
@@ -444,10 +447,10 @@ async function publish() {
 
     const expiresAt = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000);
 
-    const isAuthed = !!auth.currentUser;
+    const isAuthed = true;
     const guestId = getGuestId();
-    const sellerName = isAuthed ? getSafeSellerName() : "زائر";
-    const sellerEmail = isAuthed ? ((auth.currentUser?.email || "").trim() || null) : null;
+    const sellerName = auth.currentUser?.isAnonymous ? "زائر" : getSafeSellerName();
+    const sellerEmail = auth.currentUser?.isAnonymous ? null : ((auth.currentUser?.email || "").trim() || null);
 
     
     // ✅ Require phone/WhatsApp for guests + authed users (for contact)
@@ -456,6 +459,19 @@ async function publish() {
     if (!phoneValid || !phoneE164) {
       alert("رجاءً اختر بلدك واكتب رقم هاتف/واتساب صحيح للتواصل.");
       return;
+    }
+
+    // ✅ خزّن رقم الهاتف على حساب الزائر/المستخدم (حتى لو Anonymous)
+    try {
+      const uref = doc(db, "users", auth.currentUser.uid);
+      await setDoc(uref, {
+        displayName: sellerName,
+        phone: phoneE164,
+        updatedAt: serverTimestamp(),
+        isAnonymous: !!auth.currentUser.isAnonymous
+      }, { merge: true });
+    } catch (e) {
+      console.warn("Failed to save user phone", e);
     }
 
 await addDoc(collection(db, "listings"), {
@@ -478,11 +494,11 @@ await addDoc(collection(db, "listings"), {
 
       sellerName,
       sellerEmail,
-      uid: isAuthed ? auth.currentUser.uid : null,
+      uid: auth.currentUser.uid,
 
-      ownerType: isAuthed ? "auth" : "guest",
-      ownerId: isAuthed ? auth.currentUser.uid : guestId,
-      guestId: isAuthed ? null : guestId,
+      ownerType: auth.currentUser.isAnonymous ? "anon" : "auth",
+      ownerId: auth.currentUser.uid,
+      guestId: auth.currentUser.isAnonymous ? guestId : null,
 
       isActive: true,
       createdAt: serverTimestamp(),

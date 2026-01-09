@@ -8,12 +8,29 @@ import {
   signInWithPopup,
   signInWithRedirect,
   getRedirectResult,
-  signOut
+  signOut,
+  signInAnonymously
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-auth.js";
 
 import { UI } from "./ui.js";
 
 let globalOutsideClickInstalled = false;
+
+
+export async function ensureUser() {
+  // Ensures we always have a Firebase user (anonymous by default)
+  if (auth.currentUser) return auth.currentUser;
+  try {
+    const cred = await signInAnonymously(auth);
+    return cred.user;
+  } catch (e) {
+    console.warn("Anonymous auth failed:", e);
+    // fallback: open auth modal for manual login if anonymous fails
+    UI.actions?.openAuth?.();
+    throw e;
+  }
+}
+
 
 export function initAuth() {
   // ✅ تثبيت الوضع الداكن دائماً
@@ -156,6 +173,9 @@ export function initAuth() {
       if (badge) badge.classList.add("hidden");
     }
   });
+
+  // ✅ Default to silent anonymous session so الموقع يشتغل حتى بدون تسجيل
+  ensureUser().catch(()=>{});
 }
 
 function renderTopbar(user) {

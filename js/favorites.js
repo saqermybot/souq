@@ -3,6 +3,7 @@
 
 import { db, auth } from "./firebase.js";
 import { UI } from "./ui.js";
+import { ensureUser } from "./auth.js";
 
 import {
   doc,
@@ -36,11 +37,8 @@ function listingRef(listingId){
   return doc(db, "listings", listingId);
 }
 
-export function requireUserForFav(){
-  if (auth.currentUser) return true;
-  toast("سجّل دخول لتضيف الإعلان للمفضلة ❤️");
-  UI.actions.openAuth?.();
-  return false;
+export async function requireUserForFav(){
+  try{ await ensureUser(); return true; }catch{ return false; }
 }
 
 /* =========================
@@ -72,7 +70,7 @@ export async function getFavoriteSet(listingIds = []){
 
 export async function toggleFavorite(listingId){
   if (!listingId) return { ok:false };
-  if (!requireUserForFav()) return { ok:false, needAuth:true };
+  if (!(await requireUserForFav())) return { ok:false, needAuth:true };
 
   const uid = auth.currentUser.uid;
   const favRef = favDocRef(uid, listingId);

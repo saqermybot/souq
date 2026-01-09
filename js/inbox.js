@@ -1,6 +1,6 @@
 import { db, auth } from "./firebase.js";
 import { UI } from "./ui.js";
-import { requireAuth } from "./auth.js";
+import { ensureUser } from "./auth.js";
 import { escapeHtml } from "./utils.js";
 
 import {
@@ -27,7 +27,7 @@ export function initInbox() {
  * - إذا listingId موجود => اعرض محادثات هذا الإعلان فقط
  */
 function openInbox(listingId = null) {
-  try { requireAuth(); } catch { return; }
+  await ensureUser();
 
   filterListingId = listingId || null;
 
@@ -45,7 +45,7 @@ function closeInbox() {
 }
 
 async function loadInbox() {
-  try { requireAuth(); } catch { return; }
+  await ensureUser();
 
   UI.el.inboxList.innerHTML = "";
   UI.setInboxEmpty(false);
