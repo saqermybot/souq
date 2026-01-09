@@ -52,6 +52,53 @@ function renderAuthBar(user){
   if (btn) btn.onclick = () => UI.actions.openAuth?.();
 }
 
+
+function hashToInt(str){
+  let h = 0;
+  for (let i = 0; i < str.length; i++){
+    h = (h * 31 + str.charCodeAt(i)) >>> 0;
+  }
+  return h;
+}
+
+function makeGuestAvatarDataUrl(seed){
+  const s = String(seed || "guest");
+  const h = hashToInt(s);
+  const c1 = `hsl(${h % 360} 70% 45%)`;
+  const c2 = `hsl(${(h * 7) % 360} 70% 35%)`;
+  const c3 = `hsl(${(h * 13) % 360} 70% 55%)`;
+  const letter = "ز"; // زائر
+  const svg = `
+  <svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+    <defs>
+      <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+        <stop offset="0" stop-color="${c1}"/>
+        <stop offset="0.55" stop-color="${c2}"/>
+        <stop offset="1" stop-color="${c3}"/>
+      </linearGradient>
+    </defs>
+    <rect width="128" height="128" rx="64" fill="url(#g)"/>
+    <circle cx="64" cy="64" r="50" fill="rgba(0,0,0,0.18)"/>
+    <text x="64" y="78" text-anchor="middle" font-size="64" font-family="system-ui, -apple-system, Segoe UI, Arial" fill="white" opacity="0.92">${letter}</text>
+  </svg>`;
+  return "data:image/svg+xml;charset=UTF-8," + encodeURIComponent(svg.trim());
+}
+
+function setUserAvatar(user){
+  const avatar = document.getElementById("userAvatar");
+  if (!avatar) return;
+
+  // Admin: keep existing falcon image
+  if (isAdminUser(user)) {
+    // leave src as-is
+    return;
+  }
+
+  // Guest: generate deterministic avatar from uid
+  const uid = user?.uid || "guest";
+  avatar.src = makeGuestAvatarDataUrl(uid);
+}
+
 function initUserMenuUI(){
   const wrap = document.getElementById("userMenuWrap");
   const avatar = document.getElementById("userAvatar");
@@ -176,6 +223,7 @@ export function initAuth(){
   onAuthStateChanged(auth, (user) => {
     setBodyFlags(user);
     renderAuthBar(user);
+    setUserAvatar(user);
     // Safety for late-rendered elements
     setTimeout(() => setBodyFlags(auth.currentUser), 250);
   });
