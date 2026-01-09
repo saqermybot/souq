@@ -38,7 +38,7 @@ export const UI = {
 
       // ✅ DETAILS (+ dSeller جديد)
       "detailsPage","btnBack","btnShare","dTitle","dMeta","dStats","dSeller","dPrice","dDesc","btnReadMore","dInfo",
-      "btnFav","dFavCount","btnChat","btnWhatsapp","btnReportListing","btnReportWhatsapp","btnDeleteListing","gImg","gDots","gPrev","gNext",
+      "btnFav","dFavCount","btnChat","btnWhatsapp","btnReportListing","btnReportWhatsapp","btnDeleteListing","gImg","gDots","gPrev","gNext","heroCounter",
 
       "inboxPage","btnInboxBack","btnInboxRefresh","inboxList","inboxEmpty",
 
@@ -626,6 +626,8 @@ bindDeluxeTypeControls(){
     }
 
     this.el.gImg.src = imgs[0];
+
+    if (this.el.heroCounter) this.el.heroCounter.textContent = `1/${imgs.length || 1}`;
     this.el.gDots.innerHTML = imgs.map((_,i)=>`<div class="dot ${i===0?"active":""}"></div>`).join("");
   },
 
@@ -636,6 +638,8 @@ bindDeluxeTypeControls(){
     const idx = (i + n) % n;
     this.state.gallery.idx = idx;
     this.el.gImg.src = this.state.gallery.imgs[idx];
+
+    if (this.el.heroCounter) this.el.heroCounter.textContent = `${idx+1}/${this.state.gallery.imgs.length || 1}`;
 
     [...this.el.gDots.children].forEach((d,k)=>d.classList.toggle("active", k===idx));
   },
