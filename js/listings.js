@@ -253,12 +253,8 @@ function renderInfoCards(data){
     if (kind) cards.push({ icon:"🏠", label:"النوع العقاري", value: kind });
     if (rooms) cards.push({ icon:"🛏️", label:"الغرف", value: `${rooms}` });
   }
-
-  // إحصائيات
-  cards.push({ icon:"👁️", label:"المشاهدات", value: `${views}` });
-  cards.push({ icon:"❤️", label:"المفضلة", value: `${favs}` });
-
-  box.innerHTML = cards.map(c => `
+  // إحصائيات (تُعرض أعلى الإعلان)
+box.innerHTML = cards.map(c => `
     <div class="infoCard">
       <div class="infoIcon" aria-hidden="true">${escapeHtml(c.icon)}</div>
       <div class="infoText">

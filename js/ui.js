@@ -103,7 +103,8 @@ export const UI = {
         SY_CITIES.map(c=>`<option value="${c}">${c}</option>`).join("");
     }
 
-    if (this.el.aCity){
+    // aCity أصبح hidden (يُملأ تلقائياً من الخريطة/الموقع)
+    if (this.el.aCity && this.el.aCity.tagName === "SELECT"){
       this.el.aCity.innerHTML =
         `<option value="">اختر مدينة</option>` +
         SY_CITIES.map(c=>`<option value="${c}">${c}</option>`).join("");

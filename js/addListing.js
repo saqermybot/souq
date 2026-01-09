@@ -323,6 +323,12 @@ function clearForm() {
   if (UI.el.aPrice) UI.el.aPrice.value = "";
   if (UI.el.aCurrency) UI.el.aCurrency.value = "SYP";
   if (UI.el.aCity) UI.el.aCity.value = "";
+  const latEl = document.getElementById("aLat");
+  const lngEl = document.getElementById("aLng");
+  if (latEl) latEl.value = "";
+  if (lngEl) lngEl.value = "";
+  const pp = document.getElementById("placePreview");
+  if (pp) pp.textContent = "لم يتم تحديد مكان الإعلان بعد.";
   if (UI.el.aCat) UI.el.aCat.value = "";
   if (UI.el.aImages) UI.el.aImages.value = "";
   if (UI.el.imgPreview) UI.el.imgPreview.innerHTML = "";
@@ -433,13 +439,14 @@ function collectExtraFields(catId){
   return {};
 }
 
-function validateForm({ title, description, price, city, catId, files, extra }) {
+function validateForm({ title, description, price, placeLat, placeLng, catId, files, extra }) {
   if (!title) return "اكتب عنوان الإعلان";
   if (title.length < 3) return "العنوان قصير جداً";
   if (!description) return "اكتب وصف الإعلان";
   if (description.length < 10) return "الوصف قصير جداً";
   if (!price || Number.isNaN(price) || price <= 0) return "اكتب سعر صحيح";
-  if (!city) return "اختر المدينة";
+  // مكان الإعلان (إجباري) عبر الخريطة/الموقع
+  if (!placeLat || !placeLng) return "حدد مكان الإعلان على الخريطة";
   if (!catId) return "اختر الصنف";
   if (!files.length) return `اختر صورة واحدة على الأقل (حد أقصى ${MAX_IMAGES})`;
 
@@ -552,7 +559,9 @@ async function publish() {
   const description = (UI.el.aDesc?.value || "").trim();
   const price = Number(UI.el.aPrice?.value || 0);
   const currency = (UI.el.aCurrency?.value || "SYP").trim();
-  const city = (UI.el.aCity?.value || "").trim();
+  const city = (UI.el.aCity?.value || "").trim(); // يتم تعبئته تلقائياً من الخريطة/الموقع
+  const placeLat = Number(document.getElementById("aLat")?.value || "");
+  const placeLng = Number(document.getElementById("aLng")?.value || "");
 
   const categoryId = getCategoryId();
   const categoryNameAr = catToAr(categoryId);
@@ -560,7 +569,7 @@ async function publish() {
   const extra = collectExtraFields(categoryId);
   const files = Array.from(UI.el.aImages?.files || []).slice(0, MAX_IMAGES);
 
-  const err = validateForm({ title, description, price, city, catId: categoryId, files, extra });
+  const err = validateForm({ title, description, price, placeLat, placeLng, catId: categoryId, files, extra });
   if (err) return alert(err);
 
   publishing = true;
@@ -618,18 +627,16 @@ async function publish() {
       }
     }
 
-    
-    // 📍 Optional approximate location (does NOT block publishing)
-    let loc = null;
-    try { loc = await getMyLocationApproxOptional(); } catch (e) { loc = null; }
-await addDoc(collection(db, "listings"), {
+    // 📍 مكان الإعلان المختار (مقرب للخصوصية)
+    const placeCity = city || "موقع تقريبي";
+    await addDoc(collection(db, "listings"), {
       title,
       description,
       price,
       currency,
-      city,
-      // 📍 Location is approximate and optional (user may be elsewhere than item location)
-      location: loc ? { lat: loc.lat, lng: loc.lng, acc: "approx", label: loc.label || "", capturedAt: serverTimestamp() } : null,
+      city: placeCity,
+      // 📍 Location of the item/place (chosen on map or from device), always approximate
+      location: { lat: placeLat, lng: placeLng, acc: "approx", label: placeCity, capturedAt: serverTimestamp() },
 
       categoryId,
       categoryNameAr,
