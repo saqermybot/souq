@@ -69,6 +69,30 @@ function getDistanceTextForListing(listing){
 const LIST_PAGE_SIZE = 12;
 const FAV_PAGE_SIZE = 30;
 
+// ✅ Stats cache (favCount + viewCount) so numbers don't jump up/down
+// We never update listings/{id} counters; all counters live in listingStats/{listingId}.
+// Cache is filled lazily for rendered cards only (page size ≈ 12) to keep reads low.
+const STATS_CACHE = new Map();
+
+async function getStatsCached(listingId){
+  if (!listingId) return { favCount: 0, viewCount: 0 };
+  if (STATS_CACHE.has(listingId)) return STATS_CACHE.get(listingId);
+  const s = await getListingStats(listingId);
+  const stats = { favCount: Number(s.favCount || 0) || 0, viewCount: Number(s.viewCount || 0) || 0 };
+  STATS_CACHE.set(listingId, stats);
+  return stats;
+}
+
+function setStatsCached(listingId, patch){
+  if (!listingId) return;
+  const cur = STATS_CACHE.get(listingId) || { favCount: 0, viewCount: 0 };
+  const next = {
+    favCount: Number(patch.favCount ?? cur.favCount) || 0,
+    viewCount: Number(patch.viewCount ?? cur.viewCount) || 0,
+  };
+  STATS_CACHE.set(listingId, next);
+}
+
 /* =========================
    ✅ Helpers
 ========================= */
@@ -457,8 +481,11 @@ async function loadFavorites(){
 
     const card = document.createElement("div");
     card.className = "cardItem";
-    const viewsC = Number(data.viewsCount || 0) || 0;
-    const favC = Number(data.favCount || 0) || 0;
+
+    // ✅ counts from listingStats (cached) — keep stable even if listings/{id} has old numbers
+    const cached = STATS_CACHE.get(ds.id) || { favCount: 0, viewCount: 0 };
+    const viewsC = Number(cached.viewCount || 0) || 0;
+    const favC = Number(cached.favCount || 0) || 0;
     const isFav = favSet.has(id);
 
     card.innerHTML = `
@@ -479,6 +506,17 @@ async function loadFavorites(){
         </div>
       </div>
     `;
+
+    // ✅ lazy fetch stats for this card (1 getDoc) to avoid jumping numbers
+    // (only for cards that passed filters)
+    getStatsCached(ds.id).then(st => {
+      try{
+        const countEl = card.querySelector(".favCount");
+        if (countEl) countEl.textContent = String(st.favCount || 0);
+        const vEl = card.querySelector(".cardStats .muted:last-child");
+        if (vEl) vEl.textContent = `👁️ ${st.viewCount || 0}`;
+      }catch{}
+    });
 
     card.onclick = () => openDetails(id, data);
 
@@ -605,6 +643,8 @@ async function openDetails(id, data = null, fromHash = false){
     const statsNow = await getListingStats(id);
     const viewsNow = Number(statsNow.viewCount || 0) || 0;
     const favNow = Number(statsNow.favCount || 0) || 0;
+    // ✅ keep list-page stats stable by caching
+    setStatsCached(id, { viewCount: viewsNow, favCount: favNow });
     if (UI.el.dStats) UI.el.dStats.textContent = `👁️ ${viewsNow} • ❤️ ${favNow}`;
     if (UI.el.dFavCount) UI.el.dFavCount.textContent = String(favNow);
 
@@ -632,6 +672,9 @@ async function openDetails(id, data = null, fromHash = false){
           UI.el.btnFav.classList.toggle("isFav", !!res.isFav);
           if (UI.el.dFavCount) UI.el.dFavCount.textContent = String(res.favCount ?? 0);
           if (UI.el.dStats) UI.el.dStats.textContent = `👁️ ${viewsNow} • ❤️ ${res.favCount ?? 0}`;
+
+          // ✅ update cache so list cards don't jump back to old numbers
+          setStatsCached(id, { favCount: (res.favCount ?? 0), viewCount: viewsNow });
 
           if (UI.state.currentListing && UI.state.currentListing.id === id){
             UI.state.currentListing.favCount = res.favCount ?? 0;
@@ -1092,8 +1135,11 @@ async function loadListings(reset = true){
 
     const card = document.createElement("div");
     card.className = "cardItem";
-    const viewsC = Number(data.viewsCount || 0) || 0;
-    const favC = Number(data.favCount || 0) || 0;
+
+    // ✅ Start with cached stats (if any). We'll refresh from listingStats lazily.
+    const cachedStats = STATS_CACHE.get(ds.id) || { favCount: 0, viewCount: 0 };
+    const viewsC = Number(cachedStats.viewCount || 0) || 0;
+    const favC = Number(cachedStats.favCount || 0) || 0;
     const isFav = favSet.has(ds.id);
     card.innerHTML = `
       <div class="cardMedia">
@@ -1112,10 +1158,21 @@ async function loadListings(reset = true){
 
         <div class="cardStats">
           <span class="muted">♥ <span class="favCount">${favC}</span></span>
-          <span class="muted">👁️ ${viewsC}</span>
+          <span class="muted">👁️ <span class="viewCount">${viewsC}</span></span>
         </div>
       </div>
     `;
+
+    // ✅ Refresh stats from Firestore (listingStats) once per rendered card
+    // This keeps numbers stable and avoids using stale counters inside listings/{id}.
+    getStatsCached(ds.id).then((st) => {
+      try{
+        const favEl = card.querySelector('.favCount');
+        const viewEl = card.querySelector('.viewCount');
+        if (favEl) favEl.textContent = String(st.favCount ?? 0);
+        if (viewEl) viewEl.textContent = String(st.viewCount ?? 0);
+      }catch{}
+    });
 
     // card click => open details
     card.onclick = () => openDetails(ds.id, data);
@@ -1135,6 +1192,8 @@ async function loadListings(reset = true){
           favBtn.classList.toggle("isFav", !!res.isFav);
           const countEl = card.querySelector(".favCount");
           if (countEl) countEl.textContent = String(res.favCount ?? 0);
+          // ✅ cache for stability
+          setStatsCached(ds.id, { favCount: (res.favCount ?? 0) });
         }catch(err){
           alert(err?.message || "فشل تحديث المفضلة");
         }finally{

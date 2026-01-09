@@ -403,14 +403,23 @@ async function sendMsg(){
   }catch{}
 
   // ✅ أرسل الرسالة
-  await addDoc(msgsRef, {
-    text,
-    senderId: me,
-    createdAt: serverTimestamp(),
-    deliveredTo: {},
-    readBy: {},
-    expiresAt: new Date(Date.now() + 7*24*3600*1000)
-  });
+  // مهم: نخلي createdAt رقم (Date.now) لتكون متوافقة مع أغلب قواعد Firestore
+  // ونتعامل مع أي فشل برسالة واضحة بدون ما تختفي الرسالة بصمت.
+  let sentOk = false;
+  try{
+    await addDoc(msgsRef, {
+      text,
+      senderId: me,
+      createdAt: Date.now(),
+      deliveredTo: {},
+      readBy: {},
+      expiresAt: new Date(Date.now() + 7*24*3600*1000)
+    });
+    sentOk = true;
+  }catch(e){
+    try{ Notify.toast?.("فشل الإرسال. تحقق من الاتصال وحاول مجدداً."); }catch{}
+    return; // لا تمسح النص إذا فشل
+  }
 
   // ✅ حدّث الميتا + عدّاد غير مقروء للطرف الآخر
   try{
@@ -440,7 +449,7 @@ async function sendMsg(){
     });
   }catch{}
 
-  UI.el.chatInput.value = "";
+  if (sentOk) UI.el.chatInput.value = "";
 }
 
 /* =========================
