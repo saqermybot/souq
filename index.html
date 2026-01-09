@@ -7,6 +7,7 @@
 
   <link rel="stylesheet" href="./base.css">
   <link rel="stylesheet" href="./components.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/intl-tel-input@23.8.0/build/css/intlTelInput.css">
 
   <script>
     document.documentElement.setAttribute("data-theme", "dark");
@@ -53,6 +54,11 @@
     box-shadow: 0 10px 24px rgba(0,0,0,.35);
   }
   .fab-add:active{ transform: translateY(1px); }
+  /* Phone input (intl-tel-input) */
+  .iti{ width:100%; direction:ltr; }
+  .iti input{ width:100%; }
+  .iti__country-list{ direction:ltr; }
+
 </style>
 
 </head>
@@ -308,6 +314,11 @@
         <input id="aTitle" placeholder="ماذا تبيع؟ (مثال: موبايل سامسونغ A51)" />
         <textarea id="aDesc" placeholder="الوصف" rows="4"></textarea>
 
+        <label class="lbl" for="aPhone">رقم الهاتف / واتساب</label>
+        <input id="aPhone" type="tel" placeholder="اختر البلد ثم اكتب رقمك" autocomplete="tel" />
+        <input id="aPhoneE164" type="hidden" />
+        <div class="muted small" style="margin-top:6px">اختر بلدك من العلم ثم اكتب رقمك. سيظهر للناس داخل الإعلان للتواصل.</div>
+
         <div class="grid">
           <input id="aPrice" type="number" placeholder="السعر" />
           <select id="aCurrency">
@@ -398,6 +409,9 @@
     <img id="imgFull" class="imgFull" alt="full" />
     <button id="imgNext" class="imgNav" type="button">›</button>
   </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@23.8.0/build/js/intlTelInput.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@23.8.0/build/js/utils.js"></script>
 
   <script type="module" src="./app.js?v=20260104_01"></script>
 

@@ -65,7 +65,7 @@ service cloud.firestore {
     // reports (listing reports / wrong whatsapp / ...)
     // -------------------------
     match /reports/{id} {
-      allow create: if signedIn();
+      allow create: if signedIn() || isGuestCreate();
       allow read, update, delete: if isAdmin();
     }
   }
