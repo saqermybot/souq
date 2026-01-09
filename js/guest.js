@@ -1,21 +1,19 @@
-// guest.js
-// ✅ حساب جهاز تلقائي (بدون تسجيل) — يتفعل فقط عند الفعل
-
-import { API_BASE } from "./config.js";
-
-export async function ensureGuest() {
-  // كاش بسيط لتقليل الطلبات (الكوكي هي الأساس)
-  if (localStorage.getItem("guest_ready") === "1") return;
-
-  const res = await fetch(`${API_BASE}/api/guest/start`, {
-    method: "POST",
-    credentials: "include"
-  });
-
-  if (!res.ok) {
-    // لا نرمي رسالة تقنية
-    throw new Error("guest_start_failed");
+// guest.js - lightweight guest identity (no Firebase Auth required)
+export function getGuestId() {
+  try {
+    let id = localStorage.getItem("souq_guest_id");
+    if (!id) {
+      const rnd = (crypto?.randomUUID ? crypto.randomUUID() : (Date.now() + "_" + Math.random().toString(16).slice(2)));
+      id = "g_" + rnd;
+      localStorage.setItem("souq_guest_id", id);
+    }
+    return id;
+  } catch {
+    // very old browsers / private mode
+    return "g_" + (Date.now() + "_" + Math.random().toString(16).slice(2));
   }
+}
 
-  try { localStorage.setItem("guest_ready", "1"); } catch {}
+export function isGuestMode() {
+  return true;
 }

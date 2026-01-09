@@ -1,8 +1,21 @@
 // favorites.js
-// ✅ Guest favorites + global counters via API (no Firebase Auth required)
+// ✅ Per-user favorites + global counters (favCount + viewsCount)
 
+import { db, auth } from "./firebase.js";
 import { UI } from "./ui.js";
-import { apiFetch, ensureGuest } from "./apiClient.js";
+
+import {
+  doc,
+  getDoc,
+  setDoc,
+  serverTimestamp,
+  runTransaction,
+  increment
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
+
+/* =========================
+   ✅ Toast (دبلوماسي)
+========================= */
 
 function toast(msg){
   try{
@@ -11,54 +24,85 @@ function toast(msg){
   try{ alert(msg); }catch{}
 }
 
-// Called before any "identity" action
-export async function requireUserForFav(){
-  await ensureGuest();
-  return true;
+/* =========================
+   ✅ Helpers
+========================= */
+
+function favDocRef(uid, listingId){
+  return doc(db, "users", uid, "favorites", listingId);
 }
 
-// Read favorites for a list of listing IDs (used to paint ❤️ states)
-export async function getFavoriteSet(listingIds = []){
-  const ids = Array.from(new Set((listingIds || []).filter(Boolean)));
-  if (!ids.length) return new Set();
-
-  try{
-    await ensureGuest();
-    const data = await apiFetch("/api/favorites/list", {
-      method: "POST",
-      body: JSON.stringify({ listingIds: ids })
-    });
-    return new Set((data?.favorites || []).filter(Boolean));
-  }catch(e){
-    console.warn("getFavoriteSet failed:", e);
-    return new Set();
-  }
+function listingRef(listingId){
+  return doc(db, "listings", listingId);
 }
 
-// Toggle favorite (server updates Firestore favCount + stores per-device state)
-export async function toggleFavorite(listingId){
-  if (!listingId) return { ok:false };
-  await requireUserForFav();
-
-  try{
-    const data = await apiFetch(`/api/listings/${encodeURIComponent(listingId)}/favorite`, {
-      method: "POST",
-      body: "{}"
-    });
-
-    return {
-      ok: true,
-      isFav: !!data?.isFav,
-      favCount: Number(data?.favCount || 0) || 0
-    };
-  }catch(e){
-    toast(e?.message || "تعذر تحديث المفضلة");
-    return { ok:false };
-  }
+export function requireUserForFav(){
+  if (auth.currentUser) return true;
+  toast("سجّل دخول لتضيف الإعلان للمفضلة ❤️");
+  UI.actions.openAuth?.();
+  return false;
 }
 
 /* =========================
-   ✅ Views counter (with client TTL)
+   ✅ Read favorites for a list of listings (12-24 is fine)
+========================= */
+
+export async function getFavoriteSet(listingIds = []){
+  const uid = auth.currentUser?.uid || "";
+  const ids = Array.from(new Set((listingIds || []).filter(Boolean)));
+  if (!uid || !ids.length) return new Set();
+
+  const results = await Promise.all(
+    ids.map(async (id) => {
+      try{
+        const snap = await getDoc(favDocRef(uid, id));
+        return snap.exists() ? id : null;
+      }catch{
+        return null;
+      }
+    })
+  );
+
+  return new Set(results.filter(Boolean));
+}
+
+/* =========================
+   ✅ Toggle favorite (transaction-safe, updates global favCount)
+========================= */
+
+export async function toggleFavorite(listingId){
+  if (!listingId) return { ok:false };
+  if (!requireUserForFav()) return { ok:false, needAuth:true };
+
+  const uid = auth.currentUser.uid;
+  const favRef = favDocRef(uid, listingId);
+  const lRef = listingRef(listingId);
+
+  return await runTransaction(db, async (tx) => {
+    const favSnap = await tx.get(favRef);
+    const lSnap = await tx.get(lRef);
+
+    if (!lSnap.exists()) throw new Error("الإعلان غير موجود");
+
+    const wasFav = favSnap.exists();
+    const delta = wasFav ? -1 : 1;
+
+    if (wasFav) tx.delete(favRef);
+    else tx.set(favRef, { listingId, createdAt: serverTimestamp() }, { merge: true });
+
+    tx.set(lRef, { favCount: increment(delta) }, { merge: true });
+
+    const prev = Number(lSnap.data()?.favCount || 0) || 0;
+    const next = Math.max(0, prev + delta);
+
+    return { ok:true, isFav: !wasFav, favCount: next };
+  });
+}
+
+/* =========================
+   ✅ Views counter ("ضغطة حقيقية")
+   - يزيد عند فتح صفحة التفاصيل
+   - يمنع الزيادة المتكررة السريعة لنفس الإعلان (TTL)
 ========================= */
 
 const VIEW_TTL_MS = 2 * 60 * 1000; // 2 minutes
@@ -70,7 +114,7 @@ function viewKey(listingId){
 export async function bumpViewCount(listingId){
   if (!listingId) return;
 
-  // gate with localStorage to avoid spam
+  // gate with localStorage
   try{
     const k = viewKey(listingId);
     const last = Number(localStorage.getItem(k) || 0) || 0;
@@ -80,11 +124,6 @@ export async function bumpViewCount(listingId){
   }catch{}
 
   try{
-    // No need to ensureGuest for views (optional), but do it to link abuse
-    await ensureGuest();
-    await apiFetch(`/api/listings/${encodeURIComponent(listingId)}/view`, {
-      method: "POST",
-      body: "{}"
-    });
+    await setDoc(listingRef(listingId), { viewsCount: increment(1) }, { merge: true });
   }catch{}
 }

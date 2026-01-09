@@ -1,10 +1,16 @@
 // addListing.js (Deluxe UI + dynamic fields + organized saving)
-// ✅ تم تحويل النشر إلى API (بدل Firestore) + Guest Account (مهم لسوريا)
+
+import { db, auth } from "./firebase.js";
 import { CLOUDINARY, MAX_IMAGES } from "./config.js";
 import { UI } from "./ui.js";
-import { ensureGuest } from "./guest.js";
-import { API } from "./apiClient.js";
 import { fileToResizedJpeg } from "./utils.js";
+import { getGuestId } from "./guest.js";
+
+import {
+  addDoc,
+  collection,
+  serverTimestamp
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 let publishing = false;
 let previewUrls = [];
@@ -29,9 +35,15 @@ function getCategoryId(){
 
 // ✅ NEW: safe seller name (for store/profile page)
 function getSafeSellerName() {
-  // ✅ Guest: اسم افتراضي بسيط (يمكن تطويره لاحقاً بصفحة "توثيق الحساب")
-  const cached = (localStorage.getItem("guest_displayName") || "").trim();
-  if (cached) return cached;
+  const u = auth.currentUser;
+  if (!u) return "مستخدم";
+
+  const dn = (u.displayName || "").trim();
+  if (dn) return dn;
+
+  const em = (u.email || "").trim();
+  if (em && em.includes("@")) return em.split("@")[0];
+
   return "مستخدم";
 }
 
@@ -359,11 +371,7 @@ function validateForm({ title, description, price, city, catId, files, extra }) 
    ✅ PUBLISH
 ========================= */
 async function publish() {
-  // ✅ تفعيل حساب الجهاز فقط عند النشر
-  try { await ensureGuest(); } catch {
-    alert("مشكلة اتصال مؤقتة. جرّب مرة ثانية.");
-    return;
-  }
+  try { requireAuth(); } catch { return; }
   if (publishing) return;
 
   const title = (UI.el.aTitle?.value || "").trim();
@@ -397,21 +405,40 @@ async function publish() {
 
     setStatus("جاري نشر الإعلان...");
 
-    const sellerName = getSafeSellerName();
-    const payload = {
+    const expiresAt = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000);
+
+    const isAuthed = !!auth.currentUser;
+    const guestId = getGuestId();
+    const sellerName = isAuthed ? getSafeSellerName() : "زائر";
+    const sellerEmail = isAuthed ? ((auth.currentUser?.email || "").trim() || null) : null;
+
+    await addDoc(collection(db, "listings"), {
       title,
       description,
       price,
       currency,
       city,
+
       categoryId,
       categoryNameAr,
-      extra,
-      images: urls,
-      sellerName
-    };
+      category: categoryNameAr || categoryId,
 
-    await API.createListing(payload);
+      ...extra,
+
+      images: urls,
+
+      sellerName,
+      sellerEmail,
+      uid: isAuthed ? auth.currentUser.uid : null,
+
+      ownerType: isAuthed ? "auth" : "guest",
+      ownerId: isAuthed ? auth.currentUser.uid : guestId,
+      guestId: isAuthed ? null : guestId,
+
+      isActive: true,
+      createdAt: serverTimestamp(),
+      expiresAt
+    });
 
     setStatus("تم نشر الإعلان ✅");
 
