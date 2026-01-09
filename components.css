@@ -82,52 +82,6 @@ html, body{
   color: #fff;
 }
 
-/* =========================
-   ✅ Floating Add Listing Button (Always visible)
-========================= */
-.addFloat{
-  position: fixed;
-  bottom: 16px;
-  right: 16px;            /* RTL: على اليمين */
-  z-index: 99999;
-}
-.addFloat.hidden{ display:none !important; }
-
-.addFloatBtn{
-  border: 1px solid rgba(255,255,255,.14);
-  background: rgba(34,197,94,.20);
-  color: #fff;
-  border-radius: 999px;
-  padding: 10px 12px;
-  font-weight: 900;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  box-shadow: 0 16px 40px rgba(0,0,0,.35);
-  -webkit-backdrop-filter: blur(10px);
-  backdrop-filter: blur(10px);
-}
-.addFloatBtn:active{ transform: scale(.98); }
-
-.addFloatIcon{
-  width: 28px;
-  height: 28px;
-  border-radius: 999px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: rgba(34,197,94,.35);
-  border: 1px solid rgba(255,255,255,.18);
-  font-size: 18px;
-  line-height: 1;
-}
-
-.addFloatText{
-  font-size: 14px;
-  font-weight: 900;
-  white-space: nowrap;
-}
-
 /* شعار */
 .brand{ font-weight:900; letter-spacing:.2px; }
 .brand::after{
