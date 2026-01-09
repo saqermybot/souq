@@ -8,39 +8,26 @@ import { getFavoriteSet, toggleFavorite, bumpViewCount, requireUserForFav } from
 import { ADMIN_UIDS, ADMIN_EMAILS } from "./config.js";
 
 import {
+  collection,
+  query,
+  where,
+  orderBy,
+  limit,
+  startAfter,
+  getDocs,
+  getDoc,
+  doc,
+  addDoc,
+  setDoc,
+  updateDoc,
+  deleteDoc,
+  serverTimestamp,
+  increment
+} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 // ✅ Performance tuning
 const LIST_PAGE_SIZE = 12;
 const FAV_PAGE_SIZE = 30;
-
-  collection,
-  addDoc,
-  getDoc,
-  getDocs,
-  doc,
-  deleteDoc,
-  limit,
-  orderBy,
-  query,
-  where,
-  startAfter,
-  serverTimestamp
-} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
-
-/* =========================
-   ✅ Admin helper
-========================= */
-function isAdminUser(user){
-  if (!user) return false;
-  const uid = user.uid || "";
-  const email = (user.email || "").toLowerCase().trim();
-
-  const byUid = Array.isArray(ADMIN_UIDS) && ADMIN_UIDS.includes(uid);
-  const byEmail = Array.isArray(ADMIN_EMAILS) && ADMIN_EMAILS.map(x => (x||"").toLowerCase().trim()).includes(email);
-
-  return !!(byUid || byEmail);
-}
-
 
 /* =========================
    ✅ Helpers
