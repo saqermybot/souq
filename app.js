@@ -22,6 +22,9 @@ async function safeAsync(fn) {
 // ✅ Start
 UI.init();
 
+// ✅ Expose UI for inline scripts (FAB button)
+window.UI = UI;
+
 // إشعارات (اختياري)
 safe(() => Notify.ensurePermission());
 
