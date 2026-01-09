@@ -17,8 +17,7 @@ import {
   updateDoc,
   where,
   runTransaction,
-  increment,
-  writeBatch
+  increment
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 export function initChat(){
@@ -183,20 +182,12 @@ function setInboxIndicator(totalUnread){
   if (floatWrap) floatWrap.classList.toggle("hidden", !(totalUnread > 0));
 }
 
-// ===== helpers: delivery/read maps =====
-function hasMapKey(obj, key){
-  return obj && typeof obj === "object" && obj[key];
-}
-
-function statusIconForMessage(m, me, otherId, isPending){
+// ===== delivery status (خفيف) =====
+// نعرض ⏳ فقط عندما تكون الكتابة لسه محلية (pending writes)
+// وبعد تأكيد السيرفر نعرض ✓.
+function statusIconForMessage(m, me, isPending){
   if (m.senderId !== me) return "";
-  if (isPending) return "⏳";
-
-  const readBy = m.readBy || {};
-  const deliveredTo = m.deliveredTo || {};
-
-  if (hasMapKey(readBy, otherId)) return `<span class="st read">✓✓</span>`;
-  if (hasMapKey(deliveredTo, otherId)) return `<span class="st">✓✓</span>`;
+  if (isPending) return `<span class="st pending">⏳</span>`;
   return `<span class="st">✓</span>`;
 }
 
@@ -283,11 +274,9 @@ async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
 
   if (UI.state.chatUnsub) UI.state.chatUnsub();
 
-  UI.state.chatUnsub = onSnapshot(qy, async (snap)=>{
+  // ✅ includeMetadataChanges مهم حتى تختفي ⏳ بعد ما السيرفر يؤكد الإرسال
+  UI.state.chatUnsub = onSnapshot(qy, { includeMetadataChanges: true }, async (snap)=>{
     UI.el.chatMsgs.innerHTML = "";
-
-    const b = writeBatch(db);
-    let needCommit = false;
 
     // ✅ اعكس النتائج حتى تطلع من القديم للجديد
     const docs = [];
@@ -299,8 +288,11 @@ async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
       // Render
       const div = document.createElement("div");
       div.className = "msg" + (m.senderId===me ? " me": "");
-      const time = m.createdAt?.toDate ? m.createdAt.toDate().toLocaleString() : "";
-      const st = statusIconForMessage(m, me, otherId, !!isPending);
+      // createdAt ممكن يكون Timestamp أو رقم (Date.now)
+      const time = (typeof m.createdAt === "number")
+        ? new Date(m.createdAt).toLocaleString()
+        : (m.createdAt?.toDate ? m.createdAt.toDate().toLocaleString() : "");
+      const st = statusIconForMessage(m, me, !!isPending);
 
       div.innerHTML = `
         <div>${escapeHtml(m.text||"")}</div>
@@ -310,29 +302,9 @@ async function openChat(listingId, listingTitle = "إعلان", ownerId = null){
         </div>
       `;
       UI.el.chatMsgs.appendChild(div);
-
-      // Mark delivery/read for incoming messages
-      if (m.senderId && m.senderId !== me){
-        const deliveredTo = m.deliveredTo || {};
-        const readBy = m.readBy || {};
-        const msgRef = doc(db, "chats", roomId, "messages", d.id);
-
-        if (!deliveredTo[me]){
-          b.set(msgRef, { deliveredTo: { [me]: serverTimestamp() } }, { merge: true });
-          needCommit = true;
-        }
-        if (!readBy[me]){
-          b.set(msgRef, { readBy: { [me]: serverTimestamp() } }, { merge: true });
-          needCommit = true;
-        }
-      }
     });
 
     UI.el.chatMsgs.scrollTop = UI.el.chatMsgs.scrollHeight;
-
-    if (needCommit){
-      try{ await b.commit(); }catch{}
-    }
 
     try{ await updateDoc(chatDocRef, { [`unread.${me}`]: 0 }); }catch{}
   });
@@ -411,8 +383,6 @@ async function sendMsg(){
       text,
       senderId: me,
       createdAt: Date.now(),
-      deliveredTo: {},
-      readBy: {},
       expiresAt: new Date(Date.now() + 7*24*3600*1000)
     });
     sentOk = true;

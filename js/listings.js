@@ -72,25 +72,66 @@ const FAV_PAGE_SIZE = 30;
 // ✅ Stats cache (favCount + viewCount) so numbers don't jump up/down
 // We never update listings/{id} counters; all counters live in listingStats/{listingId}.
 // Cache is filled lazily for rendered cards only (page size ≈ 12) to keep reads low.
-const STATS_CACHE = new Map();
+//
+// Important:
+// - We protect against race conditions:
+//   A slow `getListingStats()` response should NOT overwrite a newer value that
+//   came from a user action (like/unlike or open-details view bump).
+const STATS_CACHE = new Map(); // listingId -> { favCount, viewCount, _ts }
 
 async function getStatsCached(listingId){
-  if (!listingId) return { favCount: 0, viewCount: 0 };
-  if (STATS_CACHE.has(listingId)) return STATS_CACHE.get(listingId);
+  if (!listingId) return { favCount: 0, viewCount: 0, _ts: 0 };
+
+  const cur = STATS_CACHE.get(listingId);
+  if (cur) return cur;
+
+  const startedAt = Date.now();
   const s = await getListingStats(listingId);
-  const stats = { favCount: Number(s.favCount || 0) || 0, viewCount: Number(s.viewCount || 0) || 0 };
-  STATS_CACHE.set(listingId, stats);
-  return stats;
+  const fetched = {
+    favCount: Number(s.favCount || 0) || 0,
+    viewCount: Number(s.viewCount || 0) || 0,
+    _ts: startedAt,
+  };
+
+  const existing = STATS_CACHE.get(listingId);
+  if (existing && (existing._ts || 0) > startedAt){
+    // A newer local update happened while we were fetching; keep the newer value.
+    return existing;
+  }
+
+  STATS_CACHE.set(listingId, fetched);
+  return fetched;
 }
 
 function setStatsCached(listingId, patch){
-  if (!listingId) return;
-  const cur = STATS_CACHE.get(listingId) || { favCount: 0, viewCount: 0 };
+  if (!listingId) return { favCount: 0, viewCount: 0, _ts: 0 };
+
+  const cur = STATS_CACHE.get(listingId) || { favCount: 0, viewCount: 0, _ts: 0 };
   const next = {
     favCount: Number(patch.favCount ?? cur.favCount) || 0,
     viewCount: Number(patch.viewCount ?? cur.viewCount) || 0,
+    _ts: Date.now(),
   };
+
   STATS_CACHE.set(listingId, next);
+  return next;
+}
+
+function cssEsc(s){
+  try{ return CSS && CSS.escape ? CSS.escape(String(s)) : String(s); }
+  catch{ return String(s).replace(/"/g, '\\"'); }
+}
+
+function updateCardStatsDOM(listingId, stats){
+  if (!listingId) return;
+  const idSel = cssEsc(listingId);
+  const cards = document.querySelectorAll(`.cardItem[data-id="${idSel}"]`);
+  cards.forEach((card) => {
+    const favEl = card.querySelector('.favCount');
+    const viewEl = card.querySelector('.viewCount');
+    if (favEl) favEl.textContent = String(Number(stats?.favCount || 0) || 0);
+    if (viewEl) viewEl.textContent = String(Number(stats?.viewCount || 0) || 0);
+  });
 }
 
 /* =========================
@@ -184,8 +225,10 @@ function renderInfoCards(data){
   const catTxt = (data.category || data.categoryNameAr || data.categoryId || "").toString().trim();
   const typeTxt = typeToAr(getTypeId(data)) || "";
   const created = formatListingDate(data.createdAt);
-  const views = Number(data.viewsCount || 0) || 0;
-  const favs  = Number(data.favCount || 0) || 0;
+  // ✅ Counters come from listingStats/{id} (viewCount / favCount).
+  // Keep backward-compat for any old field names.
+  const views = Number(data.viewCount ?? data.viewsCount ?? 0) || 0;
+  const favs  = Number(data.favCount ?? data.favsCount ?? 0) || 0;
 
   const cards = [];
 
@@ -483,7 +526,7 @@ async function loadFavorites(){
     card.className = "cardItem";
 
     // ✅ counts from listingStats (cached) — keep stable even if listings/{id} has old numbers
-    const cached = STATS_CACHE.get(ds.id) || { favCount: 0, viewCount: 0 };
+    const cached = STATS_CACHE.get(id) || { favCount: 0, viewCount: 0 };
     const viewsC = Number(cached.viewCount || 0) || 0;
     const favC = Number(cached.favCount || 0) || 0;
     const isFav = favSet.has(id);
@@ -509,12 +552,14 @@ async function loadFavorites(){
 
     // ✅ lazy fetch stats for this card (1 getDoc) to avoid jumping numbers
     // (only for cards that passed filters)
-    getStatsCached(ds.id).then(st => {
+    getStatsCached(id).then(st => {
       try{
+        // إذا في قيمة أحدث بالكاش (مثلاً بعد كبسة ♥) لا نرجّع الرقم لورا
+        const latest = (STATS_CACHE.get(id) || st || {});
         const countEl = card.querySelector(".favCount");
-        if (countEl) countEl.textContent = String(st.favCount || 0);
+        if (countEl) countEl.textContent = String(latest.favCount || 0);
         const vEl = card.querySelector(".cardStats .muted:last-child");
-        if (vEl) vEl.textContent = `👁️ ${st.viewCount || 0}`;
+        if (vEl) vEl.textContent = `👁️ ${latest.viewCount || 0}`;
       }catch{}
     });
 
