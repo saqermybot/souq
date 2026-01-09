@@ -2,117 +2,122 @@ rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
 
+    /* ---------- Helpers ---------- */
     function signedIn() { return request.auth != null; }
 
-    // ✅ Admin by email (change if needed)
-    function emailLower() {
-      return signedIn() && request.auth.token.email != null
-        ? request.auth.token.email.toLowerCase()
-        : "";
-    }
     function isAdmin() {
-      return signedIn() && emailLower() == "alhossiniabdulhalim2@gmail.com";
+      return signedIn()
+        && request.auth.token.email != null
+        && request.auth.token.email == "alhossiniabdulhalim2@gmail.com";
     }
 
-    // =========================
-    // Listings
-    // =========================
-    match /listings/{listingId} {
+    function isOwner(data) {
+      return signedIn()
+        && (data.ownerId == request.auth.uid || data.uid == request.auth.uid);
+    }
+
+    /* ---------- Listings ---------- */
+    match /listings/{id} {
       allow read: if true;
 
-      // Create requires any authenticated user (anonymous allowed)
+      // Create: مرن + ملكية إلزامية
       allow create: if signedIn()
-        && request.resource.data.keys().hasAll([
-          "title","description","price","currency","city","categoryId","category",
-          "images","contact","sellerName","sellerEmail",
-          "uid","ownerType","ownerId","guestId",
-          "isActive","createdAt","expiresAt"
-        ])
+        && request.resource.data.ownerId == request.auth.uid
         && request.resource.data.uid == request.auth.uid
-        && request.resource.data.ownerId == request.auth.uid;
+        && request.resource.data.title is string
+        && request.resource.data.description is string
+        && request.resource.data.city is string
+        && request.resource.data.categoryId is string
+        && request.resource.data.currency is string
+        && (request.resource.data.price is number || request.resource.data.price is string)
+        && request.resource.data.images is list;
 
-      // Owner can update/delete; admin can update/delete
-      allow update, delete: if isAdmin()
-        || (signedIn() && (
-             resource.data.ownerId == request.auth.uid
-             || resource.data.uid == request.auth.uid
-           ));
+      // Update/Delete: فقط المالك أو الأدمن
+      allow update, delete: if isAdmin() || isOwner(resource.data);
     }
 
-    // =========================
-    // Categories (for filters)
-    // =========================
+    /* ---------- Categories (+ types) ---------- */
     match /categories/{id} {
       allow read: if true;
       allow write: if isAdmin();
+
+      match /{sub=**} {
+        allow read: if true;
+        allow write: if isAdmin();
+      }
     }
 
-    // =========================
-    // Users public profiles
-    // =========================
+    /* ---------- Users + Favorites ---------- */
     match /users/{uid} {
       allow read: if true;
       allow create, update: if signedIn() && request.auth.uid == uid;
       allow delete: if isAdmin();
+
+      // Favorites: شخصية فقط
+      match /favorites/{listingId} {
+        allow read, create, delete: if signedIn() && request.auth.uid == uid;
+        allow update: if false;
+      }
     }
 
-    // user favorites
-    match /users/{uid}/favorites/{listingId} {
-      allow read, create, delete: if signedIn() && request.auth.uid == uid;
-      allow update: if false;
-    }
-
-    // =========================
-    // Listing stats + views markers
-    // =========================
+    /* ---------- Listing Stats (views + favCount) ---------- */
     match /listingStats/{listingId} {
       allow read: if true;
-      // Only allow increments via transaction from signed-in users
       allow create, update: if signedIn();
       allow delete: if isAdmin();
     }
 
+    /* ---------- Views markers (optional) ---------- */
     match /views/{id} {
-      allow read: if false;
       allow create: if request.resource.data.keys().hasOnly(["listingId","fp","createdAt"]);
-      allow update, delete: if false;
+      allow read, update, delete: if false;
     }
 
-    // =========================
-    // Chat rooms + messages
-    // Structure:
-    // chats/{roomId} { participants:[uid1,uid2], listingId,... }
-    // chats/{roomId}/messages/{mid} { from, text, createdAt, ... }
-    // =========================
+    /* ---------- Chat ---------- */
     match /chats/{roomId} {
-      allow read: if signedIn() && request.auth.uid in resource.data.participants;
-      allow create: if signedIn()
-        && request.resource.data.participants is list
-        && request.auth.uid in request.resource.data.participants;
-      allow update: if signedIn() && request.auth.uid in resource.data.participants;
+      function isParticipant() {
+        return signedIn() && request.auth.uid in resource.data.participants;
+      }
+      function isParticipantCreate() {
+        return signedIn()
+          && request.resource.data.participants is list
+          && request.auth.uid in request.resource.data.participants;
+      }
 
+      allow read: if isParticipant();
+      allow create: if isParticipantCreate();
+      allow update: if isParticipant();
       allow delete: if isAdmin();
 
       match /messages/{mid} {
-        allow read: if signedIn()
-          && exists(/databases/$(database)/documents/chats/$(roomId))
-          && request.auth.uid in get(/databases/$(database)/documents/chats/$(roomId)).data.participants;
+        function chatParticipant() {
+          return signedIn()
+            && exists(/databases/$(database)/documents/chats/$(roomId))
+            && request.auth.uid in get(/databases/$(database)/documents/chats/$(roomId)).data.participants;
+        }
 
-        allow create: if signedIn()
+        allow read: if chatParticipant();
+
+        // Create: message from the signed-in user (anonymous = ok)
+        allow create: if chatParticipant()
           && request.resource.data.senderId == request.auth.uid
-          && exists(/databases/$(database)/documents/chats/$(roomId))
-          && request.auth.uid in get(/databases/$(database)/documents/chats/$(roomId)).data.participants;
+          && request.resource.data.text is string;
 
-        allow update, delete: if isAdmin();
+        // Update: allow participants to only mark delivered/read (no edit text/sender/createdAt)
+        allow update: if isAdmin() || (chatParticipant()
+          && request.resource.data.senderId == resource.data.senderId
+          && request.resource.data.text == resource.data.text
+          && request.resource.data.createdAt == resource.data.createdAt);
+
+        allow delete: if isAdmin();
       }
     }
 
-    // =========================
-    // Reports (admins only read)
-    // =========================
+    /* ---------- Reports ---------- */
     match /reports/{id} {
-      allow create: if signedIn(); // anonymous allowed
+      allow create: if signedIn();
       allow read, update, delete: if isAdmin();
     }
+
   }
 }
