@@ -59,21 +59,17 @@
   .iti input{ width:100%; }
   .iti__country-list{ direction:ltr; }
 
+  /* =========================
+     Admin-only UI
+     Guests should never see Logout / Google login buttons
+  ========================= */
+  .adminOnly{ display:none !important; }
+  body.is-admin .adminOnly{ display: inline-flex !important; }
+  body.is-admin #userMenu .adminOnly{ display:flex !important; }
+
 </style>
 
 
-<style>
-  /* ✅ Logout hidden by default so visitors don't lose access to their anonymous UID.
-     It will only appear for admin accounts (JS adds body.is-admin). */
-  #logoutBtn,
-  [data-act="logout"]{
-    display:none !important;
-  }
-  body.is-admin #logoutBtn,
-  body.is-admin [data-act="logout"]{
-    display:inline-flex !important;
-  }
-</style>
 </head>
 
 <body>
@@ -103,7 +99,7 @@
         <button type="button" data-act="favorites">⭐ مفضلتي</button>
         <button type="button" data-act="profile">👤 بروفايلي</button>
         <hr />
-        <button type="button" data-act="logout" class="danger" id="logoutBtn">🚪 تسجيل خروج</button>
+        <button type="button" data-act="logout" class="danger adminOnly" id="logoutBtn">🚪 تسجيل خروج</button>
       </div>
     </div>
   </div>
@@ -327,10 +323,10 @@
         <input id="aTitle" placeholder="ماذا تبيع؟ (مثال: موبايل سامسونغ A51)" />
         <textarea id="aDesc" placeholder="الوصف" rows="4"></textarea>
 
-        <label class="lbl" for="aPhone">رقم الهاتف / واتساب</label>
-        <input id="aPhone" type="tel" placeholder="اختر البلد ثم اكتب رقمك" autocomplete="tel" />
+        <label class="lbl" for="aPhone">رقم الهاتف / واتساب (اختياري)</label>
+        <input id="aPhone" type="tel" placeholder="اختياري: اختر البلد ثم اكتب رقمك" autocomplete="tel" />
         <input id="aPhoneE164" type="hidden" />
-        <div class="muted small" style="margin-top:6px">اختر بلدك من العلم ثم اكتب رقمك. سيظهر للناس داخل الإعلان للتواصل.</div>
+        <div class="muted small" style="margin-top:6px">اختياري: إذا وضعت رقمك سيظهر داخل الإعلان للتواصل عبر واتساب/اتصال. يمكنك أيضاً الاعتماد على المراسلة داخل الموقع.</div>
 
         <div class="grid">
           <input id="aPrice" type="number" placeholder="السعر" />
@@ -386,10 +382,10 @@
   </main>
 
   <!-- AUTH MODAL -->
-  <div id="authModal" class="modal hidden">
+    <div id="authModal" class="modal hidden">
     <div class="modalCard">
       <div class="modalHead">
-        <div style="font-weight:900">تسجيل الدخول</div>
+        <div style="font-weight:900">دخول الأدمن</div>
         <button id="btnCloseAuth" class="ghost" type="button">إغلاق</button>
       </div>
 
@@ -403,11 +399,11 @@
 
       <div class="row actions" style="margin-top:12px">
         <button id="btnLogin" type="button">دخول</button>
-        <button id="btnRegister" class="secondary" type="button">تسجيل</button>
       </div>
 
-      <button id="btnGoogle" class="secondary full" style="margin-top:10px" type="button">دخول عبر Google</button>
-      <p class="muted small" style="margin-top:8px">Email + Google</p>
+      <p class="muted small" style="margin-top:10px">
+        هذا الدخول مخصص للإدارة فقط. المستخدمون يتصفحون وينشرون ويتواصلون كزوار بدون تسجيل.
+      </p>
     </div>
   </div>
 
@@ -426,7 +422,7 @@
   <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@23.8.0/build/js/intlTelInput.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@23.8.0/build/js/utils.js"></script>
 
-  <script type="module" src="./app.js?v=20260104_01"></script>
+  <script type="module" src="./app.js?v=20260109_10"></script>
 
   <!-- ✅ FAB: Add Listing (always visible) -->
   <button id="fabAddListing" class="fab-add" type="button" aria-label="إضافة إعلان">➕ إضافة إعلان</button>
