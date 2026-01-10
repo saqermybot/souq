@@ -339,8 +339,9 @@ function clearForm() {
   if (UI.el.aDesc) UI.el.aDesc.value = "";
   if (UI.el.aPrice) UI.el.aPrice.value = "";
   if (UI.el.aCurrency) UI.el.aCurrency.value = "SYP";
-  const placeEl = document.getElementById("aPlaceText");
-  if (placeEl) placeEl.value = "";
+  if (UI.el.aCity) UI.el.aCity.value = "";
+  const addrEl = document.getElementById("aAddress");
+  if (addrEl) addrEl.value = "";
   if (UI.el.aCat) UI.el.aCat.value = "";
   if (UI.el.aImages) UI.el.aImages.value = "";
   if (UI.el.imgPreview) UI.el.imgPreview.innerHTML = "";
@@ -451,14 +452,14 @@ function collectExtraFields(catId){
   return {};
 }
 
-function validateForm({ title, description, price, placeText, catId, files, extra }) {
+function validateForm({ title, description, price, city, address, catId, files, extra }) {
   if (!title) return "اكتب عنوان الإعلان";
   if (title.length < 3) return "العنوان قصير جداً";
   if (!description) return "اكتب وصف الإعلان";
   if (description.length < 10) return "الوصف قصير جداً";
   if (!price || Number.isNaN(price) || price <= 0) return "اكتب سعر صحيح";
-  // ✅ الموقع النصّي (إجباري)
-  if (!placeText) return "اكتب الموقع (مثال: حمص - الدبلان)";
+  // ✅ المدينة (إجباري)
+  if (!city) return "اختر المدينة";
   if (!catId) return "اختر الصنف";
   if (!files.length) return `اختر صورة واحدة على الأقل (حد أقصى ${MAX_IMAGES})`;
 
@@ -494,7 +495,8 @@ async function publish() {
   const description = (UI.el.aDesc?.value || "").trim();
   const price = Number(UI.el.aPrice?.value || 0);
   const currency = (UI.el.aCurrency?.value || "SYP").trim();
-  const placeText = (document.getElementById("aPlaceText")?.value || "").trim();
+  const city = (UI.el.aCity?.value || "").trim();
+  const address = (document.getElementById("aAddress")?.value || "").trim();
 
   const categoryId = getCategoryId();
   const categoryNameAr = catToAr(categoryId);
@@ -502,7 +504,7 @@ async function publish() {
   const extra = collectExtraFields(categoryId);
   const files = Array.from(UI.el.aImages?.files || []).slice(0, MAX_IMAGES);
 
-  const err = validateForm({ title, description, price, placeText, catId: categoryId, files, extra });
+  const err = validateForm({ title, description, price, city, address, catId: categoryId, files, extra });
   if (err) return alert(err);
 
   publishing = true;
@@ -559,16 +561,16 @@ async function publish() {
         console.warn("Failed to save user phone", e);
       }
     }
-    // 📍 الموقع النصّي (بدون خريطة)
-    const city = (placeText.split(/[-–—,،]/)[0] || "").trim();
+    // 📍 المدينة (إجباري) + العنوان (اختياري)
+    const placeText = address || "";
 
     await addDoc(collection(db, "listings"), {
       title,
       description,
       price,
       currency,
-      city: city || null,
-      placeText: placeText,
+      city: city,
+      placeText,
 
       categoryId,
       categoryNameAr,

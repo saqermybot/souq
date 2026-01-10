@@ -82,6 +82,39 @@ function getDistanceTextForListing(listing){
 const LIST_PAGE_SIZE = 12;
 const FAV_PAGE_SIZE = 30;
 
+
+// ✅ إزالة تكرار المدينة من العنوان (مثال: "دمشق المزة" + city="دمشق" => "المزة")
+function stripCityFromPlace(rawPlace, rawCity){
+  try{
+    const city = String(rawCity || "").trim();
+    let place  = String(rawPlace || "").trim();
+    if (!place) return "";
+    if (!city) return place;
+
+    const norm = (s)=>String(s||"").trim().replace(/\s+/g,"").toLowerCase();
+    const nCity = norm(city);
+    const nPlace = norm(place);
+
+    // إذا العنوان كله هو المدينة
+    if (nPlace === nCity) return "";
+
+    // إذا العنوان يبدأ بالمدينة (دمشق - المزة / دمشق المزة / دمشق، المزة)
+    if (nPlace.startsWith(nCity)){
+      const reStart = new RegExp("^\s*" + escapeRegExp(city) + "\s*[\-–—,،]*\s*", "i");
+      place = place.replace(reStart, "").trim();
+      place = place.replace(/^[\-–—,،\s]+/,"").trim();
+      return place;
+    }
+
+    return place;
+  }catch{
+    return String(rawPlace || "").trim();
+  }
+}
+function escapeRegExp(str){
+  return String(str).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 // ✅ Stats cache (favCount + viewCount) so numbers don't jump up/down
 // We never update listings/{id} counters; all counters live in listingStats/{listingId}.
 // Cache is filled lazily for rendered cards only (page size ≈ 12) to keep reads low.
@@ -524,7 +557,9 @@ async function loadFavorites(){
     const catTxt  = escapeHtml(data.category || data.categoryNameAr || data.categoryId || "");
 
     const distTxt = escapeHtml(getDistanceTextForListing(data));
-    const placeLabel = escapeHtml(String(data.placeText || (data.location && data.location.label) || data.city || ""));
+    const rawPlace = String(data.placeText || (data.location && data.location.label) || "" ).trim();
+    const placeOnly = stripCityFromPlace(rawPlace, data.city);
+    const placeLabel = escapeHtml(placeOnly);
 
     const sellerUid = getSellerUid(data);
     const sellerName = escapeHtml(getSellerNameFallback(data));
@@ -1184,7 +1219,9 @@ async function loadListings(reset = true){
 	    const catTxt  = escapeHtml(data.category || data.categoryNameAr || data.categoryId || "");
 
 	    const distTxt = escapeHtml(getDistanceTextForListing(data));
-	    const placeLabel = escapeHtml(String(data.placeText || (data.location && data.location.label) || data.city || ""));
+	    const rawPlace = String(data.placeText || (data.location && data.location.label) || "" ).trim();
+    const placeOnly = stripCityFromPlace(rawPlace, data.city);
+    const placeLabel = escapeHtml(placeOnly);
 
 	    const sellerUid = getSellerUid(data);
     const sellerName = escapeHtml(getSellerNameFallback(data));
