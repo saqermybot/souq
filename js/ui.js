@@ -535,8 +535,10 @@ bindDeluxeTypeControls(){
       deluxe.classList.remove('carsMode','estateMode');
       if (cat === 'cars') deluxe.classList.add('carsMode');
       else if (cat === 'realestate') deluxe.classList.add('estateMode');
+      deluxe.classList.toggle('catSolo', (cat === 'cars' || cat === 'realestate'));
+
     }
-    const allowType = (!cat || cat === 'cars' || cat === 'realestate');
+    const allowType = (cat === 'cars' || cat === 'realestate');
     if (typeField){
       typeField.classList.toggle('hidden', !allowType);
     }
