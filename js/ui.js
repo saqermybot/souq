@@ -493,6 +493,24 @@ bindDeluxeTypeControls(){
   syncEstateFiltersVisibility(){
     const cat = this.normalizeCat(this.el.catFilter?.value || "");
 
+    // ✅ Layout modes + diplomatic Sale/Rent filter
+    const deluxe = document.querySelector('.deluxeFilters');
+    const typeField = document.getElementById('typeField');
+    if (deluxe){
+      deluxe.classList.remove('carsMode','estateMode');
+      if (cat === 'cars') deluxe.classList.add('carsMode');
+      else if (cat === 'realestate') deluxe.classList.add('estateMode');
+    }
+    const allowType = (!cat || cat === 'cars' || cat === 'realestate');
+    if (typeField){
+      typeField.classList.toggle('hidden', !allowType);
+    }
+    // إذا الصنف غير مناسب، نمسح نوع الإعلان حتى لا يضل يفلتر بدون سبب
+    if (!allowType && this.el.typeFilter){
+      this.el.typeFilter.value = '';
+      this.syncTypeButtonsUI?.();
+    }
+
     // ✅ عقارات: نوع العقار + غرف
     if (this.el.estateFilters){
       const isEstate = (cat === "realestate");

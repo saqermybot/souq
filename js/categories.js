@@ -110,13 +110,6 @@ async function syncTypesForCategory(catId){
       `<option value="">كل الأنواع</option>` +
       types.map(t => `<option value="${escapeHtml(t.name_ar || t.id)}">${escapeHtml(t.name_ar || t.id)}</option>`).join("");
   }
-
-  // ✅ عقارات: إذا عندك types بدل الهاردكود (اختياري)
-  if (cid === "realestate" && UI.el.estateKindFilter){
-    UI.el.estateKindFilter.innerHTML =
-      `<option value="">كل أنواع العقارات</option>` +
-      types.map(t => `<option value="${escapeHtml(t.name_ar || t.id)}">${escapeHtml(t.name_ar || t.id)}</option>`).join("");
-  }
 }
 
 async function loadTypes(categoryId){

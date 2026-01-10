@@ -189,17 +189,21 @@ function ensureDynamicFields(){
 <!-- ✅ سيارات -->
     <div id="carFields" class="hidden">
       <div class="formGrid">
-        <div class="field">
-<select id="aTypeCar">
-            <option value="">نوع الإعلان (بيع / إيجار)</option>
-            <option value="sale">بيع</option>
-            <option value="rent">إيجار</option>
-          </select>
-        </div>
 
-        <div class="field">
-<input id="aCarYear" type="number" min="1950" max="2035" placeholder="مثال: 2006" />
-        </div>
+	        <!-- ✅ سطر واحد: (بيع/إيجار) + السنة -->
+	        <div class="inlineRow">
+	          <div class="field select-wrapper">
+	            <select id="aTypeCar">
+	              <option value="">بيع / إيجار</option>
+	              <option value="sale">بيع</option>
+	              <option value="rent">إيجار</option>
+	            </select>
+	            <span class="arrow">›</span>
+	          </div>
+	          <div class="field">
+	            <input id="aCarYear" type="number" min="1950" max="2035" placeholder="السنة (مثال: 2006)" />
+	          </div>
+	        </div>
 
         <div class="field span2">
 <input id="aCarModel" placeholder="مثال: كيا ريو / هيونداي i10" />
@@ -210,16 +214,20 @@ function ensureDynamicFields(){
     <!-- ✅ عقارات -->
     <div id="estateFields" class="hidden">
       <div class="formGrid">
-        <div class="field">
-<select id="aTypeEstate">
+
+        <!-- ✅ سطر واحد: نوع الإعلان + عدد الغرف -->
+        <div class="inlineRow span2">
+          <div class="field select-wrapper">
+            <select id="aTypeEstate">
             <option value="">نوع الإعلان (بيع / إيجار)</option>
             <option value="sale">بيع</option>
             <option value="rent">إيجار</option>
           </select>
-        </div>
-
-        <div class="field">
-<input id="aRooms" type="number" min="0" max="20" placeholder="مثال: 3" />
+            <span class="arrow">›</span>
+          </div>
+          <div class="field">
+            <input id="aRooms" type="number" min="0" max="20" placeholder="عدد الغرف (مثال: 3)" />
+          </div>
         </div>
 
         <div class="field span2">
@@ -329,6 +337,10 @@ function clearForm() {
   if (UI.el.aCurrency) UI.el.aCurrency.value = "SYP";
   const placeEl = document.getElementById("aPlaceText");
   if (placeEl) placeEl.value = "";
+  // ✅ clear city/area visible controls
+  if (UI.el.aCity) UI.el.aCity.value = "";
+  const areaEl = document.getElementById("aArea");
+  if (areaEl) areaEl.value = "";
   if (UI.el.aCat) UI.el.aCat.value = "";
   if (UI.el.aImages) UI.el.aImages.value = "";
   if (UI.el.imgPreview) UI.el.imgPreview.innerHTML = "";
@@ -439,14 +451,14 @@ function collectExtraFields(catId){
   return {};
 }
 
-function validateForm({ title, description, price, placeText, catId, files, extra }) {
+function validateForm({ title, description, price, city, placeText, catId, files, extra }) {
   if (!title) return "اكتب عنوان الإعلان";
   if (title.length < 3) return "العنوان قصير جداً";
   if (!description) return "اكتب وصف الإعلان";
   if (description.length < 10) return "الوصف قصير جداً";
   if (!price || Number.isNaN(price) || price <= 0) return "اكتب سعر صحيح";
-  // ✅ الموقع النصّي (إجباري)
-  if (!placeText) return "اكتب الموقع (مثال: حمص - الدبلان)";
+  // ✅ المدينة (إجباري)
+  if (!city) return "اختر المدينة";
   if (!catId) return "اختر الصنف";
   if (!files.length) return `اختر صورة واحدة على الأقل (حد أقصى ${MAX_IMAGES})`;
 
@@ -482,7 +494,12 @@ async function publish() {
   const description = (UI.el.aDesc?.value || "").trim();
   const price = Number(UI.el.aPrice?.value || 0);
   const currency = (UI.el.aCurrency?.value || "SYP").trim();
-  const placeText = (document.getElementById("aPlaceText")?.value || "").trim();
+  // ✅ الموقع: مدينة (إجباري) + منطقة/شارع (اختياري)
+  const city = (UI.el.aCity?.value || "").trim();
+  const area = (document.getElementById("aArea")?.value || "").trim();
+  const placeText = (city ? (area ? `${city} - ${area}` : city) : "").trim();
+  const placeHidden = document.getElementById("aPlaceText");
+  if (placeHidden) placeHidden.value = placeText;
 
   const categoryId = getCategoryId();
   const categoryNameAr = catToAr(categoryId);
@@ -490,7 +507,7 @@ async function publish() {
   const extra = collectExtraFields(categoryId);
   const files = Array.from(UI.el.aImages?.files || []).slice(0, MAX_IMAGES);
 
-  const err = validateForm({ title, description, price, placeText, catId: categoryId, files, extra });
+  const err = validateForm({ title, description, price, city, placeText, catId: categoryId, files, extra });
   if (err) return alert(err);
 
   publishing = true;
