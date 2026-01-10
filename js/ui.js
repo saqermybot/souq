@@ -573,6 +573,14 @@ bindDeluxeTypeControls(){
         if (this.el.yearFrom) this.el.yearFrom.value = "";
         if (this.el.yearTo) this.el.yearTo.value = "";
       }
+
+
+    // ✅ ملابس/أحذية: الفئة (رجالي/نسائي/ولادي)
+    if (this.el.fashionFilters){
+      const isFashion = (cat === "clothing");
+      this.el.fashionFilters.classList.toggle("hidden", !isFashion);
+      if (!isFashion && this.el.fashionGenderFilter) this.el.fashionGenderFilter.value = "";
+    }
     }
   },
 
@@ -589,6 +597,7 @@ bindDeluxeTypeControls(){
     if (this.el.roomsFilter) this.el.roomsFilter.value = "";
 
     if (this.el.electKindFilter) this.el.electKindFilter.value = "";
+    if (this.el.fashionGenderFilter) this.el.fashionGenderFilter.value = "";
 
     this.syncTypeButtonsUI();
     this.syncEstateFiltersVisibility();
