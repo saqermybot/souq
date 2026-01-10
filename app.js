@@ -1,11 +1,11 @@
 // app.js
-// IMPORTANT: avoid static imports that depend on remote Firebase modules.
-// If a single remote module fails, iOS Safari may stop executing the whole app.
-// We load Firebase-dependent modules dynamically so the UI + Guest identity always works.
-
 import { UI } from "./js/ui.js";
+import { initListings } from "./js/listings.js";
+import { initAddListing } from "./js/addListing.js";
+import { initAuth } from "./js/auth.js";
+import { initCategories } from "./js/categories.js";
+import { initChat } from "./js/chat.js";
 import { Notify } from "./js/notify.js";
-import { initGuestUI } from "./js/guest.js";
 
 // ✅ ثبّت الوضع الداكن دائماً
 document.documentElement.setAttribute("data-theme", "dark");
@@ -17,18 +17,6 @@ function safe(fn) {
 
 async function safeAsync(fn) {
   try { return await fn(); } catch (e) { console.error(e); }
-}
-
-function showBootstrapError(msg) {
-  try {
-    const grid = document.getElementById("listings");
-    if (grid) {
-      grid.innerHTML = `<div class="adsEmpty" style="padding:14px; text-align:center; color:#9CA3AF;">${msg}</div>`;
-      return;
-    }
-    const box = document.querySelector(".adsEmpty");
-    if (box) box.textContent = msg;
-  } catch {}
 }
 
 // ✅ Start
@@ -69,48 +57,25 @@ window.UI = UI;
 // إشعارات (اختياري)
 safe(() => Notify.ensurePermission());
 
-// ✅ Group 1: Guest identity label (works even if Firebase is blocked)
-safe(() => initGuestUI());
+// ✅ جهّز actions أولاً
+initListings();
+initAddListing();
 
-// ✅ Load Firebase-dependent modules dynamically.
-// If anything fails, keep the UI alive and show a friendly message.
-let listingsReady = false;
-await safeAsync(async () => {
-  const { initListings } = await import("./js/listings.js");
-  initListings();
-  listingsReady = true;
-});
+// ✅ مهم جداً: اربط chat/inbox actions قبل auth
+initChat();
 
-await safeAsync(async () => {
-  const { initAddListing } = await import("./js/addListing.js");
-  initAddListing();
-});
+// ✅ Auth بعد ما صار loadInbox جاهز
+initAuth();
 
-await safeAsync(async () => {
-  const { initChat } = await import("./js/chat.js");
-  initChat();
-});
-
-await safeAsync(async () => {
-  const { initAuth } = await import("./js/auth.js");
-  initAuth();
-});
-
-await safeAsync(async () => {
-  const { initCategories } = await import("./js/categories.js");
-  await initCategories();
-});
+// ✅ categories (لو فشل ما يوقف الموقع)
+await safeAsync(() => initCategories());
 
 // ✅ دائماً خلي الفلاتر OFF عند أول فتح
 UI.state.filtersActive = false;
 UI.state.onlyMine = false;
 
-// ✅ أول تحميل: اعرض الكل (إذا listings جاهزة)
-if (listingsReady && UI.actions?.loadListings) {
-  await safeAsync(() => UI.actions.loadListings(true));
-} else {
-  showBootstrapError("تعذر تحميل الإعلانات حالياً. جرّب تحديث الصفحة.");
-}
+// ✅ أول تحميل: اعرض الكل
+await safeAsync(() => UI.actions.loadListings(true));
 
 // ✅ فتح إعلان من hash (مرة واحدة فقط)
 // ملاحظة: UI.init() عندك أصلاً عامل listener للـ hashchange

@@ -1128,24 +1128,6 @@ button.sm{
   position: relative !important;
   display: flex !important;
   align-items: center !important;
-  gap: 10px !important;
-}
-
-/* اسم المستخدم (ضيف) بجانب الأفاتار */
-#userLabel.userLabel{
-  font-weight: 800 !important;
-  font-size: 14px !important;
-  color: var(--text) !important;
-  opacity: 0.92 !important;
-  max-width: 140px !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  cursor: pointer !important;
-}
-
-@media (max-width: 420px){
-  #userLabel.userLabel{ max-width: 110px !important; }
 }
 
 /* المنيو نفسها */
@@ -1565,20 +1547,3 @@ select, input, textarea{
 
 /* fashion filter single select full width */
 #fashionFilters .select-wrapper{ width:100%; }
-
-
-/* Account modal tabs */
-.tabsRow{display:flex;gap:8px;margin-top:10px}
-.tabBtn{flex:1;padding:10px 12px;border-radius:12px;border:1px solid rgba(255,255,255,0.08);background:#111827;color:#e5e7eb;font-weight:800;cursor:pointer}
-.tabBtn.active{border-color:rgba(31,174,110,0.6);box-shadow:0 0 0 2px rgba(31,174,110,0.15) inset}
-
-
-/* ✅ زر تحميل المزيد بأسفل القائمة */
-.moreWrap{
-  display:flex;
-  justify-content:center;
-  margin-top:12px;
-}
-.moreWrap #btnMore{
-  min-width: 160px;
-}
