@@ -1,5 +1,4 @@
-import { getLocalAccount } from "./accounts.js";
-import { getGuestId, getGuestDisplayName } from "./guest.js";
+
 // =========================
 // Guest phone input (intl-tel-input)
 // =========================
@@ -541,9 +540,8 @@ async function publish() {
     const expiresAt = new Date(Date.now() + 15 * 24 * 60 * 60 * 1000);
 
     const guestId = getGuestId();
-    const localAcc = getLocalAccount();
-    const sellerName = (localAcc?.displayName || getGuestDisplayName() || "مستخدم");
-    const sellerEmail = (localAcc?.contact && String(localAcc.contact).includes("@")) ? localAcc.contact : null;
+    const sellerName = auth.currentUser?.isAnonymous ? "زائر" : getSafeSellerName();
+    const sellerEmail = auth.currentUser?.isAnonymous ? null : ((auth.currentUser?.email || "").trim() || null);
 
     
     // ✅ تأكد من مزامنة رقم الهاتف قبل التحقق (حتى لو المستخدم ضغط نشر بدون blur)
@@ -602,12 +600,11 @@ async function publish() {
 
       sellerName,
       sellerEmail,
-      uid: (auth.currentUser?.uid || guestId),
+      uid: auth.currentUser.uid,
 
-      ownerType: (localAcc?.accountId ? "account" : "guest"),
-      ownerAccountId: (localAcc?.accountId || null),
-      ownerKey: guestId,
-      ownerId: (localAcc?.accountId ? localAcc.accountId : guestId),
+      ownerType: auth.currentUser.isAnonymous ? "anon" : "auth",
+      ownerId: auth.currentUser.uid,
+      guestId: auth.currentUser.isAnonymous ? guestId : null,
 
       isActive: true,
       createdAt: serverTimestamp(),
