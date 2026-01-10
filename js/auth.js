@@ -102,20 +102,32 @@ function setUserAvatar(user){
 function initUserMenuUI(){
   const wrap = document.getElementById("userMenuWrap");
   const avatar = document.getElementById("userAvatar");
+  const label = document.getElementById("userLabel");
   const menu = document.getElementById("userMenu");
   if (!wrap || !avatar || !menu) return;
 
   // show menu for everyone (guest + admin)
   wrap.style.display = "";
 
-  const toggleMenu = () => {
-    menu.classList.toggle("hidden");
-  };
-  avatar.onclick = (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    toggleMenu();
-  };
+  const toggleMenu = () => menu.classList.toggle("hidden");
+
+  // Avoid double-binding if guest.js already attached listeners
+  if (!window.__souqGuestMenuBound) {
+    avatar.onclick = (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      toggleMenu();
+    };
+
+    // clicking the name behaves like clicking the avatar
+    if (label){
+      label.onclick = (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        toggleMenu();
+      };
+    }
+  }
 
   // one global outside-click to close
   if (!window.__souqMenuOutsideClickInstalled) {
@@ -139,6 +151,8 @@ function initUserMenuUI(){
     if (act === "myListings") UI.actions.openMyListings?.();
     if (act === "favorites") UI.actions.openFavorites?.();
     if (act === "profile") UI.actions.openProfile?.();
+    if (act === "accountUpgrade") UI.actions.openAccountUpgrade?.();
+    if (act === "accountRecover") UI.actions.openAccountRecover?.();
   });
 }
 
