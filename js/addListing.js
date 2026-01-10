@@ -92,20 +92,14 @@ function initPhoneInput(){
 
 // addListing.js (Deluxe UI + dynamic fields + organized saving)
 
-import { db, auth } from "./firebase.js";
+import { getSupabase } from "./supabase.js";
 import { CLOUDINARY, MAX_IMAGES } from "./config.js";
 import { UI } from "./ui.js";
-import { ensureUser } from "./auth.js";
 import { fileToResizedJpeg } from "./utils.js";
 import { getGuestId } from "./guest.js";
+// ✅ Auth shim: المشروع الآن بدون Firebase Auth. نستخدم Guest ID فقط.
+const auth = { currentUser: { uid: null, isAnonymous: true } };
 
-import {
-  addDoc,
-  collection,
-  serverTimestamp,
-  doc,
-  setDoc
-} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 let publishing = false;
 let previewUrls = [];
@@ -498,7 +492,6 @@ function validateForm({ title, description, price, city, placeText, catId, files
 
 
 async function publish() {
-  await ensureUser();
   if (publishing) return;
 
   const title = (UI.el.aTitle?.value || "").trim();
@@ -563,13 +556,13 @@ async function publish() {
 
       // ✅ خزّن رقم الهاتف على حساب الزائر/المستخدم (حتى لو Anonymous) فقط إذا موجود
       try {
-        const uref = doc(db, "users", auth.currentUser.uid);
+        const uref = doc(db, "users", getGuestId());
         await setDoc(uref, {
           displayName: sellerName,
           phone: finalPhone,
           whatsapp: finalPhone,
           updatedAt: serverTimestamp(),
-          isAnonymous: !!auth.currentUser.isAnonymous
+          isAnonymous: !!true
         }, { merge: true });
       } catch (e) {
         console.warn("Failed to save user phone", e);
@@ -578,40 +571,71 @@ async function publish() {
     // 📍 الموقع النصّي (بدون خريطة)
     const city = (placeText.split(/[-–—,،]/)[0] || "").trim();
 
-    await addDoc(collection(db, "listings"), {
-      title,
-      description,
-      price,
-      currency,
-      city: city || null,
-      placeText: placeText,
+    const sb = getSupabase();
 
-      categoryId,
-      categoryNameAr,
-      category: categoryNameAr || categoryId,
+// ✅ اختر category_id النهائي (أفضل: خزّن الفرعي عندما يوجد)
+const finalCategoryId = (() => {
+  // سيارات: بيع/إيجار → cars_sale / cars_rent
+  const main = String(categoryId || "");
+  if (main === "cars") {
+    const t = (document.getElementById("aTypeCar")?.value || "").trim();
+    if (t === "sale") return "cars_sale";
+    if (t === "rent") return "cars_rent";
+    return "cars";
+  }
 
-      ...extra,
+  // عقارات: بيع/إيجار → re_sale / re_rent
+  if (main === "realestate") {
+    const t = (document.getElementById("aTypeRe")?.value || "").trim();
+    if (t === "sale") return "re_sale";
+    if (t === "rent") return "re_rent";
+    return "realestate";
+  }
 
-      images: urls,
+  // ألبسة: جنس → cl_women/cl_kids/cl_men
+  if (main === "clothing") {
+    const g = (document.getElementById("aGender")?.value || "").trim();
+    if (g === "women") return "cl_women";
+    if (g === "kids") return "cl_kids";
+    if (g === "men") return "cl_men";
+    return "clothing";
+  }
 
-      // ✅ optional contact (keep keys to avoid any edge-case rule stripping)
-      contact: { phone: finalPhone || null, whatsapp: finalPhone || null },
+  // أحذية: جنس → sh_women/sh_kids/sh_men
+  if (main === "shoes") {
+    const g = (document.getElementById("aGenderShoes")?.value || "").trim();
+    if (g === "women") return "sh_women";
+    if (g === "kids") return "sh_kids";
+    if (g === "men") return "sh_men";
+    return "shoes";
+  }
 
+  // إلكترونيات: نوع → el_mobile/el_computer/el_games
+  if (main === "electronics") {
+    const k = (document.getElementById("aElectKind")?.value || "").trim();
+    if (k === "mobile") return "el_mobile";
+    if (k === "computer") return "el_computer";
+    if (k === "games") return "el_games";
+    return "electronics";
+  }
 
-      sellerName,
-      sellerEmail,
-      uid: auth.currentUser.uid,
+  return main || null;
+})();
 
-      ownerType: auth.currentUser.isAnonymous ? "anon" : "auth",
-      ownerId: auth.currentUser.uid,
-      guestId: auth.currentUser.isAnonymous ? guestId : null,
+const payload = {
+  title,
+  description,
+  price: price ? Number(price) : null,
+  city: city || null,
+  category_id: finalCategoryId,
+  created_at: new Date().toISOString(),
+  is_active: true
+};
 
-      isActive: true,
-      createdAt: serverTimestamp(),
-      expiresAt
-    });
-
-    setStatus("تم نشر الإعلان ✅");
+// ملاحظة: حقول إضافية (صور/تواصل/تفاصيل) يمكن إضافتها لاحقاً بعمود JSONB.
+const { error: insErr } = await sb.from("listings").insert(payload);
+if (insErr) throw insErr;
+setStatus("تم نشر الإعلان ✅");
 
     clearForm();
     UI.hide(UI.el.addBox);

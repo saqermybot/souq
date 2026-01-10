@@ -1,221 +1,140 @@
-// categories.js (نسخة مرتبة: عربي + value=id + كاش + دعم قوائم فرعية اختياري)
-//
-// ملاحظة: لتفادي انهيار الموقع في بعض الشبكات/الدول، لا نستورد Firestore بشكل ثابت.
-// نجلب الأقسام من ملف ثابت أولاً، ثم نحاول Firestore كخيار ثانٍ (Dynamic Import).
+// categories.js (Supabase)
+// هدف هذا الملف: مصدر واحد للأقسام يُستخدم للفلترة ولإضافة الإعلان.
 
 import { UI } from "./ui.js";
 import { escapeHtml } from "./utils.js";
+import { getSupabase } from "./supabase.js";
 
-// ✅ مصدر ثابت للأقسام (يضمن ظهور الأقسام حتى لو تعطلت Firebase/Firestore)
-const DEFAULT_CATEGORIES = [
-  { id: "cars", name_ar: "سيارات", order: 10, isActive: true },
-  { id: "realestate", name_ar: "عقارات", order: 20, isActive: true },
-  { id: "electronics", name_ar: "إلكترونيات", order: 30, isActive: true },
-];
+const CACHE_KEY = "souq_categories_cache_v1";
+const CACHE_TTL_MS = 10 * 60 * 1000;
 
-async function loadCategoriesFromFile() {
-  // ضع الملف في: /data/categories.json
-  const res = await fetch(`/data/categories.json?v=${Date.now()}`, { cache: "no-store" });
-  if (!res.ok) throw new Error(`categories.json HTTP ${res.status}`);
-  const data = await res.json();
-  if (!Array.isArray(data) || data.length === 0) throw new Error("categories.json invalid");
-  return data;
+function now(){ return Date.now(); }
+
+function normalizeRow(r){
+  return {
+    id: String(r.id),
+    name: String(r.name || ""),
+    icon: r.icon || null,
+    order: Number(r.order_no ?? 100),
+    parentId: r.parent_id ? String(r.parent_id) : null,
+    groupKey: r.group_key ? String(r.group_key) : null,
+    isActive: r.is_active !== false,
+  };
 }
 
-async function getFirestoreApi() {
-  // imports قد تفشل في بعض الشبكات، لذلك نلفّها بـ try/catch في مكان الاستدعاء
-  const [{ db }, fs] = await Promise.all([
-    import("./firebase.js"),
-    import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js"),
-  ]);
-  const { collection, getDocs, orderBy, query } = fs;
-  return { db, collection, getDocs, orderBy, query };
+async function fetchAllCategories(){
+  const sb = getSupabase();
+  const { data, error } = await sb
+    .from("categories")
+    .select("id,name,icon,order_no,parent_id,group_key,is_active")
+    .eq("is_active", true)
+    .order("order_no", { ascending: true });
+
+  if (error) throw error;
+  return (data || []).map(normalizeRow);
 }
 
+function buildMaps(cats){
+  const byId = new Map();
+  const childrenByParent = new Map();
+  const childrenByParentAndGroup = new Map();
 
-// ✅ كاش للأنواع: categoryId -> types[]
+  for (const c of cats){
+    byId.set(c.id, c);
+    if (c.parentId){
+      if (!childrenByParent.has(c.parentId)) childrenByParent.set(c.parentId, []);
+      childrenByParent.get(c.parentId).push(c);
 
-function arabicElectLabel(id){
-  const s = (id || "").toString().trim().toLowerCase();
-  if (!s) return "";
-  if (s === "mobiles" || s === "mobile" || s === "phone" || s === "phones") return "موبايلات";
-  if (s === "tv" || s === "television" || s === "tvs") return "تلفزيونات";
-  if (s === "computers" || s === "computer" || s === "pc" || s === "laptops") return "كمبيوتر";
-  if (s === "games" || s === "game" || s === "playstation" || s === "ps") return "ألعاب";
-  // لو كان أصلاً عربي
-  return (id || "").toString().trim();
-}
-
-const _typesCache = new Map();
-
-export async function initCategories() {
-  // خيارات افتراضية
-  if (UI.el.catFilter) UI.el.catFilter.innerHTML = `<option value="">كل الأصناف</option>`;
-  if (UI.el.aCat) UI.el.aCat.innerHTML = `<option value="">اختر صنف الإعلان</option>`;
-
-  // action
-  UI.actions.loadCategories = loadCategories;
-
-  // تحميل أولي
-  await loadCategories();
-
-  // ✅ لما يغيّر المستخدم الصنف بصفحة "إعلان جديد"
-  // (اختياري) عبّي أنواع القسم (types) بشكل ديناميكي من Firestore
-  if (UI.el.aCat) {
-    UI.el.aCat.addEventListener("change", () => {
-      const catId = UI.el.aCat.value || "";
-      syncTypesForCategory(catId).catch(()=>{});
-    });
-  }
-
-  // ✅ لما يغيّر المستخدم الصنف بالفلترة
-  if (UI.el.catFilter) {
-    UI.el.catFilter.addEventListener("change", () => {
-      const catId = UI.el.catFilter.value || "";
-      syncTypesForCategory(catId).catch(()=>{});
-    });
-  }
-}
-
-/**
- * يجلب الأصناف من Firestore:
- * - value = id (cars / realestate / electronics)
- * - label = name_ar (عربي)
- * - كاش إلى UI.state.categories
- */
-async function loadCategories() {
-  // 1) جرّب الملف الثابت أولاً
-  let cats = null;
-  try {
-    cats = await loadCategoriesFromFile();
-  } catch (e) {
-    console.warn("[categories] file source failed:", e?.message || e);
-  }
-
-  // 2) إذا الملف غير متاح، جرّب Firestore (بـ dynamic import حتى لا ينهار الموقع عند فشل التحميل)
-  if (!cats) {
-    try {
-      const { db, collection, getDocs, orderBy, query } = await getFirestoreApi();
-      const qy = query(collection(db, "categories"), orderBy("order", "asc"));
-      const snap = await getDocs(qy);
-      cats = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-    } catch (e) {
-      console.warn("[categories] firestore source failed:", e?.message || e);
+      const k = `${c.parentId}::${c.groupKey || ""}`;
+      if (!childrenByParentAndGroup.has(k)) childrenByParentAndGroup.set(k, []);
+      childrenByParentAndGroup.get(k).push(c);
     }
   }
 
-  // 3) آخر حل: قائمة افتراضية
-  if (!cats) cats = DEFAULT_CATEGORIES;
+  // sort children arrays by order
+  for (const arr of childrenByParent.values()) arr.sort((a,b)=>a.order-b.order);
+  for (const arr of childrenByParentAndGroup.values()) arr.sort((a,b)=>a.order-b.order);
 
-  // فلترة وترتيب
-  const active = (cats || [])
-    .filter((x) => x && (x.isActive === undefined || x.isActive === true))
-    .map((x) => ({
-      id: (x.id || "").toString().trim(),
-      name_ar: x.name_ar || x.name || x.title || "",
-      order: Number(x.order ?? 999),
-      ...x,
-    }))
-    .filter((x) => x.id);
-
-  active.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
-
-  // ✅ خزّن بالكاش لتستخدمها بأي ملف
-  UI.state.categories = active;
-
-  const opts = active.map((x) => {
-    const label = (x.name_ar || x.id || "").toString().trim();
-    return `<option value="${escapeHtml(x.id)}">${escapeHtml(label)}</option>`;
-  });
-
-  if (UI.el.catFilter) {
-    UI.el.catFilter.innerHTML = `<option value="">كل الأصناف</option>` + opts.join("");
-  }
-  if (UI.el.aCat) {
-    UI.el.aCat.innerHTML = `<option value="">اختر صنف الإعلان</option>` + opts.join("");
-  }
-
-  // ✅ بعد التحميل: جهّز الفرعيات بناء على الاختيار الحالي (لو فيه)
-  const selectedCat = UI.el.aCat?.value || "";
-  syncTypesForCategory(selectedCat).catch(() => {});
+  return { byId, childrenByParent, childrenByParentAndGroup };
 }
 
-
-/**
- * ✅ تحميل أنواع القسم (types) ديناميكياً من:
- * categories/{catId}/types
- *
- * الاستعمال الحالي:
- * - فلترة الإلكترونيات: electKindFilter
- * - فلترة العقارات: estateKindFilter (لو كانت عندك types للعقارات)
- *
- * ملاحظة: هذا لا يضيف أي ميزة جديدة للمستخدم، فقط يستبدل الخيارات الهاردكود
- * بخيارات Firestore عند توفرها.
- */
-async function syncTypesForCategory(catId){
-  const cid = (catId || "").toString().trim();
-  // إذا ما في قسم، رجّع القوائم للوضع الافتراضي
-  if (!cid){
-    resetDynamicTypeSelects();
-    return;
-  }
-
-  const types = await loadTypes(cid);
-  // إذا ما في types، ما نكسر شي
-  if (!types.length){
-    resetDynamicTypeSelects(cid);
-    return;
-  }
-
-  // ✅ إلكترونيات: عبّي قائمة النوع الموجودة أصلاً
-  if (cid === "electronics" && UI.el.electKindFilter){
-    UI.el.electKindFilter.innerHTML =
-      `<option value="">كل الأنواع</option>` +
-      types.map(t => {
-        const label = (t.name_ar || arabicElectLabel(t.id) || t.id);
-        return `<option value="${escapeHtml(t.id)}">${escapeHtml(label)}</option>`;
-      }).join("");
-  }
-}
-
-async function loadTypes(categoryId){
-  if (_typesCache.has(categoryId)) return _typesCache.get(categoryId);
+function cacheSet(cats){
   try{
-    const { db, collection, getDocs, orderBy, query } = await getFirestoreApi();
-    const qy = query(
-      collection(db, "categories", categoryId, "types"),
-      orderBy("order", "asc")
-    );
-    const snap = await getDocs(qy);
-    const arr = snap.docs
-      .map(d => ({ id: d.id, ...d.data() }))
-      .filter(x => x.isActive === true);
-    _typesCache.set(categoryId, arr);
-    return arr;
-  }catch(e){
-    _typesCache.set(categoryId, []);
-    return [];
+    localStorage.setItem(CACHE_KEY, JSON.stringify({ t: now(), cats }));
+  }catch{}
+}
+
+function cacheGet(){
+  try{
+    const raw = localStorage.getItem(CACHE_KEY);
+    if(!raw) return null;
+    const j = JSON.parse(raw);
+    if(!j?.t || !Array.isArray(j?.cats)) return null;
+    if(now() - j.t > CACHE_TTL_MS) return null;
+    return j.cats;
+  }catch{ return null; }
+}
+
+function setGlobalCategoryMaps(cats){
+  const maps = buildMaps(cats);
+  globalThis.__CATS = {
+    list: cats,
+    byId: maps.byId,
+    childrenByParent: maps.childrenByParent,
+    childrenByParentAndGroup: maps.childrenByParentAndGroup,
+    // helper:
+    getChildren(parentId){ return maps.childrenByParent.get(parentId) || []; },
+    getChildrenByGroup(parentId, groupKey){ return maps.childrenByParentAndGroup.get(`${parentId}::${groupKey||""}`) || []; }
+  };
+}
+
+function fillSelect(selectEl, items, { placeholder = "كل الأصناف", valueKey="id", labelKey="name" } = {}){
+  if (!selectEl) return;
+  const current = selectEl.value || "";
+  selectEl.innerHTML = "";
+  const ph = document.createElement("option");
+  ph.value = "";
+  ph.textContent = placeholder;
+  selectEl.appendChild(ph);
+
+  for (const it of items){
+    const opt = document.createElement("option");
+    opt.value = String(it[valueKey]);
+    opt.textContent = escapeHtml(String(it[labelKey] || it.id));
+    selectEl.appendChild(opt);
+  }
+
+  // try keep selected
+  if ([...selectEl.options].some(o => o.value === current)) {
+    selectEl.value = current;
   }
 }
 
-function resetDynamicTypeSelects(currentCatId=""){
-  // رجّع الالكترونيات للوضع الافتراضي إذا مو بقسم الإلكترونيات
-  if (currentCatId !== "electronics" && UI.el.electKindFilter){
-    UI.el.electKindFilter.innerHTML = `
-      <option value="">كل الأنواع</option>
-      <option value="mobiles">موبايلات</option>
-      <option value="tv">تلفزيونات</option>
-      <option value="computers">كمبيوتر</option>
-      <option value="games">ألعاب (بلايستيشن)</option>
-    `;
+export async function initCategories(){
+  // 1) حاول من الكاش
+  const cached = cacheGet();
+  if (cached && cached.length){
+    setGlobalCategoryMaps(cached);
+    fillMainCategorySelects(cached);
   }
-  if (currentCatId !== "realestate" && UI.el.estateKindFilter){
-    UI.el.estateKindFilter.innerHTML = `
-      <option value="">كل أنواع العقارات</option>
-      <option value="شقة">شقة</option>
-      <option value="محل">محل</option>
-      <option value="أرض">أرض</option>
-      <option value="بيت">بيت</option>
-    `;
+
+  // 2) جلب مباشر من Supabase
+  try{
+    const cats = await fetchAllCategories();
+    cacheSet(cats);
+    setGlobalCategoryMaps(cats);
+    fillMainCategorySelects(cats);
+  }catch(e){
+    console.warn("Supabase categories failed, using cached if any.", e);
   }
+}
+
+function fillMainCategorySelects(cats){
+  const mains = cats.filter(c => !c.parentId).sort((a,b)=>a.order-b.order);
+
+  // Filter select
+  fillSelect(UI.el.catFilter || document.getElementById("catFilter"), mains, { placeholder: "كل الأصناف" });
+
+  // Add listing select
+  fillSelect(document.getElementById("aCat"), mains, { placeholder: "اختر الصنف" });
 }

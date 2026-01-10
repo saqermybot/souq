@@ -20,3 +20,10 @@ export const ADMIN_UIDS = [
 export const ADMIN_EMAILS = [
   "alhossiniabdulhalim2@gmail.com"
 ];
+
+
+// Supabase (ضع القيم من Project Settings → API)
+export const SUPABASE = {
+  url: "",
+  anonKey: "",
+};
