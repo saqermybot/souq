@@ -252,11 +252,6 @@
               <span class="heartIcon" aria-hidden="true">♥</span>
               <span id="dFavCount" class="favCountBadge">0</span>
             </button>
-<button id="btnFav" class="heroFav" type="button" aria-label="إضافة للمفضلة">
-                <span class="heartIcon" aria-hidden="true">♥</span>
-                <span id="dFavCount" class="favCountBadge">0</span>
-              </button>
-            </div>
 
             <button id="gPrev" class="gbtn" type="button">‹</button>
             <button id="gNext" class="gbtn" type="button">›</button>
@@ -332,6 +327,12 @@
         <input id="aTitle" placeholder="ماذا تبيع؟ (مثال: موبايل سامسونغ A51)" />
         <textarea id="aDesc" placeholder="الوصف" rows="4"></textarea>
 
+        <!-- ✅ الصنف (ضعه مبكراً حتى لا يضيع المستخدم) -->
+        <label class="lbl" for="aCat">اختر صنف الإعلان</label>
+        <div class="grid" style="margin-top:-6px">
+          <select id="aCat"></select>
+        </div>
+
         <!-- ✅ صور الإعلان (من فوق) -->
         <label class="lbl">صور الإعلان</label>
         <div class="muted small" style="margin-top:-6px;margin-bottom:8px">اختر من 1 إلى 3 صور (حد أقصى 3)</div>
@@ -365,10 +366,6 @@
         <input id="aCity" type="hidden" value="" />
         <input id="aLat" type="hidden" value="" />
         <input id="aLng" type="hidden" value="" />
-
-        <div class="grid" style="margin-top:10px">
-          <select id="aCat"></select>
-        </div>
 
         <div class="row actions">
           <button id="btnPublish" type="button">نشر</button>
