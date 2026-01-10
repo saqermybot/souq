@@ -1,1 +1,20 @@
-
+[
+  {
+    "id": "cars",
+    "name_ar": "سيارات",
+    "order": 10,
+    "isActive": true
+  },
+  {
+    "id": "realestate",
+    "name_ar": "عقارات",
+    "order": 20,
+    "isActive": true
+  },
+  {
+    "id": "electronics",
+    "name_ar": "إلكترونيات",
+    "order": 30,
+    "isActive": true
+  }
+]
