@@ -113,19 +113,25 @@ let previewUrls = [];
 /* =========================
    ✅ HELPERS
 ========================= */
-function catToAr(catId){
-  if (catId === "cars") return "سيارات";
-  if (catId === "realestate") return "عقارات";
-  if (catId === "electronics") return "إلكترونيات";
-
-  // ✅ NEW
-  if (catId === "clothing") return "ملابس و أحذية";
-
+function kindToAr(kind){
+  if (kind === "car") return "سيارات";
+  if (kind === "estate") return "عقارات";
+  if (kind === "electronics") return "إلكترونيات";
+  if (kind === "fashion") return "ملابس";
   return "";
 }
 
-function getCategoryId(){
-  return (UI.el.aCat?.value || "").toString().trim();
+function getDetailsKind(){
+  return (document.getElementById("aDetailsKind")?.value || "").toString().trim();
+}
+
+function inferDetailsKind(extra){
+  // Infer from filled extra fields (best-effort)
+  if (extra?.car && (extra.car.model || extra.car.year || extra.car.typeId)) return "car";
+  if (extra?.estate && (extra.estate.kind || extra.estate.rooms || extra.estate.typeId)) return "estate";
+  if (extra?.elect && (extra.elect.kind)) return "electronics";
+  if (extra?.fashion && (extra.fashion.gender)) return "fashion";
+  return "";
 }
 
 // ✅ NEW: safe seller name (for store/profile page)
@@ -155,16 +161,10 @@ export function initAddListing() {
   if (UI.el.btnPublish) UI.el.btnPublish.onclick = publish;
 
   ensureDynamicFields();
-  if (UI.el.aCat) {
-    UI.el.aCat.addEventListener("change", () => {
-      syncDynamicFieldsVisibility();
-
-      // ✅ UX: after changing category, scroll to the extra fields area
-      requestAnimationFrame(() => {
-        const anchor = document.getElementById("dynamicFieldsWrap") || UI.el.aCat;
-        if (anchor && typeof anchor.scrollIntoView === "function") {
-          anchor.scrollIntoView({ behavior: "smooth", block: "start" });
-        }
+  
+// ✅ تفاصيل إضافية اختيارية (بدون أقسام)
+setupDetailsKindListener();
+syncDynamicFieldsVisibility();
       });
     });
     syncDynamicFieldsVisibility();
@@ -186,6 +186,19 @@ function ensureDynamicFields(){
   wrap.className = "deluxeDyn";
 
   wrap.innerHTML = `
+    <div class="field span2" style="margin-bottom:10px">
+      <div class="select-wrapper">
+        <select id="aDetailsKind" aria-label="تفاصيل إضافية">
+          <option value="">تفاصيل إضافية (اختياري)</option>
+          <option value="car">تفاصيل سيارة</option>
+          <option value="estate">تفاصيل عقار</option>
+          <option value="electronics">تفاصيل إلكترونيات</option>
+          <option value="fashion">تفاصيل ملابس</option>
+        </select>
+        <span class="arrow">›</span>
+      </div>
+      <div class="muted small" style="margin-top:6px">إذا تركتها فارغة يمكنك نشر الإعلان مباشرة بدون أي تفاصيل إضافية.</div>
+    </div>
 <!-- ✅ سيارات -->
     <div id="carFields" class="hidden">
       <div class="formGrid">
@@ -304,20 +317,37 @@ function ensureDynamicFields(){
   UI.el.aFashionGender = document.getElementById("aFashionGender");
 }
 
+function setupDetailsKindListener(){
+  const sel = document.getElementById("aDetailsKind");
+  if (!sel) return;
+  if (sel.dataset.bound === "1") return;
+  sel.dataset.bound = "1";
+
+  sel.addEventListener("change", () => {
+    syncDynamicFieldsVisibility();
+
+    // ✅ UX: بعد تغيير نوع التفاصيل، انزل على الحقول
+    requestAnimationFrame(() => {
+      const anchor = document.getElementById("dynamicFieldsWrap") || sel;
+      if (anchor && typeof anchor.scrollIntoView === "function") {
+        anchor.scrollIntoView({ behavior: "smooth", block: "start" });
+      }
+    });
+  });
+}
+
 function syncDynamicFieldsVisibility(){
-  const catId = getCategoryId();
+  const kind = getDetailsKind();
 
   const carBox = document.getElementById("carFields");
   const estBox = document.getElementById("estateFields");
   const eleBox = document.getElementById("electFields");
   const fashBox = document.getElementById("fashionFields");
 
-  if (carBox) carBox.classList.toggle("hidden", catId !== "cars");
-  if (estBox) estBox.classList.toggle("hidden", catId !== "realestate");
-  if (eleBox) eleBox.classList.toggle("hidden", catId !== "electronics");
-
-  const isFashion = (catId === "clothing");
-  if (fashBox) fashBox.classList.toggle("hidden", !isFashion);
+  if (carBox) carBox.classList.toggle("hidden", kind !== "car");
+  if (estBox) estBox.classList.toggle("hidden", kind !== "estate");
+  if (eleBox) eleBox.classList.toggle("hidden", kind !== "electronics");
+  if (fashBox) fashBox.classList.toggle("hidden", kind !== "fashion");
 }
 
 /* =========================
@@ -351,7 +381,7 @@ function clearForm() {
   if (UI.el.aCity) UI.el.aCity.value = "";
   const areaEl = document.getElementById("aArea");
   if (areaEl) areaEl.value = "";
-  if (UI.el.aCat) UI.el.aCat.value = "";
+  if (document.getElementById("aDetailsKind")) document.getElementById("aDetailsKind").value = "";
   if (UI.el.aImages) UI.el.aImages.value = "";
   if (UI.el.imgPreview) UI.el.imgPreview.innerHTML = "";
 
@@ -415,8 +445,8 @@ function previewImages() {
 /* =========================
    ✅ EXTRA FIELDS + VALIDATION
 ========================= */
-function collectExtraFields(catId){
-  if (catId === "cars") {
+function collectExtraFields(kind){
+  if (kind === "car") {
     const typeId = (UI.el.aTypeCar?.value || "").trim();
     const carModel = (UI.el.aCarModel?.value || "").trim();
     const y = Number(UI.el.aCarYear?.value || 0);
@@ -430,7 +460,7 @@ function collectExtraFields(catId){
     };
   }
 
-  if (catId === "realestate") {
+  if (kind === "estate") {
     const typeId = (UI.el.aTypeEstate?.value || "").trim();
     const estateKind = (UI.el.aEstateKind?.value || "").trim();
     const r = Number(UI.el.aRooms?.value || 0);
@@ -444,14 +474,14 @@ function collectExtraFields(catId){
     };
   }
 
-  if (catId === "electronics") {
+  if (kind === "electronics") {
     const kindRaw = (UI.el.aElectKind?.value || "").trim();
     const kind = normalizeElectKind(kindRaw);
     return { electronics: { kind }, electKind: kind };
   }
 
   // ✅ NEW: ملابس و أحذية (القسم إلزامي) -> نخزنها باسم gender للفلترة
-  if (catId === "clothing") {
+  if (kind === "fashion") {
     const gender = (UI.el.aFashionGender?.value || "").trim();
     return {
       gender,
@@ -462,7 +492,7 @@ function collectExtraFields(catId){
   return {};
 }
 
-function validateForm({ title, description, price, city, placeText, catId, files, extra }) {
+function validateForm({ title, description, price, city, files }) {
   if (!title) return "اكتب عنوان الإعلان";
   if (title.length < 3) return "العنوان قصير جداً";
   if (!description) return "اكتب وصف الإعلان";
@@ -470,27 +500,10 @@ function validateForm({ title, description, price, city, placeText, catId, files
   if (!price || Number.isNaN(price) || price <= 0) return "اكتب سعر صحيح";
   // ✅ المدينة (إجباري)
   if (!city) return "اختر المدينة";
-  if (!catId) return "اختر الصنف";
   if (!files.length) return `اختر صورة واحدة على الأقل (حد أقصى ${MAX_IMAGES})`;
-
-  if (catId === "cars") {
-    if (!extra.typeId) return "اختر (بيع/إيجار) للسيارة";
-    if (!extra.carModel) return "اكتب موديل السيارة";
-    if (!extra.carYear) return "اكتب سنة الموديل";
-  }
-
-  if (catId === "realestate") {
-    if (!extra.typeId) return "اختر (بيع/إيجار) للعقار";
-    if (!extra.estateKind) return "اختر نوع العقار";
-  }
-
-  // ✅ NEW (إجباري فعلياً)
-  if (catId === "clothing") {
-    if (!extra.gender) return "اختر القسم (رجالي / نسائي / ولادي)";
-  }
-
   return null;
 }
+
 
 /* =========================
    ✅ PUBLISH
@@ -512,13 +525,17 @@ async function publish() {
   const placeHidden = document.getElementById("aPlaceText");
   if (placeHidden) placeHidden.value = placeText;
 
-  const categoryId = getCategoryId();
-  const categoryNameAr = catToAr(categoryId);
 
-  const extra = collectExtraFields(categoryId);
+const selectedKind = getDetailsKind();
+const extra = collectExtraFields(selectedKind);
+
+// ✅ kind داخلي (اختياري): إما من اختيار "تفاصيل إضافية" أو استنتاج من الحقول
+const inferredKind = inferDetailsKind(extra);
+const detailsKind = selectedKind || inferredKind;
+const detailsKindAr = kindToAr(detailsKind);
   const files = Array.from(UI.el.aImages?.files || []).slice(0, MAX_IMAGES);
 
-  const err = validateForm({ title, description, price, city, placeText, catId: categoryId, files, extra });
+  const err = validateForm({ title, description, price, city, files });
   if (err) return alert(err);
 
   publishing = true;
@@ -586,9 +603,9 @@ async function publish() {
       city: city || null,
       placeText: placeText,
 
-      categoryId,
-      categoryNameAr,
-      category: categoryNameAr || categoryId,
+      // ✅ بدون أقسام: تصنيف داخلي اختياري لتحسين الفلاتر والبحث
+      detailsKind: detailsKind || null,
+      detailsKindAr: detailsKindAr || null,
 
       ...extra,
 

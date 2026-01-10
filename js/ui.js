@@ -34,7 +34,7 @@ export const UI = {
     document.documentElement.setAttribute("data-theme", "dark");
 
     const ids = [
-      "authBar","qSearch","cityFilter","catFilter","btnApply","btnReset","btnMore","listings","emptyState",
+      "authBar","qSearch","cityFilter","kindFilter","btnApply","btnReset","btnMore","listings","emptyState",
 
       // ✅ DETAILS (+ dSeller جديد)
       "detailsPage","btnBack","btnShare","dTitle","dMeta","dStats","dSeller","dPrice","dDesc","btnReadMore","dInfo",
@@ -42,7 +42,7 @@ export const UI = {
 
       "inboxPage","btnInboxBack","btnInboxRefresh","inboxList","inboxEmpty",
 
-      "addBox","btnAddBack","aTitle","aDesc","aPrice","aCurrency","aCity","aCat","aImages","imgPreview",
+      "addBox","btnAddBack","aTitle","aDesc","aPrice","aCurrency","aCity","aImages","imgPreview",
       "btnPublish","btnClear","uploadStatus",
 
       "chatBox","btnChatBack","chatTitle","chatMsgs","chatInput","btnSend",
@@ -181,13 +181,13 @@ export const UI = {
     const hasAnyFilter = () => {
       const q = (this.el.qSearch?.value || "").trim();
       const city = (this.el.cityFilter?.value || "").trim();
-      const cat = (this.el.catFilter?.value || "").trim();
+      const kind = (this.el.kindFilter?.value || "").trim();
       const type = (this.el.typeFilter?.value || "").trim();
       const yf = (this.el.yearFrom?.value || "").toString().trim();
       const yt = (this.el.yearTo?.value || "").toString().trim();
       const ek = (this.el.estateKindFilter?.value || "").toString().trim();
       const rr = (this.el.roomsFilter?.value || "").toString().trim();
-      return !!(q || city || cat || type || yf || yt || ek || rr);
+      return !!(q || city || kind || type || yf || yt || ek || rr);
     };
 
     const liveReload = () => {
@@ -217,8 +217,8 @@ export const UI = {
 
     // ✅ باقي الحقول (Live)
     this.el.cityFilter?.addEventListener("change", liveReload);
-    this.el.catFilter?.addEventListener("change", () => {
-      this.syncEstateFiltersVisibility();
+    this.el.kindFilter?.addEventListener("change", () => {
+      this.syncAdvancedFiltersVisibility();
       liveReload();
     });
 
@@ -249,7 +249,7 @@ export const UI = {
     this.handleHash();
 
     // ✅ أول مرة: نخفي/نظهر فلاتر العقارات حسب القسم
-    this.syncEstateFiltersVisibility();
+    this.syncAdvancedFiltersVisibility();
   },
 
   /* =========================
@@ -514,79 +514,80 @@ bindDeluxeTypeControls(){
     on(this.el.typeRent, v === "rent");
   },
 
-  /* =========================
-     ✅ Estate filters show/hide
-  ========================= */
-  normalizeCat(v){
-    const s = (v || "").toString().trim().toLowerCase();
-    if (s === "سيارات") return "cars";
-    if (s === "عقارات") return "realestate";
-    if (s === "إلكترونيات" || s === "الكترونيات") return "electronics";
-    return s;
-  },
+  
+/* =========================
+   ✅ Advanced filters show/hide (internal kind)
+========================= */
+normalizeKind(v){
+  const s = (v || "").toString().trim().toLowerCase();
+  if (!s) return "";
+  if (["car","cars","سيارات","سيارة"].includes(s)) return "car";
+  if (["estate","realestate","عقارات","عقار"].includes(s)) return "estate";
+  if (["electronics","electronic","إلكترونيات","الكترونيات"].includes(s)) return "electronics";
+  if (["fashion","clothing","ملابس"].includes(s)) return "fashion";
+  return s;
+},
 
-  syncEstateFiltersVisibility(){
-    const cat = this.normalizeCat(this.el.catFilter?.value || "");
+syncAdvancedFiltersVisibility(){
+  const kind = this.normalizeKind(this.el.kindFilter?.value || "");
 
-    // ✅ Layout modes + diplomatic Sale/Rent filter
-    const deluxe = document.querySelector('.deluxeFilters');
-    const typeField = document.getElementById('typeField');
-    if (deluxe){
-      deluxe.classList.remove('carsMode','estateMode');
-      if (cat === 'cars') deluxe.classList.add('carsMode');
-      else if (cat === 'realestate') deluxe.classList.add('estateMode');
-      deluxe.classList.toggle('catSolo', (cat === 'cars' || cat === 'realestate'));
+  // ✅ Layout modes + Sale/Rent filter
+  const deluxe = document.querySelector('.deluxeFilters');
+  const typeField = document.getElementById('typeField');
+  if (deluxe){
+    deluxe.classList.remove('carsMode','estateMode');
+    if (kind === 'car') deluxe.classList.add('carsMode');
+    else if (kind === 'estate') deluxe.classList.add('estateMode');
+    deluxe.classList.toggle('catSolo', (kind === 'car' || kind === 'estate'));
+  }
 
+  const allowType = (kind === 'car' || kind === 'estate');
+  if (typeField){
+    typeField.classList.toggle('hidden', !allowType);
+  }
+  if (!allowType && this.el.typeFilter){
+    this.el.typeFilter.value = '';
+    this.syncTypeButtonsUI?.();
+  }
+
+  // ✅ عقارات: نوع العقار + غرف
+  if (this.el.estateFilters){
+    const isEstate = (kind === "estate");
+    this.el.estateFilters.classList.toggle("hidden", !isEstate);
+    if (!isEstate){
+      if (this.el.estateKindFilter) this.el.estateKindFilter.value = "";
+      if (this.el.roomsFilter) this.el.roomsFilter.value = "";
     }
-    const allowType = (cat === 'cars' || cat === 'realestate');
-    if (typeField){
-      typeField.classList.toggle('hidden', !allowType);
-    }
-    // إذا الصنف غير مناسب، نمسح نوع الإعلان حتى لا يضل يفلتر بدون سبب
-    if (!allowType && this.el.typeFilter){
-      this.el.typeFilter.value = '';
-      this.syncTypeButtonsUI?.();
-    }
+  }
 
-    // ✅ عقارات: نوع العقار + غرف
-    if (this.el.estateFilters){
-      const isEstate = (cat === "realestate");
-      this.el.estateFilters.classList.toggle("hidden", !isEstate);
-      if (!isEstate){
-        if (this.el.estateKindFilter) this.el.estateKindFilter.value = "";
-        if (this.el.roomsFilter) this.el.roomsFilter.value = "";
-      }
-    }
+  // ✅ إلكترونيات: نوع الإلكترونيات
+  if (this.el.electFilters){
+    const isElect = (kind === "electronics");
+    this.el.electFilters.classList.toggle("hidden", !isElect);
+    if (!isElect && this.el.electKindFilter) this.el.electKindFilter.value = "";
+  }
 
-    // ✅ إلكترونيات: نوع الإلكترونيات
-    if (this.el.electFilters){
-      const isElect = (cat === "electronics");
-      this.el.electFilters.classList.toggle("hidden", !isElect);
-      if (!isElect && this.el.electKindFilter) this.el.electKindFilter.value = "";
+  // ✅ سيارات: سنة
+  if (this.el.carFilters){
+    const isCars = (kind === "car");
+    this.el.carFilters.classList.toggle("hidden", !isCars);
+    if (!isCars){
+      if (this.el.yearFrom) this.el.yearFrom.value = "";
+      if (this.el.yearTo) this.el.yearTo.value = "";
     }
+  }
 
-    // ✅ سيارات: سنة
-    if (this.el.carFilters){
-      const isCars = (cat === "cars");
-      this.el.carFilters.classList.toggle("hidden", !isCars);
-      if (!isCars){
-        if (this.el.yearFrom) this.el.yearFrom.value = "";
-        if (this.el.yearTo) this.el.yearTo.value = "";
-      }
-
-
-    // ✅ ملابس/أحذية: الفئة (رجالي/نسائي/ولادي)
-    if (this.el.fashionFilters){
-      const isFashion = (cat === "clothing");
-      this.el.fashionFilters.classList.toggle("hidden", !isFashion);
-      if (!isFashion && this.el.fashionGenderFilter) this.el.fashionGenderFilter.value = "";
-    }
-    }
-  },
+  // ✅ ملابس: الفئة (رجالي/نسائي/ولادي)
+  if (this.el.fashionFilters){
+    const isFashion = (kind === "fashion");
+    this.el.fashionFilters.classList.toggle("hidden", !isFashion);
+    if (!isFashion && this.el.fashionGenderFilter) this.el.fashionGenderFilter.value = "";
+  }
+},
 
   resetFiltersUI(){
     if (this.el.cityFilter) this.el.cityFilter.value = "";
-    if (this.el.catFilter) this.el.catFilter.value = "";
+    if (this.el.kindFilter) this.el.kindFilter.value = "";
     if (this.el.qSearch) this.el.qSearch.value = "";
 
     if (this.el.typeFilter) this.el.typeFilter.value = "";
@@ -600,7 +601,7 @@ bindDeluxeTypeControls(){
     if (this.el.fashionGenderFilter) this.el.fashionGenderFilter.value = "";
 
     this.syncTypeButtonsUI();
-    this.syncEstateFiltersVisibility();
+    this.syncAdvancedFiltersVisibility();
   },
 
   /* =========================

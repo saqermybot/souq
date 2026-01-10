@@ -238,21 +238,38 @@ function electKindLabel(id){
   return id;
 }
 
-function normalizeCat(v){
+function normalizeKind(v){
   const s = (v || "").toString().trim().toLowerCase();
   if (!s) return "";
-  if (s === "سيارات") return "cars";
-  if (s === "عقارات") return "realestate";
-  if (s === "إلكترونيات" || s === "الكترونيات") return "electronics";
+  if (["car","cars","سيارة","سيارات"].includes(s)) return "car";
+  if (["estate","realestate","عقار","عقارات"].includes(s)) return "estate";
+  if (["electronics","electronic","إلكترونيات","الكترونيات"].includes(s)) return "electronics";
+  if (["fashion","clothing","ملابس"].includes(s)) return "fashion";
   return s;
 }
 
-function getCatId(data){
-  const raw = data.categoryId || data.categoryNameAr || data.category || "";
-  return normalizeCat(raw);
+function inferKindFromFields(data){
+  if (data?.car?.model || data?.car?.year || data?.carModel || data?.carYear) return "car";
+  if (data?.estate?.kind || data?.estate?.rooms || data?.estateKind || data?.rooms) return "estate";
+  if (data?.elect?.kind || data?.electKind || data?.electronicsKind) return "electronics";
+  if (data?.fashion?.gender || data?.gender) return "fashion";
+  return "";
 }
 
-function getTypeId(data){
+function getKind(data){
+  return normalizeKind(data?.detailsKind || data?.kind || "") || inferKindFromFields(data);
+}
+
+function kindToAr(kind){
+  if (kind === "car") return "سيارات";
+  if (kind === "estate") return "عقارات";
+  if (kind === "electronics") return "إلكترونيات";
+  if (kind === "fashion") return "ملابس";
+  return "";
+}
+
+function getTypeId
+(data){
   return (data.typeId ?? data.car?.typeId ?? data.estate?.typeId ?? data.type ?? "").toString().trim();
 }
 
@@ -286,7 +303,7 @@ function renderInfoCards(data){
   const box = UI.el.dInfo || $id("dInfo");
   if (!box) return;
 
-  const catTxt = (data.category || data.categoryNameAr || data.categoryId || "").toString().trim();
+  const kindTxt = kindToAr(getKind(data)) || "";
   const typeTxt = typeToAr(getTypeId(data)) || "";
   const created = formatListingDate(data.createdAt);
   // ✅ Counters come from listingStats/{id} (viewCount / favCount).
@@ -299,7 +316,7 @@ function renderInfoCards(data){
   // أساسي
   const placeTxt = getPlaceLabel(data);
   if (placeTxt) cards.push({ icon:"📍", label:"الموقع", value: String(placeTxt) });
-  if (catTxt)   cards.push({ icon:"🏷️", label:"القسم", value: catTxt });
+  if (kindTxt)  cards.push({ icon:"🏷️", label:"النوع", value: kindTxt });
   if (typeTxt)  cards.push({ icon:"🤝", label:"النوع", value: typeTxt });
   if (created)  cards.push({ icon:"🗓️", label:"تاريخ النشر", value: created });
 
@@ -332,7 +349,7 @@ box.innerHTML = cards.map(c => `
 
 
 // ---- Cars ----
-function isCarsCategory(data){ return getCatId(data) === "cars"; }
+function isCarsCategory(data){ return getKind(data) === "car"; }
 
 function getCarModel(data){
   return (data.car?.model ?? data.carModel ?? data.model ?? "").toString().trim();
@@ -352,10 +369,10 @@ function carLine(data){
 }
 
 // ---- Real Estate ----
-function isEstateCategory(data){ return getCatId(data) === "realestate"; }
+function isEstateCategory(data){ return getKind(data) === "estate"; }
 
 // ---- Electronics ----
-function isElectronicsCategory(data){ return getCatId(data) === "electronics"; }
+function isElectronicsCategory(data){ return getKind(data) === "electronics"; }
 
 function getElectKind(data){
   const raw = (data.elect?.kind ?? data.electKind ?? data.electronicsKind ?? data.kind ?? "").toString().trim();
@@ -578,7 +595,7 @@ async function loadFavorites(){
 
     const { place, city, showCityInMeta } = getCardLocationParts(data);
     const cityTxt = escapeHtml(city || "");
-    const catTxt  = escapeHtml(data.category || data.categoryNameAr || data.categoryId || "");
+    const kindTxt = escapeHtml(kindToAr(getKind(data)) || "");
 
     const distTxt = escapeHtml(getDistanceTextForListing(data));
     const placeLabel = escapeHtml(place || "");
@@ -606,7 +623,7 @@ async function loadFavorites(){
       <div class="p">
         <div class="t">${escapeHtml(data.title || "بدون عنوان")}</div>
         ${extraMeta ? `<div class="carMeta">${escapeHtml(extraMeta)}</div>` : ``}
-        <div class="m">${showCityInMeta ? cityTxt : ""}${(showCityInMeta && catTxt) ? " • " : ""}${catTxt}</div>
+        <div class="m">${showCityInMeta ? cityTxt : ""}${(showCityInMeta && kindTxt) ? " • " : ""}${kindTxt}</div>
         ${(distTxt || placeLabel) ? `<div class="m muted small">${distTxt ? `📏 ${distTxt}` : ""}${(distTxt && placeLabel) ? " • " : ""}${placeLabel ? `📍 ${placeLabel}` : ""}</div>` : ""}
         ${sellerHtml}
         <div class="pr">${escapeHtml(formatPrice(data.price, data.currency))}</div>
@@ -713,9 +730,9 @@ async function openDetails(id, data = null, fromHash = false){
     UI.renderGallery(data.images || []);
     UI.el.dTitle && (UI.el.dTitle.textContent = data.title || "");
 
-    const catTxt = (data.category || data.categoryNameAr || data.categoryId || "").toString().trim();
+    const kindTxtRaw = kindToAr(getKind(data)) || "";
     const { place, city } = getCardLocationParts(data);
-    const baseMeta = `${city || ""}${(city && catTxt) ? " • " : ""}${catTxt}`.trim();
+    const baseMeta = `${city || ""}${(city && kindTxtRaw) ? " • " : ""}${kindTxtRaw}`.trim();
 
     const extraMeta =
       isCarsCategory(data) ? carLine(data) :
@@ -1164,7 +1181,7 @@ async function loadListings(reset = true){
   const useFilters = !!UI.state.filtersActive;
 
   const cityVal = useFilters ? (UI.el.cityFilter?.value || "") : "";
-  const catVal  = useFilters ? normalizeCat(UI.el.catFilter?.value || "") : "";
+  const kindVal  = useFilters ? normalizeKind(UI.el.kindFilter?.value || "") : "";
 
   const typeVal = useFilters ? readTypeFilter() : "";
   const { from: yearFrom, to: yearTo } = useFilters ? readYearRange() : { from: 0, to: 0 };
@@ -1191,9 +1208,9 @@ async function loadListings(reset = true){
     if (data.isActive === false) return;
     if (cityVal && data.city !== cityVal) return;
 
-    if (catVal){
-      const docCat = getCatId(data);
-      if (docCat !== catVal) return;
+    if (kindVal){
+      const docKind = getKind(data);
+      if (docKind !== kindVal) return;
     }
 
     if (typeVal){
@@ -1254,7 +1271,7 @@ async function loadListings(reset = true){
 
 	    const { place, city, showCityInMeta } = getCardLocationParts(data);
 	    const cityTxt = escapeHtml(city || "");
-	    const catTxt  = escapeHtml(data.category || data.categoryNameAr || data.categoryId || "");
+	    const kindTxt = escapeHtml(kindToAr(getKind(data)) || "");
 
 	    const distTxt = escapeHtml(getDistanceTextForListing(data));
 	    const placeLabel = escapeHtml(place || "");
@@ -1281,7 +1298,7 @@ async function loadListings(reset = true){
       <div class="p">
         <div class="t">${escapeHtml(data.title || "بدون عنوان")}</div>
         ${extraMeta ? `<div class="carMeta">${escapeHtml(extraMeta)}</div>` : ``}
-        <div class="m">${showCityInMeta ? cityTxt : ""}${(showCityInMeta && catTxt) ? " • " : ""}${catTxt}</div>
+        <div class="m">${showCityInMeta ? cityTxt : ""}${(showCityInMeta && kindTxt) ? " • " : ""}${kindTxt}</div>
         ${(distTxt || placeLabel) ? `<div class="m muted small">${distTxt ? `📏 ${distTxt}` : ""}${(distTxt && placeLabel) ? " • " : ""}${placeLabel ? `📍 ${placeLabel}` : ""}</div>` : ""}
         ${sellerHtml}
         
