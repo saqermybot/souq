@@ -176,8 +176,18 @@
         <div id="carFilters" class="field span2 hidden">
           
           <div class="range2">
-            <input id="yearFrom" type="number" min="1950" max="2035" placeholder="من" />
-            <input id="yearTo" type="number" min="1950" max="2035" placeholder="إلى" />
+            <div class="select-wrapper">
+              <select id="yearFrom">
+                <option value="">من</option>
+              </select>
+              <span class="arrow">›</span>
+            </div>
+            <div class="select-wrapper">
+              <select id="yearTo">
+                <option value="">إلى</option>
+              </select>
+              <span class="arrow">›</span>
+            </div>
           </div>
         </div>
 
@@ -193,7 +203,12 @@
               <option value="بيت">بيت</option>
             </select>
 
-            <input id="roomsFilter" type="number" min="0" max="20" placeholder="غرف" />
+            <div class="select-wrapper">
+              <select id="roomsFilter">
+                <option value="">غرف</option>
+              </select>
+              <span class="arrow">›</span>
+            </div>
           </div>
         </div>
 

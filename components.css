@@ -1466,3 +1466,25 @@ button.sm{
   font-size: 15px;
 }
 .fieldInput::placeholder{ color:#9ca3af; }
+
+
+
+/* ✅ تحسين قراءة فلاتر العقارات (موبايل) */
+.deluxeFilters #estateFilters .range2 {
+  gap: 10px;
+}
+.deluxeFilters #estateFilters .range2 > :first-child { flex: 2; min-width: 0; }
+.deluxeFilters #estateFilters .range2 > :last-child { flex: 1; min-width: 0; }
+
+.deluxeFilters #estateFilters select,
+.deluxeFilters #carFilters select {
+  width: 100%;
+  padding: 14px 16px;
+  font-size: 15px;
+}
+
+/* خلي النص يبين كامل قدر الإمكان */
+.deluxeFilters #estateFilters select option,
+.deluxeFilters #carFilters select option {
+  font-size: 15px;
+}

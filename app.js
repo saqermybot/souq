@@ -22,6 +22,33 @@ async function safeAsync(fn) {
 // ✅ Start
 UI.init();
 
+// ✅ قوائم جاهزة: سنة السيارات (2000-2026) + غرف العقارات (1-10)
+function fillNumberSelect(sel, start, end, { placeholder = '', pad = false } = {}) {
+  if (!sel) return;
+  // keep first option as placeholder if exists
+  const first = sel.querySelector('option');
+  const keepPlaceholder = first && (first.value === '' || first.value == null);
+  if (!keepPlaceholder) sel.innerHTML = '';
+  for (let n = start; n <= end; n++) {
+    const opt = document.createElement('option');
+    opt.value = String(n);
+    opt.textContent = String(n);
+    sel.appendChild(opt);
+  }
+}
+
+function initPresetSelects() {
+  // Add Listing
+  fillNumberSelect(document.getElementById('aCarYear'), 2000, 2026);
+  fillNumberSelect(document.getElementById('aRooms'), 1, 10);
+  // Filters
+  fillNumberSelect(document.getElementById('yearFrom'), 2000, 2026);
+  fillNumberSelect(document.getElementById('yearTo'), 2000, 2026);
+  fillNumberSelect(document.getElementById('roomsFilter'), 1, 10);
+}
+initPresetSelects();
+
+
 // ✅ Expose UI for inline scripts (FAB button)
 window.UI = UI;
 
