@@ -1,4 +1,4 @@
-
+import { SY_CITIES } from "./config.js";
 // =========================
 // Guest phone input (intl-tel-input)
 // =========================
@@ -147,6 +147,13 @@ function getSafeSellerName() {
 ========================= */
 export function initAddListing() {
   UI.actions.openAdd = openAdd;
+
+  // ✅ City select (required)
+  const citySel = document.getElementById("aCity");
+  if (citySel){
+    citySel.required = true;
+    citySel.innerHTML = `<option value="">اختر المدينة *</option>` + SY_CITIES.map(c=>`<option value="${c}">${c}</option>`).join("");
+  }
 
   if (UI.el.btnAddBack) UI.el.btnAddBack.onclick = () => UI.hide(UI.el.addBox);
 
@@ -340,8 +347,8 @@ function clearForm() {
   if (UI.el.aPrice) UI.el.aPrice.value = "";
   if (UI.el.aCurrency) UI.el.aCurrency.value = "SYP";
   if (UI.el.aCity) UI.el.aCity.value = "";
-  const addrEl = document.getElementById("aAddress");
-  if (addrEl) addrEl.value = "";
+  const placeEl = document.getElementById("aPlaceText");
+  if (placeEl) placeEl.value = "";
   if (UI.el.aCat) UI.el.aCat.value = "";
   if (UI.el.aImages) UI.el.aImages.value = "";
   if (UI.el.imgPreview) UI.el.imgPreview.innerHTML = "";
@@ -452,7 +459,7 @@ function collectExtraFields(catId){
   return {};
 }
 
-function validateForm({ title, description, price, city, address, catId, files, extra }) {
+function validateForm({ title, description, price, city, placeText, catId, files, extra }) {
   if (!title) return "اكتب عنوان الإعلان";
   if (title.length < 3) return "العنوان قصير جداً";
   if (!description) return "اكتب وصف الإعلان";
@@ -460,7 +467,7 @@ function validateForm({ title, description, price, city, address, catId, files, 
   if (!price || Number.isNaN(price) || price <= 0) return "اكتب سعر صحيح";
   // ✅ المدينة (إجباري)
   if (!city) return "اختر المدينة";
-  if (!catId) return "اختر الصنف";
+if (!catId) return "اختر الصنف";
   if (!files.length) return `اختر صورة واحدة على الأقل (حد أقصى ${MAX_IMAGES})`;
 
   if (catId === "cars") {
@@ -496,7 +503,7 @@ async function publish() {
   const price = Number(UI.el.aPrice?.value || 0);
   const currency = (UI.el.aCurrency?.value || "SYP").trim();
   const city = (UI.el.aCity?.value || "").trim();
-  const address = (document.getElementById("aAddress")?.value || "").trim();
+  const placeText = (document.getElementById("aPlaceText")?.value || "").trim();
 
   const categoryId = getCategoryId();
   const categoryNameAr = catToAr(categoryId);
@@ -504,7 +511,7 @@ async function publish() {
   const extra = collectExtraFields(categoryId);
   const files = Array.from(UI.el.aImages?.files || []).slice(0, MAX_IMAGES);
 
-  const err = validateForm({ title, description, price, city, address, catId: categoryId, files, extra });
+  const err = validateForm({ title, description, price, city, placeText, catId: categoryId, files, extra });
   if (err) return alert(err);
 
   publishing = true;
@@ -561,16 +568,16 @@ async function publish() {
         console.warn("Failed to save user phone", e);
       }
     }
-    // 📍 المدينة (إجباري) + العنوان (اختياري)
-    const placeText = address || "";
+    // 📍 الموقع النصّي (بدون خريطة)
+    const city = (placeText.split(/[-–—,،]/)[0] || "").trim();
 
     await addDoc(collection(db, "listings"), {
       title,
       description,
       price,
       currency,
-      city: city,
-      placeText,
+      city: city || null,
+      placeText: placeText || "",
 
       categoryId,
       categoryNameAr,
