@@ -1502,3 +1502,39 @@ button.sm{
 /* ✅ وضوح نصوص الفلاتر (خاصة على iPhone) */
 .deluxeFilters .field, .deluxeFilters select{ font-size:16px; }
 .deluxeFilters .segBtn{ font-size:15px; }
+
+
+/* === v9: better select/input sizing on iPhone + tidy filter rows === */
+select, input, textarea{
+  font-size:16px; /* prevents iOS zoom + keeps text readable */
+}
+
+.range2{
+  display:flex;
+  gap:10px;
+  align-items:center;
+}
+
+.range2.keep2 > *{
+  flex:1 1 0;
+  min-width:0;
+}
+
+.select-wrapper select{
+  min-height:48px;
+  line-height:1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  overflow: hidden;
+}
+
+.segWrap .segBtn{
+  min-height:44px;
+}
+
+/* estate row: make property type wider than rooms */
+#estateFilters .range2 > select#estateKindFilter{ flex: 2 1 0; min-width:0; }
+#estateFilters .range2 > .select-wrapper{ flex: 1 1 0; min-width:0; }
+
+/* fashion filter single select full width */
+#fashionFilters .select-wrapper{ width:100%; }
