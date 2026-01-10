@@ -24,6 +24,6 @@ export const ADMIN_EMAILS = [
 
 // Supabase (ضع القيم من Project Settings → API)
 export const SUPABASE = {
-  url: "",
-  anonKey: "",
+  url: "https://lidflkcvetatjpddehsm.supabase.co",
+  anonKey: "sb_publishable_pDLoaQ3ellEVhygtxoIayw_MyBnJH7A",
 };
