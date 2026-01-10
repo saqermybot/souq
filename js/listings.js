@@ -51,6 +51,37 @@ function getPlaceLabel(data){
   }
 }
 
+// ✅ Avoid duplicate location like "دمشق دمشق" on cards.
+// We show the full place (city - area) once with the pin.
+// The small meta line shows the city only when it's different from the full place label.
+function getCityLabel(data){
+  try{
+    let c = String(data?.city || "").trim();
+    const p = getPlaceLabel(data);
+
+    // If city is missing, derive it from place label (before dash/comma)
+    if (!c && p) c = (p.split(/[-–—,،]/)[0] || "").trim();
+
+    // If legacy data stored the full place inside `city`, normalize it
+    if (c && p && c.includes("-") && p && !p.includes("-") ){
+      // keep as-is; not enough info
+    }
+    if (c && c.includes("-") ){
+      c = (c.split(/[-–—,،]/)[0] || "").trim();
+    }
+    return c;
+  }catch{
+    return "";
+  }
+}
+
+function getCardLocationParts(data){
+  const place = String(getPlaceLabel(data) || "").trim();
+  const city  = String(getCityLabel(data) || "").trim();
+  const showCityInMeta = !!(city && place && city !== place);
+  return { place, city, showCityInMeta };
+}
+
 function kmBetween(lat1, lng1, lat2, lng2){
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -520,11 +551,12 @@ async function loadFavorites(){
       isEstateCategory(data) ? estateLine(data) :
       "";
 
-    const cityTxt = escapeHtml(data.city || "");
+    const { place, city, showCityInMeta } = getCardLocationParts(data);
+    const cityTxt = escapeHtml(city || "");
     const catTxt  = escapeHtml(data.category || data.categoryNameAr || data.categoryId || "");
 
     const distTxt = escapeHtml(getDistanceTextForListing(data));
-    const placeLabel = escapeHtml(String(data.placeText || (data.location && data.location.label) || data.city || ""));
+    const placeLabel = escapeHtml(place || "");
 
     const sellerUid = getSellerUid(data);
     const sellerName = escapeHtml(getSellerNameFallback(data));
@@ -549,7 +581,7 @@ async function loadFavorites(){
       <div class="p">
         <div class="t">${escapeHtml(data.title || "بدون عنوان")}</div>
         ${extraMeta ? `<div class="carMeta">${escapeHtml(extraMeta)}</div>` : ``}
-        <div class="m">${cityTxt}${(cityTxt && catTxt) ? " • " : ""}${catTxt}</div>
+        <div class="m">${showCityInMeta ? cityTxt : ""}${(showCityInMeta && catTxt) ? " • " : ""}${catTxt}</div>
         ${(distTxt || placeLabel) ? `<div class="m muted small">${distTxt ? `📏 ${distTxt}` : ""}${(distTxt && placeLabel) ? " • " : ""}${placeLabel ? `📍 ${placeLabel}` : ""}</div>` : ""}
         ${sellerHtml}
         <div class="pr">${escapeHtml(formatPrice(data.price, data.currency))}</div>
@@ -657,7 +689,8 @@ async function openDetails(id, data = null, fromHash = false){
     UI.el.dTitle && (UI.el.dTitle.textContent = data.title || "");
 
     const catTxt = (data.category || data.categoryNameAr || data.categoryId || "").toString().trim();
-    const baseMeta = `${data.city || ""}${(data.city && catTxt) ? " • " : ""}${catTxt}`.trim();
+    const { place, city } = getCardLocationParts(data);
+    const baseMeta = `${city || ""}${(city && catTxt) ? " • " : ""}${catTxt}`.trim();
 
     const extraMeta =
       isCarsCategory(data) ? carLine(data) :
@@ -666,14 +699,15 @@ async function openDetails(id, data = null, fromHash = false){
 
     // ✅ Distance + approximate location (if available)
     const distInfo = getDistanceTextForListing(data);
-    const placeLabel = String(data.placeText || (data.location && data.location.label) || data.city || "");
+    const placeLabel = String(place || "");
 
     let metaLine = extraMeta ? `${baseMeta} • ${extraMeta}` : baseMeta;
     if (distInfo) metaLine = `${metaLine} • ${distInfo}`;
     UI.el.dMeta && (UI.el.dMeta.textContent = metaLine);
 
     // show approximate label near seller (does not override city)
-    if (UI.el.dSeller && placeLabel) {
+    // Only show the pinned location if it's NOT identical to the city already shown in meta
+    if (UI.el.dSeller && placeLabel && placeLabel !== (city || "")) {
       const line = document.createElement("div");
       line.className = "muted small";
       line.textContent = `📍 ${placeLabel}`;
@@ -1180,11 +1214,12 @@ async function loadListings(reset = true){
       isEstateCategory(data) ? estateLine(data) :
       "";
 
-	    const cityTxt = escapeHtml(data.city || "");
+	    const { place, city, showCityInMeta } = getCardLocationParts(data);
+	    const cityTxt = escapeHtml(city || "");
 	    const catTxt  = escapeHtml(data.category || data.categoryNameAr || data.categoryId || "");
 
 	    const distTxt = escapeHtml(getDistanceTextForListing(data));
-	    const placeLabel = escapeHtml(String(data.placeText || (data.location && data.location.label) || data.city || ""));
+	    const placeLabel = escapeHtml(place || "");
 
 	    const sellerUid = getSellerUid(data);
     const sellerName = escapeHtml(getSellerNameFallback(data));
@@ -1208,7 +1243,7 @@ async function loadListings(reset = true){
       <div class="p">
         <div class="t">${escapeHtml(data.title || "بدون عنوان")}</div>
         ${extraMeta ? `<div class="carMeta">${escapeHtml(extraMeta)}</div>` : ``}
-        <div class="m">${cityTxt}${(cityTxt && catTxt) ? " • " : ""}${catTxt}</div>
+        <div class="m">${showCityInMeta ? cityTxt : ""}${(showCityInMeta && catTxt) ? " • " : ""}${catTxt}</div>
         ${(distTxt || placeLabel) ? `<div class="m muted small">${distTxt ? `📏 ${distTxt}` : ""}${(distTxt && placeLabel) ? " • " : ""}${placeLabel ? `📍 ${placeLabel}` : ""}</div>` : ""}
         ${sellerHtml}
         
