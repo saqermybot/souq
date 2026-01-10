@@ -336,9 +336,17 @@
         <option value="EUR">EUR</option>
       </select>
     </div>
-    <!-- ✅ مكان الإعلان (إجباري) - بدون خريطة -->
-    <label class="lbl" for="aPlaceText">الموقع (إجباري)</label>
-    <input id="aPlaceText" placeholder="مثال: حمص - الدبلان" />
+    <!-- ✅ المدينة + العنوان (المدينة إجباري) -->
+    <div class="grid locRow" style="margin-top:2px">
+      <div>
+        <label class="lbl" for="aCity">المدينة (إجباري)</label>
+        <select id="aCity" required></select>
+      </div>
+      <div>
+        <label class="lbl" for="aAddress">العنوان / المنطقة (اختياري)</label>
+        <input id="aAddress" placeholder="مثال: المزة - أوتستراد / الدبلان" />
+      </div>
+    </div>
 
     <!-- ✅ رقم التواصل -->
     <label class="lbl" for="aPhone">رقم الهاتف / واتساب (اختياري)</label>

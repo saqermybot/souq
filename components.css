@@ -828,10 +828,15 @@ button.sm{
   align-items:start;
 }
 
+/* City + Address row: keep 2 columns even on mobile */
+.grid.locRow{ grid-template-columns: 1fr 1fr; }
+
 @media (max-width: 560px){
   .grid{ grid-template-columns: 1fr; }
   /* Keep price + currency on one row even on small screens */
   .grid.priceRow{ grid-template-columns: 1fr 96px; }
+  /* Keep city + address on one row as requested */
+  .grid.locRow{ grid-template-columns: 1fr 1fr; }
 }
 .actionsGrid button{
   height:40px;
