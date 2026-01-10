@@ -100,7 +100,7 @@
     <div id="authBar"></div>
 
     <!-- ✅ صورة الحساب + منيو -->
-    <div class="userMenuWrap" id="userMenuWrap" style="display:none;">
+    <div class="userMenuWrap" id="userMenuWrap">
       <img
         id="userAvatar"
         class="avatar"
@@ -109,10 +109,15 @@
         style="width:38px;height:38px;border-radius:999px;object-fit:cover;border:1px solid rgba(255,255,255,.12);cursor:pointer;"
       />
 
+      <!-- ✅ اسم المستخدم (ضيف) بدل "زائر" - يملأ من js/guest.js -->
+      <span id="userLabel" class="userLabel" style="cursor:pointer;">مستخدم</span>
+
       <div id="userMenu" class="userMenu hidden">
         <button type="button" data-act="myListings">📦 إعلاناتي</button>
         <button type="button" data-act="favorites">⭐ مفضلتي</button>
         <button type="button" data-act="profile">👤 بروفايلي</button>
+        <button type="button" data-act="accountUpgrade">🆙 ترقية لحساب</button>
+        <button type="button" data-act="accountRecover">🔑 استرجاع حساب</button>
         <hr />
         <button type="button" data-act="logout" class="danger adminOnly" id="logoutBtn">🚪 تسجيل خروج</button>
       </div>
@@ -258,10 +263,13 @@
     <section class="card">
       <div class="sectionHead">
         <h3>الإعلانات</h3>
-        <button id="btnMore" class="secondary" type="button">تحميل المزيد</button>
       </div>
 
       <div id="listings" class="cardsGrid"></div>
+
+      <div class="moreWrap">
+        <button id="btnMore" class="secondary" type="button">تحميل المزيد</button>
+      </div>
 
       <div id="emptyState" class="muted small" style="display:none;margin-top:10px">
         لا يوجد نتائج حالياً
@@ -442,6 +450,53 @@
 
   </main>
 
+  
+  <!-- ACCOUNT MODAL (Upgrade / Recover) -->
+  <div id="accountModal" class="modal hidden">
+    <div class="modalCard">
+      <div class="modalHead">
+        <div style="font-weight:900">حسابك (بدون توثيق)</div>
+        <button id="btnCloseAccount" class="ghost" type="button">إغلاق</button>
+      </div>
+
+      <div class="tabsRow">
+        <button id="accTabUpgrade" class="tabBtn active" type="button">ترقية لحساب</button>
+        <button id="accTabRecover" class="tabBtn" type="button">استرجاع حساب</button>
+      </div>
+
+      <div id="accPaneUpgrade">
+        <div class="row" style="margin-top:10px">
+          <input id="accDisplayName" placeholder="اسمك / اسم المتجر" autocomplete="name" />
+        </div>
+        <div class="row" style="margin-top:10px">
+          <input id="accContact" placeholder="رقم هاتف أو إيميل (للاسترجاع)" autocomplete="email" />
+        </div>
+        <div class="row" style="margin-top:10px">
+          <input id="accPin" placeholder="PIN (5 أرقام أو أكثر)" inputmode="numeric" autocomplete="one-time-code" />
+        </div>
+        <div class="row" style="margin-top:12px">
+          <button id="btnDoUpgrade" class="primary" type="button">إنشاء الحساب</button>
+        </div>
+        <p class="muted small" style="margin-top:10px">
+          ملاحظة: بدون توثيق. إذا مسحت المتصفح، بتسترجع حسابك عبر (الهاتف/الإيميل + PIN).
+        </p>
+      </div>
+
+      <div id="accPaneRecover" style="display:none">
+        <div class="row" style="margin-top:10px">
+          <input id="recIdentifier" placeholder="رقم هاتف أو إيميل أو اسم المتجر" autocomplete="username" />
+        </div>
+        <div class="row" style="margin-top:10px">
+          <input id="recPin" placeholder="PIN" inputmode="numeric" autocomplete="current-password" />
+        </div>
+        <div class="row" style="margin-top:12px">
+          <button id="btnDoRecover" class="primary" type="button">استرجاع</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
   <!-- AUTH MODAL -->
     <div id="authModal" class="modal hidden">
     <div class="modalCard">
@@ -484,23 +539,33 @@
   <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@23.8.0/build/js/intlTelInput.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@23.8.0/build/js/utils.js"></script>
 
-
-  <!-- ✅ SAFE FALLBACK (حتى لو صار حجب/خطأ بالـ JS) -->
+  
+  <!-- ✅ Fallback: إذا تعذّر تحميل المدن/الأقسام (مثلاً حجب/انقطاع) نعبيها محلياً -->
   <script>
   (function(){
+    function hasRealOptions(sel){
+      if(!sel) return false;
+      var opts = sel.querySelectorAll('option');
+      if(opts.length <= 1) return false;
+      for(var i=0;i<opts.length;i++){
+        var v = (opts[i].value||'').trim();
+        var t = (opts[i].textContent||'').trim();
+        if(v || (t && i>0)) return true;
+      }
+      return false;
+    }
     function fillSelect(sel, items, placeholder){
-      if(!sel) return;
-      if(sel.options && sel.options.length > 1) return;
-      sel.innerHTML = "";
-      var opt0 = document.createElement("option");
-      opt0.value = "";
-      opt0.textContent = placeholder || "";
-      sel.appendChild(opt0);
-      (items||[]).forEach(function(it){
-        var o = document.createElement("option");
-        o.value = it.value;
-        o.textContent = it.label;
-        sel.appendChild(o);
+      if(!sel || hasRealOptions(sel)) return;
+      sel.innerHTML = '';
+      var ph = document.createElement('option');
+      ph.value = '';
+      ph.textContent = placeholder || '';
+      sel.appendChild(ph);
+      items.forEach(function(it){
+        var opt = document.createElement('option');
+        opt.value = it.value;
+        opt.textContent = it.label;
+        sel.appendChild(opt);
       });
     }
 
@@ -522,9 +587,6 @@
     fillSelect(document.getElementById("catFilter"), CATS, "كل الأصناف");
     fillSelect(document.getElementById("aCity"), CITIES, "المدينة (إجباري)");
     fillSelect(document.getElementById("aCat"), CATS, "اختر صنف الإعلان");
-
-    var ul = document.getElementById("userLabel");
-    if(ul && (!ul.textContent || ul.textContent.trim()==="زائر")) ul.textContent = "مستخدم";
   })();
   </script>
 
