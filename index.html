@@ -151,7 +151,7 @@
           <input id="qSearch" placeholder="عن ماذا تبحث؟ (بحث عن إعلان...)" />
         </div>
 
-        <!-- ✅ (مُرتّبة) المدينة + القسم جنب بعض -->
+        <!-- ✅ (مُرتّبة) المدينة + نوع التفاصيل جنب بعض -->
         <div class="field span2">
           <div class="range2 keep2">
             <div class="select-wrapper">
@@ -159,7 +159,13 @@
               <span class="arrow">›</span>
             </div>
             <div class="select-wrapper">
-              <select id="catFilter" aria-label="القسم"></select>
+              <select id="kindFilter" aria-label="نوع التفاصيل">
+              <option value="">كل الإعلانات</option>
+              <option value="car">سيارات</option>
+              <option value="estate">عقارات</option>
+              <option value="electronics">إلكترونيات</option>
+              <option value="fashion">ملابس</option>
+            </select>
               <span class="arrow">›</span>
             </div>
           </div>
@@ -396,14 +402,7 @@
 <input id="aImages" type="file" accept="image/*" multiple />
     <div id="imgPreview" class="preview" style="margin-top:10px"></div>
 
-    <!-- ✅ الأقسام (بعد الصور) -->
-    <div id="categoryBlock">
-<div class="grid" style="margin-top:-6px">
-        <select id="aCat"></select>
-      </div>
-    </div>
-
-    <!-- ✅ الحقول المتغيرة (يتم حقنها بالـ JS داخل هذا الصندوق) -->
+    <!-- ✅ تفاصيل إضافية (اختياري) — يتم حقنها بالـ JS داخل هذا الصندوق -->
     <div id="dynWrapAnchor"></div>
 
     <div class="row actions">
@@ -519,11 +518,8 @@
     ].map(function(c){ return {value:c,label:c}; });
 
     fillSelect(document.getElementById("cityFilter"), CITIES, "كل المدن");
-    fillSelect(document.getElementById("catFilter"), CATS, "كل الأصناف");
-    fillSelect(document.getElementById("aCity"), CITIES, "المدينة (إجباري)");
-    fillSelect(document.getElementById("aCat"), CATS, "اختر صنف الإعلان");
-
-    var ul = document.getElementById("userLabel");
+fillSelect(document.getElementById("aCity"), CITIES, "المدينة (إجباري)");
+var ul = document.getElementById("userLabel");
     if(ul && (!ul.textContent || ul.textContent.trim()==="زائر")) ul.textContent = "مستخدم";
   })();
   </script>

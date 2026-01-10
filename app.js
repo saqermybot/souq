@@ -3,7 +3,6 @@ import { UI } from "./js/ui.js";
 import { initListings } from "./js/listings.js";
 import { initAddListing } from "./js/addListing.js";
 import { initAuth } from "./js/auth.js";
-import { initCategories } from "./js/categories.js";
 import { initChat } from "./js/chat.js";
 import { Notify } from "./js/notify.js";
 
@@ -67,8 +66,6 @@ initChat();
 // ✅ Auth بعد ما صار loadInbox جاهز
 initAuth();
 
-// ✅ categories (لو فشل ما يوقف الموقع)
-await safeAsync(() => initCategories());
 
 // ✅ دائماً خلي الفلاتر OFF عند أول فتح
 UI.state.filtersActive = false;
