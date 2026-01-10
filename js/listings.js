@@ -6,6 +6,8 @@ import { UI } from "./ui.js";
 import { escapeHtml, formatPrice } from "./utils.js";
 import { getFavoriteSet, toggleFavorite, bumpViewCount, getListingStats, requireUserForFav } from "./favorites.js";
 import { ADMIN_UIDS, ADMIN_EMAILS } from "./config.js";
+import { getLocalAccount } from "./accounts.js";
+import { getGuestId } from "./guest.js";
 
 import {
   collection,
@@ -475,6 +477,11 @@ export function initListings(){
   UI.actions.loadListings = loadListings;
   UI.actions.openDetails = openDetails;
   UI.actions.openFavorites = openFavorites;
+  UI.actions.openMyListings = () => {
+    UI.state.myOnly = true;
+    UI.state.filtersActive = false;
+    loadListings(true);
+  };
 
   // ✅ زر مراسلة من صفحة التفاصيل (ممنوع للزائر)
   if (UI.el.btnChat){
@@ -1185,8 +1192,17 @@ async function loadListings(reset = true){
     }catch{}
   }
 
+  const myOnly = UI.state.myOnly === true;
+  const acc = getLocalAccount();
+  const guestId = getGuestId();
+
   snap.forEach(ds=>{
     const data = ds.data();
+
+    if (myOnly){
+      const ok = (acc?.accountId && data.ownerAccountId === acc.accountId) || (!acc?.accountId && (data.ownerKey === guestId || data.guestId === guestId));
+      if (!ok) return;
+    }
 
     if (data.isActive === false) return;
     if (cityVal && data.city !== cityVal) return;

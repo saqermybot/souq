@@ -151,6 +151,8 @@ function initUserMenuUI(){
     if (act === "myListings") UI.actions.openMyListings?.();
     if (act === "favorites") UI.actions.openFavorites?.();
     if (act === "profile") UI.actions.openProfile?.();
+    if (act === "accountUpgrade") UI.actions.openAccountUpgrade?.();
+    if (act === "accountRecover") UI.actions.openAccountRecover?.();
   });
 }
 

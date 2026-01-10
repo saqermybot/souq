@@ -26,6 +26,18 @@ function arabicElectLabel(id){
 
 const _typesCache = new Map();
 
+// ✅ fallback محلي (إذا Firestore محجوب/ضعيف بسوريا)
+// ids لازم تطابق ids المستخدمة عندك في المشروع
+const FALLBACK_CATEGORIES = [
+  { id: "cars", name_ar: "سيارات" },
+  { id: "realestate", name_ar: "عقارات" },
+  { id: "electronics", name_ar: "إلكترونيات" },
+  { id: "appliances", name_ar: "كهربائيات" },
+  { id: "bikes", name_ar: "دراجات" },
+  { id: "other", name_ar: "أخرى" },
+  { id: "clothing", name_ar: "ملابس وأحذية" }
+];
+
 export async function initCategories() {
   // خيارات افتراضية
   if (UI.el.catFilter) UI.el.catFilter.innerHTML = `<option value="">كل الأصناف</option>`;
@@ -62,31 +74,49 @@ export async function initCategories() {
  * - كاش إلى UI.state.categories
  */
 async function loadCategories() {
-  const qy = query(collection(db, "categories"), orderBy("order", "asc"));
-  const snap = await getDocs(qy);
+  try {
+    const qy = query(collection(db, "categories"), orderBy("order", "asc"));
+    const snap = await getDocs(qy);
 
-  const active = snap.docs
-    .map((d) => ({ id: d.id, ...d.data() }))
-    .filter((x) => x.isActive === true);
+    const active = snap.docs
+      .map((d) => ({ id: d.id, ...d.data() }))
+      .filter((x) => x.isActive === true);
 
-  // ✅ خزّن بالكاش لتستخدمها بأي ملف
-  UI.state.categories = active;
+    // ✅ خزّن بالكاش لتستخدمها بأي ملف
+    UI.state.categories = active;
 
-  const opts = active.map((x) => {
-    const label = (x.name_ar || x.id || "").toString().trim();
-    return `<option value="${escapeHtml(x.id)}">${escapeHtml(label)}</option>`;
-  });
+    const opts = active.map((x) => {
+      const label = (x.name_ar || x.id || "").toString().trim();
+      return `<option value="${escapeHtml(x.id)}">${escapeHtml(label)}</option>`;
+    });
 
-  if (UI.el.catFilter) {
-    UI.el.catFilter.innerHTML = `<option value="">كل الأصناف</option>` + opts.join("");
+    if (UI.el.catFilter) {
+      UI.el.catFilter.innerHTML = `<option value="">كل الأصناف</option>` + opts.join("");
+    }
+    if (UI.el.aCat) {
+      UI.el.aCat.innerHTML = `<option value="">اختر صنف الإعلان</option>` + opts.join("");
+    }
+
+    // ✅ بعد التحميل: جهّز الفرعيات بناء على الاختيار الحالي (لو فيه)
+    const selectedCat = UI.el.aCat?.value || "";
+    syncTypesForCategory(selectedCat).catch(() => {});
+  } catch (e) {
+    // ✅ fallback: إذا Firestore ما اشتغل (حجب/ضعف اتصال/قواعد)
+    UI.state.categories = FALLBACK_CATEGORIES;
+    const opts = FALLBACK_CATEGORIES.map((x) =>
+      `<option value="${escapeHtml(x.id)}">${escapeHtml(x.name_ar)}</option>`
+    );
+    if (UI.el.catFilter) {
+      UI.el.catFilter.innerHTML = `<option value="">كل الأصناف</option>` + opts.join("");
+    }
+    if (UI.el.aCat) {
+      // ✅ لا تمسح الخيارات الموجودة إذا كانت موجودة (لو صفحة add حاطة خيارات هاردكود)
+      const hasOnlyPlaceholder = UI.el.aCat.options.length <= 1;
+      if (hasOnlyPlaceholder) {
+        UI.el.aCat.innerHTML = `<option value="">اختر صنف الإعلان</option>` + opts.join("");
+      }
+    }
   }
-  if (UI.el.aCat) {
-    UI.el.aCat.innerHTML = `<option value="">اختر صنف الإعلان</option>` + opts.join("");
-  }
-
-  // ✅ بعد التحميل: جهّز الفرعيات بناء على الاختيار الحالي (لو فيه)
-  const selectedCat = UI.el.aCat?.value || "";
-  syncTypesForCategory(selectedCat).catch(()=>{});
 }
 
 
