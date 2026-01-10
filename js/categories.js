@@ -1,13 +1,37 @@
 // categories.js (نسخة مرتبة: عربي + value=id + كاش + دعم قوائم فرعية اختياري)
+//
+// ملاحظة: لتفادي انهيار الموقع في بعض الشبكات/الدول، لا نستورد Firestore بشكل ثابت.
+// نجلب الأقسام من ملف ثابت أولاً، ثم نحاول Firestore كخيار ثانٍ (Dynamic Import).
 
 import { UI } from "./ui.js";
 import { escapeHtml } from "./utils.js";
 
-import {
-  collection,
-  getDocs,
-  orderBy,
-  query
+// ✅ مصدر ثابت للأقسام (يضمن ظهور الأقسام حتى لو تعطلت Firebase/Firestore)
+const DEFAULT_CATEGORIES = [
+  { id: "cars", name_ar: "سيارات", order: 10, isActive: true },
+  { id: "realestate", name_ar: "عقارات", order: 20, isActive: true },
+  { id: "electronics", name_ar: "إلكترونيات", order: 30, isActive: true },
+];
+
+async function loadCategoriesFromFile() {
+  // ضع الملف في: /data/categories.json
+  const res = await fetch(`/data/categories.json?v=${Date.now()}`, { cache: "no-store" });
+  if (!res.ok) throw new Error(`categories.json HTTP ${res.status}`);
+  const data = await res.json();
+  if (!Array.isArray(data) || data.length === 0) throw new Error("categories.json invalid");
+  return data;
+}
+
+async function getFirestoreApi() {
+  // imports قد تفشل في بعض الشبكات، لذلك نلفّها بـ try/catch في مكان الاستدعاء
+  const [{ db }, fs] = await Promise.all([
+    import("./firebase.js"),
+    import("https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js"),
+  ]);
+  const { collection, getDocs, orderBy, query } = fs;
+  return { db, collection, getDocs, orderBy, query };
+}
+
 
 // ✅ كاش للأنواع: categoryId -> types[]
 
@@ -23,36 +47,6 @@ function arabicElectLabel(id){
 }
 
 const _typesCache = new Map();
-
-// ✅ مصدر احتياطي ثابت للأصناف (يضمن عدم انهيار الواجهة إذا تعطل Firestore داخل بعض الدول)
-const DEFAULT_CATEGORIES = [
-  { id: "cars", name_ar: "سيارات", order: 10, isActive: true },
-  { id: "realestate", name_ar: "عقارات", order: 20, isActive: true },
-  { id: "electronics", name_ar: "إلكترونيات", order: 30, isActive: true },
-];
-
-async function loadCategoriesFromFile() {
-  // يمكن وضع الملف في: /data/categories.json داخل GitHub/Hosting
-  const url = `/data/categories.json?v=${Date.now()}`;
-  const res = await fetch(url, { cache: "no-store" });
-  if (!res.ok) throw new Error(`categories.json HTTP ${res.status}`);
-  const data = await res.json();
-  if (!Array.isArray(data) || data.length === 0) throw new Error("categories.json invalid");
-  return data;
-}
-
-async function loadCategoriesFromFirestore() {
-  // تحميل Firebase/Firestore عند الحاجة فقط (يقلل الأعطال إذا كانت Google endpoints غير مستقرة)
-  const fb = await import("./firebase.js");
-  const { collection, getDocs, orderBy, query } = await import(
-    "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js"
-  );
-
-  const qy = query(collection(fb.db, "categories"), orderBy("order", "asc"));
-  const snap = await getDocs(qy);
-  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
-}
-
 
 export async function initCategories() {
   // خيارات افتراضية
@@ -90,37 +84,41 @@ export async function initCategories() {
  * - كاش إلى UI.state.categories
  */
 async function loadCategories() {
-  let raw = null;
-
-  // 1) حاول جلب الأصناف من ملف ثابت (أفضل لسوريا لأنه لا يعتمد على Google endpoints)
+  // 1) جرّب الملف الثابت أولاً
+  let cats = null;
   try {
-    raw = await loadCategoriesFromFile();
+    cats = await loadCategoriesFromFile();
   } catch (e) {
     console.warn("[categories] file source failed:", e?.message || e);
   }
 
-  // 2) إذا فشل الملف، جرّب Firestore
-  if (!raw) {
+  // 2) إذا الملف غير متاح، جرّب Firestore (بـ dynamic import حتى لا ينهار الموقع عند فشل التحميل)
+  if (!cats) {
     try {
-      raw = await loadCategoriesFromFirestore();
+      const { db, collection, getDocs, orderBy, query } = await getFirestoreApi();
+      const qy = query(collection(db, "categories"), orderBy("order", "asc"));
+      const snap = await getDocs(qy);
+      cats = snap.docs.map((d) => ({ id: d.id, ...d.data() }));
     } catch (e) {
       console.warn("[categories] firestore source failed:", e?.message || e);
     }
   }
 
-  // 3) آخر حل: default ثابت
-  if (!raw) raw = DEFAULT_CATEGORIES;
+  // 3) آخر حل: قائمة افتراضية
+  if (!cats) cats = DEFAULT_CATEGORIES;
 
-  // ✅ فعّال فقط + ترتيب ثابت
-  const active = raw
+  // فلترة وترتيب
+  const active = (cats || [])
+    .filter((x) => x && (x.isActive === undefined || x.isActive === true))
     .map((x) => ({
       id: (x.id || "").toString().trim(),
-      name_ar: x.name_ar || x.title || x.name || x.nameAr || x.label,
+      name_ar: x.name_ar || x.name || x.title || "",
       order: Number(x.order ?? 999),
-      isActive: (x.isActive === undefined ? true : !!x.isActive),
+      ...x,
     }))
-    .filter((x) => x.id && x.isActive === true)
-    .sort((a, b) => a.order - b.order);
+    .filter((x) => x.id);
+
+  active.sort((a, b) => (a.order ?? 999) - (b.order ?? 999));
 
   // ✅ خزّن بالكاش لتستخدمها بأي ملف
   UI.state.categories = active;
@@ -139,7 +137,7 @@ async function loadCategories() {
 
   // ✅ بعد التحميل: جهّز الفرعيات بناء على الاختيار الحالي (لو فيه)
   const selectedCat = UI.el.aCat?.value || "";
-  syncTypesForCategory(selectedCat).catch(()=>{});
+  syncTypesForCategory(selectedCat).catch(() => {});
 }
 
 
@@ -183,6 +181,7 @@ async function syncTypesForCategory(catId){
 async function loadTypes(categoryId){
   if (_typesCache.has(categoryId)) return _typesCache.get(categoryId);
   try{
+    const { db, collection, getDocs, orderBy, query } = await getFirestoreApi();
     const qy = query(
       collection(db, "categories", categoryId, "types"),
       orderBy("order", "asc")
@@ -197,6 +196,8 @@ async function loadTypes(categoryId){
     _typesCache.set(categoryId, []);
     return [];
   }
+}
+
 }
 
 function resetDynamicTypeSelects(currentCatId=""){
