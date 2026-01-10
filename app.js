@@ -2,9 +2,7 @@
 import { UI } from "./js/ui.js";
 import { initListings } from "./js/listings.js";
 import { initAddListing } from "./js/addListing.js";
-import { initAuth } from "./js/auth.js";
 import { initCategories } from "./js/categories.js";
-import { initChat } from "./js/chat.js";
 import { Notify } from "./js/notify.js";
 
 // ✅ ثبّت الوضع الداكن دائماً
@@ -62,12 +60,8 @@ initListings();
 initAddListing();
 
 // ✅ مهم جداً: اربط chat/inbox actions قبل auth
-initChat();
-
-// ✅ Auth بعد ما صار loadInbox جاهز
-initAuth();
-
-// ✅ categories (لو فشل ما يوقف الموقع)
+// ✅ (اختياري) Chat/Auth تم تعطيلهم حالياً لتجنب اعتماد Firebase داخل سوريا.
+// إذا أردت تفعيلهم لاحقاً، نعيد بنائهم على Supabase.
 await safeAsync(() => initCategories());
 
 // ✅ دائماً خلي الفلاتر OFF عند أول فتح
