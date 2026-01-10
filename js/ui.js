@@ -188,14 +188,14 @@ export const UI = {
       liveReload();
     });
 
-    this.el.yearFrom?.addEventListener("input", debounce(liveReload, 200));
-    this.el.yearTo?.addEventListener("input", debounce(liveReload, 200));
+    this.el.yearFrom?.addEventListener("change", debounce(liveReload, 150));
+    this.el.yearTo?.addEventListener("change", debounce(liveReload, 150));
 
     // ✅ إلكترونيات
     this.el.electKindFilter?.addEventListener("change", liveReload);
 
     this.el.estateKindFilter?.addEventListener("change", liveReload);
-    this.el.roomsFilter?.addEventListener("input", debounce(liveReload, 200));
+    this.el.roomsFilter?.addEventListener("change", debounce(liveReload, 150));
 
     // ✅ gallery controls
     this.el.gPrev && (this.el.gPrev.onclick = () => this.setGalleryIdx(this.state.gallery.idx - 1));

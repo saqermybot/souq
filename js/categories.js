@@ -12,6 +12,18 @@ import {
 } from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 // ✅ كاش للأنواع: categoryId -> types[]
+
+function arabicElectLabel(id){
+  const s = (id || "").toString().trim().toLowerCase();
+  if (!s) return "";
+  if (s === "mobiles" || s === "mobile" || s === "phone" || s === "phones") return "موبايلات";
+  if (s === "tv" || s === "television" || s === "tvs") return "تلفزيونات";
+  if (s === "computers" || s === "computer" || s === "pc" || s === "laptops") return "كمبيوتر";
+  if (s === "games" || s === "game" || s === "playstation" || s === "ps") return "ألعاب";
+  // لو كان أصلاً عربي
+  return (id || "").toString().trim();
+}
+
 const _typesCache = new Map();
 
 export async function initCategories() {
@@ -108,7 +120,10 @@ async function syncTypesForCategory(catId){
   if (cid === "electronics" && UI.el.electKindFilter){
     UI.el.electKindFilter.innerHTML =
       `<option value="">كل الأنواع</option>` +
-      types.map(t => `<option value="${escapeHtml(t.name_ar || t.id)}">${escapeHtml(t.name_ar || t.id)}</option>`).join("");
+      types.map(t => {
+        const label = (t.name_ar || arabicElectLabel(t.id) || t.id);
+        return `<option value="${escapeHtml(t.id)}">${escapeHtml(label)}</option>`;
+      }).join("");
   }
 }
 
@@ -136,10 +151,10 @@ function resetDynamicTypeSelects(currentCatId=""){
   if (currentCatId !== "electronics" && UI.el.electKindFilter){
     UI.el.electKindFilter.innerHTML = `
       <option value="">كل الأنواع</option>
-      <option value="موبايل">موبايل</option>
-      <option value="تلفزيون">تلفزيون</option>
-      <option value="كمبيوتر">كمبيوتر</option>
-      <option value="ألعاب">ألعاب (بلايستيشن)</option>
+      <option value="mobiles">موبايلات</option>
+      <option value="tv">تلفزيونات</option>
+      <option value="computers">كمبيوتر</option>
+      <option value="games">ألعاب (بلايستيشن)</option>
     `;
   }
   if (currentCatId !== "realestate" && UI.el.estateKindFilter){

@@ -233,7 +233,7 @@ function ensureDynamicFields(){
           <div class="field">
             <div class="select-wrapper">
 	              <select id="aRooms">
-	                <option value="">غرف</option>
+	                <option value="">عدد الغرف</option>
 	              </select>
 	              <span class="arrow">›</span>
 	            </div>
@@ -258,10 +258,10 @@ function ensureDynamicFields(){
         <div class="field span2">
 <select id="aElectKind">
             <option value="">اختر النوع</option>
-            <option value="موبايل">موبايل</option>
-            <option value="تلفزيون">تلفزيون</option>
-            <option value="كمبيوتر">كمبيوتر</option>
-            <option value="ألعاب">ألعاب (بلايستيشن)</option>
+            <option value="mobiles">موبايلات</option>
+            <option value="tv">تلفزيونات</option>
+            <option value="computers">كمبيوتر</option>
+            <option value="games">ألعاب (بلايستيشن)</option>
           </select>
         </div>
       </div>
@@ -445,7 +445,8 @@ function collectExtraFields(catId){
   }
 
   if (catId === "electronics") {
-    const kind = (UI.el.aElectKind?.value || "").trim();
+    const kindRaw = (UI.el.aElectKind?.value || "").trim();
+    const kind = normalizeElectKind(kindRaw);
     return { electronics: { kind }, electKind: kind };
   }
 

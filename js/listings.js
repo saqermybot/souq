@@ -218,6 +218,26 @@ function normalizeTypeId(t){
   return (t || "").toString().trim();
 }
 
+
+function normalizeElectKind(v){
+  const s = (v || "").toString().trim().toLowerCase();
+  if (!s) return "";
+  if (["mobiles","mobile","phone","phones","جوال","موبايل","موبايلات"].includes(s)) return "mobiles";
+  if (["tv","television","tvs","تلفزيون","تلفزيونات"].includes(s)) return "tv";
+  if (["computers","computer","pc","laptop","laptops","كمبيوتر","حاسوب"].includes(s)) return "computers";
+  if (["games","game","playstation","ps","ألعاب","العاب"].includes(s)) return "games";
+  return s;
+}
+function electKindLabel(id){
+  const s = normalizeElectKind(id);
+  if (!s) return "";
+  if (s === "mobiles") return "موبايلات";
+  if (s === "tv") return "تلفزيونات";
+  if (s === "computers") return "كمبيوتر";
+  if (s === "games") return "ألعاب";
+  return id;
+}
+
 function normalizeCat(v){
   const s = (v || "").toString().trim().toLowerCase();
   if (!s) return "";
@@ -338,7 +358,8 @@ function isEstateCategory(data){ return getCatId(data) === "realestate"; }
 function isElectronicsCategory(data){ return getCatId(data) === "electronics"; }
 
 function getElectKind(data){
-  return (data.elect?.kind ?? data.electKind ?? data.electronicsKind ?? data.kind ?? "").toString().trim();
+  const raw = (data.elect?.kind ?? data.electKind ?? data.electronicsKind ?? data.kind ?? "").toString().trim();
+  return normalizeElectKind(raw);
 }
 
 function getEstateKind(data){
@@ -1146,7 +1167,7 @@ async function loadListings(reset = true){
 
   const estateKindVal = useFilters ? (($id("estateKindFilter")?.value || "").toString().trim()) : "";
   const roomsVal = useFilters ? Number(($id("roomsFilter")?.value || "").toString().trim() || 0) : 0;
-  const electKindVal = useFilters ? (($id("electKindFilter")?.value || "").toString().trim()) : "";
+  const electKindVal = useFilters ? normalizeElectKind(($id("electKindFilter")?.value || "").toString().trim()) : "";
 
   const frag = document.createDocumentFragment();
 
