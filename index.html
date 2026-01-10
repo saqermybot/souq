@@ -159,12 +159,18 @@
               <span class="arrow">›</span>
             </div>
             <div class="select-wrapper">
-              <select id="kindFilter" aria-label="نوع التفاصيل">
+              <select id="primaryTypeFilter" aria-label="القسم">
               <option value="">كل الإعلانات</option>
-              <option value="car">سيارات</option>
-              <option value="estate">عقارات</option>
+              <option value="cars">سيارات</option>
+              <option value="realestate">عقارات</option>
               <option value="electronics">إلكترونيات</option>
-              <option value="fashion">ملابس</option>
+              <option value="clothing">ملابس</option>
+              <option value="shoes">أحذية</option>
+              <option value="appliances">كهربائيات</option>
+              <option value="other">أخرى</option>
+            </select>
+            <select id="subTypeFilter" aria-label="النوع" class="mt6" disabled>
+              <option value="">كل الأنواع</option>
             </select>
               <span class="arrow">›</span>
             </div>
@@ -395,6 +401,24 @@
 
 
     <!-- ✅ رقم التواصل -->
+
+    <!-- ✅ القسم + النوع (اختياري) -->
+    <div class="grid typeRow" style="margin-top:10px">
+      <select id="aPrimaryType" aria-label="القسم (اختياري)">
+        <option value="">اختر القسم (اختياري)</option>
+        <option value="cars">سيارات</option>
+        <option value="realestate">عقارات</option>
+        <option value="electronics">إلكترونيات</option>
+        <option value="clothing">ملابس</option>
+        <option value="shoes">أحذية</option>
+        <option value="appliances">كهربائيات</option>
+        <option value="other">أخرى</option>
+      </select>
+      <select id="aSubType" aria-label="النوع (اختياري)" disabled>
+        <option value="">اختر النوع (اختياري)</option>
+      </select>
+    </div>
+
 <input id="aPhone" type="tel" placeholder="اختياري: اختر البلد ثم اكتب رقمك" autocomplete="tel" />
     <input id="aPhoneE164" type="hidden" />
 
