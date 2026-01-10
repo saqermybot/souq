@@ -198,8 +198,6 @@ async function loadTypes(categoryId){
   }
 }
 
-}
-
 function resetDynamicTypeSelects(currentCatId=""){
   // رجّع الالكترونيات للوضع الافتراضي إذا مو بقسم الإلكترونيات
   if (currentCatId !== "electronics" && UI.el.electKindFilter){
