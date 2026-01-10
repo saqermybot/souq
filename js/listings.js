@@ -8,22 +8,6 @@ import { getFavoriteSet, toggleFavorite, bumpViewCount, getListingStats, require
 import { ADMIN_UIDS, ADMIN_EMAILS } from "./config.js";
 
 import {
-
-// ✅ Remove duplicated city from placeText (e.g., "دمشق - المزة" while city already shown)
-function _escapeRegExp(s){
-  return String(s||"").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-}
-function normalizePlaceLabel(city, placeText){
-  const c = String(city||"").trim();
-  let p = String(placeText||"").trim();
-  if (!p) return "";
-  if (!c) return p;
-  const re = new RegExp(`^${_escapeRegExp(c)}(?:\s*[-–—,،]\s*|\s+)`, "i");
-  p = p.replace(re, "").trim();
-  // if it becomes empty (place was only the city) hide it
-  return p;
-}
-
   collection,
   query,
   where,
@@ -66,27 +50,6 @@ function getPlaceLabel(data){
     return "";
   }
 }
-
-// ✅ Remove duplicated city from place label (e.g. "دمشق - المزة" while city is already "دمشق")
-function getPlaceLabelNoCity(data){
-  const city = String(data?.city || "").trim();
-  let label = getPlaceLabel(data);
-  if (!label) return "";
-  if (!city) return label;
-
-  // Normalize & strip city prefix with common separators
-  const escCity = city.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const rx = new RegExp("^" + escCity + "\\s*([\\-–—,،/|\\\\]+\\s*)?", "i");
-  label = String(label).replace(rx, "").trim();
-
-  // If nothing left, don't show label (city already shown elsewhere)
-  if (!label) return "";
-  // If still equals city, hide
-  if (label.toLowerCase() === city.toLowerCase()) return "";
-
-  return label;
-}
-
 
 function kmBetween(lat1, lng1, lat2, lng2){
   const R = 6371;
@@ -561,8 +524,9 @@ async function loadFavorites(){
     const catTxt  = escapeHtml(data.category || data.categoryNameAr || data.categoryId || "");
 
     const distTxt = escapeHtml(getDistanceTextForListing(data));
-    const placeLabel = escapeHtml(getPlaceLabelNoCity(data));
-const sellerUid = getSellerUid(data);
+    const placeLabel = escapeHtml(String(data.placeText || (data.location && data.location.label) || data.city || ""));
+
+    const sellerUid = getSellerUid(data);
     const sellerName = escapeHtml(getSellerNameFallback(data));
     const sellerHtml = sellerUid
       ? `<div class="sellerLine">البائع: <a class="sellerLink" href="${buildStoreUrl(sellerUid)}">${sellerName}</a></div>`
@@ -702,8 +666,9 @@ async function openDetails(id, data = null, fromHash = false){
 
     // ✅ Distance + approximate location (if available)
     const distInfo = getDistanceTextForListing(data);
-    const placeLabel = getPlaceLabelNoCity(data);
-let metaLine = extraMeta ? `${baseMeta} • ${extraMeta}` : baseMeta;
+    const placeLabel = String(data.placeText || (data.location && data.location.label) || data.city || "");
+
+    let metaLine = extraMeta ? `${baseMeta} • ${extraMeta}` : baseMeta;
     if (distInfo) metaLine = `${metaLine} • ${distInfo}`;
     UI.el.dMeta && (UI.el.dMeta.textContent = metaLine);
 
@@ -1219,8 +1184,9 @@ async function loadListings(reset = true){
 	    const catTxt  = escapeHtml(data.category || data.categoryNameAr || data.categoryId || "");
 
 	    const distTxt = escapeHtml(getDistanceTextForListing(data));
-	    const placeLabel = escapeHtml(getPlaceLabelNoCity(data));
-const sellerUid = getSellerUid(data);
+	    const placeLabel = escapeHtml(String(data.placeText || (data.location && data.location.label) || data.city || ""));
+
+	    const sellerUid = getSellerUid(data);
     const sellerName = escapeHtml(getSellerNameFallback(data));
     const sellerHtml = sellerUid
       ? `<div class="sellerLine">البائع: <a class="sellerLink" href="${buildStoreUrl(sellerUid)}">${sellerName}</a></div>`

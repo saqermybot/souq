@@ -1,4 +1,4 @@
-import { SY_CITIES } from "./config.js";
+
 // =========================
 // Guest phone input (intl-tel-input)
 // =========================
@@ -148,13 +148,6 @@ function getSafeSellerName() {
 export function initAddListing() {
   UI.actions.openAdd = openAdd;
 
-  // ✅ City select (required)
-  const citySel = document.getElementById("aCity");
-  if (citySel){
-    citySel.required = true;
-    citySel.innerHTML = `<option value="">اختر المدينة *</option>` + SY_CITIES.map(c=>`<option value="${c}">${c}</option>`).join("");
-  }
-
   if (UI.el.btnAddBack) UI.el.btnAddBack.onclick = () => UI.hide(UI.el.addBox);
 
   if (UI.el.btnClear) UI.el.btnClear.onclick = clearForm;
@@ -193,30 +186,23 @@ function ensureDynamicFields(){
   wrap.className = "deluxeDyn";
 
   wrap.innerHTML = `
-    <div class="muted small" style="margin:6px 2px 10px">
-      معلومات إضافية حسب الصنف
-    </div>
-
-    <!-- ✅ سيارات -->
+<!-- ✅ سيارات -->
     <div id="carFields" class="hidden">
       <div class="formGrid">
         <div class="field">
-          <label class="flabel">نوع الإعلان</label>
-          <select id="aTypeCar">
-            <option value="">اختر (بيع / إيجار)</option>
+<select id="aTypeCar">
+            <option value="">نوع الإعلان (بيع / إيجار)</option>
             <option value="sale">بيع</option>
             <option value="rent">إيجار</option>
           </select>
         </div>
 
         <div class="field">
-          <label class="flabel">سنة الموديل</label>
-          <input id="aCarYear" type="number" min="1950" max="2035" placeholder="مثال: 2006" />
+<input id="aCarYear" type="number" min="1950" max="2035" placeholder="مثال: 2006" />
         </div>
 
         <div class="field span2">
-          <label class="flabel">موديل السيارة</label>
-          <input id="aCarModel" placeholder="مثال: كيا ريو / هيونداي i10" />
+<input id="aCarModel" placeholder="مثال: كيا ريو / هيونداي i10" />
         </div>
       </div>
     </div>
@@ -225,22 +211,19 @@ function ensureDynamicFields(){
     <div id="estateFields" class="hidden">
       <div class="formGrid">
         <div class="field">
-          <label class="flabel">نوع الإعلان</label>
-          <select id="aTypeEstate">
-            <option value="">اختر (بيع / إيجار)</option>
+<select id="aTypeEstate">
+            <option value="">نوع الإعلان (بيع / إيجار)</option>
             <option value="sale">بيع</option>
             <option value="rent">إيجار</option>
           </select>
         </div>
 
         <div class="field">
-          <label class="flabel">عدد الغرف (اختياري)</label>
-          <input id="aRooms" type="number" min="0" max="20" placeholder="مثال: 3" />
+<input id="aRooms" type="number" min="0" max="20" placeholder="مثال: 3" />
         </div>
 
         <div class="field span2">
-          <label class="flabel">نوع العقار</label>
-          <select id="aEstateKind">
+<select id="aEstateKind">
             <option value="">اختر نوع العقار</option>
             <option value="شقة">شقة</option>
             <option value="بيت">بيت</option>
@@ -255,8 +238,7 @@ function ensureDynamicFields(){
     <div id="electFields" class="hidden">
       <div class="formGrid">
         <div class="field span2">
-          <label class="flabel">نوع الإلكترونيات (اختياري)</label>
-          <select id="aElectKind">
+<select id="aElectKind">
             <option value="">اختر النوع</option>
             <option value="موبايل">موبايل</option>
             <option value="تلفزيون">تلفزيون</option>
@@ -271,8 +253,7 @@ function ensureDynamicFields(){
     <div id="fashionFields" class="hidden">
       <div class="formGrid">
         <div class="field span2">
-          <label class="flabel">القسم (إجباري)</label>
-          <select id="aFashionGender" required>
+<select id="aFashionGender" required>
             <option value="">اختر القسم</option>
             <option value="رجالي">رجالي</option>
             <option value="نسائي">نسائي</option>
@@ -346,7 +327,6 @@ function clearForm() {
   if (UI.el.aDesc) UI.el.aDesc.value = "";
   if (UI.el.aPrice) UI.el.aPrice.value = "";
   if (UI.el.aCurrency) UI.el.aCurrency.value = "SYP";
-  if (UI.el.aCity) UI.el.aCity.value = "";
   const placeEl = document.getElementById("aPlaceText");
   if (placeEl) placeEl.value = "";
   if (UI.el.aCat) UI.el.aCat.value = "";
@@ -459,15 +439,15 @@ function collectExtraFields(catId){
   return {};
 }
 
-function validateForm({ title, description, price, city, placeText, catId, files, extra }) {
+function validateForm({ title, description, price, placeText, catId, files, extra }) {
   if (!title) return "اكتب عنوان الإعلان";
   if (title.length < 3) return "العنوان قصير جداً";
   if (!description) return "اكتب وصف الإعلان";
   if (description.length < 10) return "الوصف قصير جداً";
   if (!price || Number.isNaN(price) || price <= 0) return "اكتب سعر صحيح";
-  // ✅ المدينة (إجباري)
-  if (!city) return "اختر المدينة";
-if (!catId) return "اختر الصنف";
+  // ✅ الموقع النصّي (إجباري)
+  if (!placeText) return "اكتب الموقع (مثال: حمص - الدبلان)";
+  if (!catId) return "اختر الصنف";
   if (!files.length) return `اختر صورة واحدة على الأقل (حد أقصى ${MAX_IMAGES})`;
 
   if (catId === "cars") {
@@ -502,7 +482,6 @@ async function publish() {
   const description = (UI.el.aDesc?.value || "").trim();
   const price = Number(UI.el.aPrice?.value || 0);
   const currency = (UI.el.aCurrency?.value || "SYP").trim();
-  const city = (UI.el.aCity?.value || "").trim();
   const placeText = (document.getElementById("aPlaceText")?.value || "").trim();
 
   const categoryId = getCategoryId();
@@ -511,7 +490,7 @@ async function publish() {
   const extra = collectExtraFields(categoryId);
   const files = Array.from(UI.el.aImages?.files || []).slice(0, MAX_IMAGES);
 
-  const err = validateForm({ title, description, price, city, placeText, catId: categoryId, files, extra });
+  const err = validateForm({ title, description, price, placeText, catId: categoryId, files, extra });
   if (err) return alert(err);
 
   publishing = true;
@@ -577,7 +556,7 @@ async function publish() {
       price,
       currency,
       city: city || null,
-      placeText: placeText || "",
+      placeText: placeText,
 
       categoryId,
       categoryNameAr,

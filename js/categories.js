@@ -17,7 +17,7 @@ const _typesCache = new Map();
 export async function initCategories() {
   // خيارات افتراضية
   if (UI.el.catFilter) UI.el.catFilter.innerHTML = `<option value="">كل الأصناف</option>`;
-  if (UI.el.aCat) UI.el.aCat.innerHTML = `<option value="">اختر صنف</option>`;
+  if (UI.el.aCat) UI.el.aCat.innerHTML = `<option value="">اختر صنف الإعلان</option>`;
 
   // action
   UI.actions.loadCategories = loadCategories;
@@ -69,7 +69,7 @@ async function loadCategories() {
     UI.el.catFilter.innerHTML = `<option value="">كل الأصناف</option>` + opts.join("");
   }
   if (UI.el.aCat) {
-    UI.el.aCat.innerHTML = `<option value="">اختر صنف</option>` + opts.join("");
+    UI.el.aCat.innerHTML = `<option value="">اختر صنف الإعلان</option>` + opts.join("");
   }
 
   // ✅ بعد التحميل: جهّز الفرعيات بناء على الاختيار الحالي (لو فيه)
