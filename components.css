@@ -765,10 +765,18 @@ html, body{
 }
 
 /* ✅ Dynamic layout modes for filters */
-.deluxeFilters.carsMode #typeField{ grid-column: span 1; }
-.deluxeFilters.carsMode #carFilters{ grid-column: span 1; }
-.deluxeFilters.estateMode #typeField{ grid-column: span 1; }
-.deluxeFilters.estateMode #estateFilters{ grid-column: span 1; }
+
+/* ✅ When category is Cars/Realestate: stack city+category to reduce crowding */
+.deluxeFilters.catSolo .keep2{
+  grid-template-columns: 1fr !important;
+}
+.deluxeFilters.catSolo .keep2 select{
+  font-size: 14px;
+}
+.deluxeFilters.carsMode #typeField{ grid-column: 1 / -1; }
+.deluxeFilters.carsMode #carFilters{ grid-column: 1 / -1; }
+.deluxeFilters.estateMode #typeField{ grid-column: 1 / -1; }
+.deluxeFilters.estateMode #estateFilters{ grid-column: 1 / -1; }
 
 /* when typeField hidden, avoid empty gap */
 #typeField.hidden{ display:none !important; }
