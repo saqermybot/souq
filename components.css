@@ -407,7 +407,7 @@ html, body{
 #imgClose{
   position:absolute;
   top:14px;
-  right:14px;
+  left:14px;
   width:44px;
   height:44px;
   border-radius:999px;
@@ -1455,7 +1455,8 @@ button.sm{
   border: 1px solid rgba(255,255,255,0.08);
   border-radius: 14px;
   padding: 12px 14px;
-  padding-right:40px;
+  padding-left:40px;
+  padding-right:14px;
   color:#fff;
   font-size:16px;
   min-height:48px;
@@ -1466,7 +1467,7 @@ button.sm{
 }
 .select-wrapper .arrow{
   position:absolute;
-  right:14px;
+  left:14px;
   top:50%;
   transform:translateY(-50%);
   font-size:22px;

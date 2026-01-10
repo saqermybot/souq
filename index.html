@@ -154,8 +154,14 @@
         <!-- ✅ (مُرتّبة) المدينة + القسم جنب بعض -->
         <div class="field span2">
           <div class="range2 keep2">
-            <select id="cityFilter" aria-label="المدينة"></select>
-            <select id="catFilter" aria-label="القسم"></select>
+            <div class="select-wrapper">
+              <select id="cityFilter" aria-label="المدينة"></select>
+              <span class="arrow">›</span>
+            </div>
+            <div class="select-wrapper">
+              <select id="catFilter" aria-label="القسم"></select>
+              <span class="arrow">›</span>
+            </div>
           </div>
         </div>
 
@@ -193,13 +199,16 @@
         <div id="estateFilters" class="field span2 hidden">
           
           <div class="range2">
-            <select id="estateKindFilter">
-              <option value="">كل أنواع العقارات</option>
-              <option value="شقة">شقة</option>
-              <option value="محل">محل</option>
-              <option value="أرض">أرض</option>
-              <option value="بيت">بيت</option>
-            </select>
+            <div class="select-wrapper">
+              <select id="estateKindFilter">
+                <option value="">كل أنواع العقارات</option>
+                <option value="شقة">شقة</option>
+                <option value="محل">محل</option>
+                <option value="أرض">أرض</option>
+                <option value="بيت">بيت</option>
+              </select>
+              <span class="arrow">›</span>
+            </div>
 
             <div class="select-wrapper">
               <select id="roomsFilter">
@@ -213,13 +222,16 @@
         <!-- ✅ تفاصيل الإلكترونيات (نوع الجهاز) -->
         <div id="electFilters" class="field span2 hidden">
           <label class="flabel">نوع الإلكترونيات</label>
-          <select id="electKindFilter">
-            <option value="">كل الأنواع</option>
-            <option value="mobiles">موبايلات</option>
-            <option value="tv">تلفزيونات</option>
-            <option value="computers">كمبيوتر</option>
-            <option value="games">ألعاب (بلايستيشن)</option>
-          </select>
+          <div class="select-wrapper">
+            <select id="electKindFilter">
+              <option value="">كل الأنواع</option>
+              <option value="mobiles">موبايلات</option>
+              <option value="tv">تلفزيونات</option>
+              <option value="computers">كمبيوتر</option>
+              <option value="games">ألعاب (بلايستيشن)</option>
+            </select>
+            <span class="arrow">›</span>
+          </div>
         </div>
 
         <div class="muted small span2" style="margin-top:2px">
