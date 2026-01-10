@@ -100,7 +100,7 @@
     <div id="authBar"></div>
 
     <!-- ✅ صورة الحساب + منيو -->
-    <div class="userMenuWrap" id="userMenuWrap" style="display:none;">
+    <div class="userMenuWrap" id="userMenuWrap">
       <img
         id="userAvatar"
         class="avatar"
@@ -108,6 +108,9 @@
         alt="account"
         style="width:38px;height:38px;border-radius:999px;object-fit:cover;border:1px solid rgba(255,255,255,.12);cursor:pointer;"
       />
+
+      <!-- ✅ اسم المستخدم (ضيف) بدل "زائر" - يملأ من js/guest.js -->
+      <span id="userLabel" class="userLabel" style="cursor:pointer;">مستخدم</span>
 
       <div id="userMenu" class="userMenu hidden">
         <button type="button" data-act="myListings">📦 إعلاناتي</button>
