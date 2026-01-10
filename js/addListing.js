@@ -1,4 +1,4 @@
-
+import { TAXONOMY, getSubOptions, getPrimaryAr, getSubAr } from "./taxonomy.js";
 // =========================
 // Guest phone input (intl-tel-input)
 // =========================
@@ -163,7 +163,7 @@ export function initAddListing() {
   ensureDynamicFields();
   
 // ✅ تفاصيل إضافية اختيارية (بدون أقسام)
-setupDetailsKindListener();
+setupPrimaryTypeListener();
 syncDynamicFieldsVisibility();
       });
     });
@@ -186,7 +186,7 @@ function ensureDynamicFields(){
   wrap.className = "deluxeDyn";
 
   wrap.innerHTML = `
-    <div class="field span2" style="margin-bottom:10px">
+    <div class="field span2" style="margin-bottom:10px;display:none">
       <div class="select-wrapper">
         <select id="aDetailsKind" aria-label="تفاصيل إضافية">
           <option value="">تفاصيل إضافية (اختياري)</option>
@@ -315,6 +315,55 @@ function ensureDynamicFields(){
 
   // ✅ NEW (إجباري للملابس)
   UI.el.aFashionGender = document.getElementById("aFashionGender");
+}
+
+
+// =========================
+// ✅ PrimaryType/SubType (Static taxonomy - no Firestore categories)
+// =========================
+function setupPrimaryTypeListener(){
+  const p = document.getElementById("aPrimaryType");
+  const s = document.getElementById("aSubType");
+  const dk = document.getElementById("aDetailsKind"); // مخفي - فقط للتحكم بالتفاصيل الديناميكية
+  if(!p || !s) return;
+
+  const fillSub = () => {
+    const primary = (p.value || "").trim();
+    // reset
+    s.innerHTML = '<option value="">اختر النوع (اختياري)</option>';
+    const subs = getSubOptions(primary);
+    if (subs.length){
+      for (const o of subs){
+        const opt = document.createElement("option");
+        opt.value = o.id;
+        opt.textContent = o.ar;
+        s.appendChild(opt);
+      }
+      s.disabled = false;
+    } else {
+      s.disabled = true;
+    }
+
+    // map to hidden details kind for dynamic fields
+    if (dk){
+      const map = {
+        cars: "car",
+        realestate: "estate",
+        electronics: "electronics",
+        appliances: "electronics",
+        clothing: "fashion",
+        shoes: "fashion",
+        other: ""
+      };
+      dk.value = map[primary] || "";
+    }
+
+    syncDynamicFieldsVisibility();
+  };
+
+  p.addEventListener("change", fillSub);
+  // initial
+  fillSub();
 }
 
 function setupDetailsKindListener(){
@@ -526,6 +575,11 @@ async function publish() {
   if (placeHidden) placeHidden.value = placeText;
 
 
+const primaryType = (document.getElementById("aPrimaryType")?.value || "").trim();
+const subType = (document.getElementById("aSubType")?.value || "").trim();
+const primaryTypeAr = getPrimaryAr(primaryType);
+const subTypeAr = getSubAr(primaryType, subType);
+
 const selectedKind = getDetailsKind();
 const extra = collectExtraFields(selectedKind);
 
@@ -606,6 +660,12 @@ const detailsKindAr = kindToAr(detailsKind);
       // ✅ بدون أقسام: تصنيف داخلي اختياري لتحسين الفلاتر والبحث
       detailsKind: detailsKind || null,
       detailsKindAr: detailsKindAr || null,
+
+      // ✅ قسم/نوع (اختياري) - static taxonomy (no Firestore categories)
+      primaryType: primaryType || null,
+      primaryTypeAr: primaryTypeAr || null,
+      subType: subType || null,
+      subTypeAr: subTypeAr || null,
 
       ...extra,
 

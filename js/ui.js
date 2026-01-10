@@ -1,4 +1,5 @@
 import { SY_CITIES } from "./config.js";
+import { getSubOptions } from "./taxonomy.js";
 import { debounce } from "./utils.js";
 
 export const UI = {
@@ -34,7 +35,7 @@ export const UI = {
     document.documentElement.setAttribute("data-theme", "dark");
 
     const ids = [
-      "authBar","qSearch","cityFilter","kindFilter","btnApply","btnReset","btnMore","listings","emptyState",
+      "authBar","qSearch","cityFilter","primaryTypeFilter","subTypeFilter","btnApply","btnReset","btnMore","listings","emptyState",
 
       // ✅ DETAILS (+ dSeller جديد)
       "detailsPage","btnBack","btnShare","dTitle","dMeta","dStats","dSeller","dPrice","dDesc","btnReadMore","dInfo",
@@ -181,13 +182,14 @@ export const UI = {
     const hasAnyFilter = () => {
       const q = (this.el.qSearch?.value || "").trim();
       const city = (this.el.cityFilter?.value || "").trim();
-      const kind = (this.el.kindFilter?.value || "").trim();
+      const primary = (this.el.primaryTypeFilter?.value || "").trim();
+      const sub = (this.el.subTypeFilter?.value || "").trim();
       const type = (this.el.typeFilter?.value || "").trim();
       const yf = (this.el.yearFrom?.value || "").toString().trim();
       const yt = (this.el.yearTo?.value || "").toString().trim();
       const ek = (this.el.estateKindFilter?.value || "").toString().trim();
       const rr = (this.el.roomsFilter?.value || "").toString().trim();
-      return !!(q || city || kind || type || yf || yt || ek || rr);
+      return !!(q || city || primary || sub || type || yf || yt || ek || rr);
     };
 
     const liveReload = () => {
@@ -217,10 +219,13 @@ export const UI = {
 
     // ✅ باقي الحقول (Live)
     this.el.cityFilter?.addEventListener("change", liveReload);
-    this.el.kindFilter?.addEventListener("change", () => {
-      this.syncAdvancedFiltersVisibility();
+    this.el.primaryTypeFilter?.addEventListener("change", () => {
+      this.syncSubTypeFilterOptions();
+      this.syncSubTypeFilterOptions();
+    this.syncAdvancedFiltersVisibility();
       liveReload();
     });
+    this.el.subTypeFilter?.addEventListener("change", debounce(liveReload, 150));
 
     this.el.yearFrom?.addEventListener("change", debounce(liveReload, 150));
     this.el.yearTo?.addEventListener("change", debounce(liveReload, 150));
@@ -521,15 +526,35 @@ bindDeluxeTypeControls(){
 normalizeKind(v){
   const s = (v || "").toString().trim().toLowerCase();
   if (!s) return "";
-  if (["car","cars","سيارات","سيارة"].includes(s)) return "car";
-  if (["estate","realestate","عقارات","عقار"].includes(s)) return "estate";
-  if (["electronics","electronic","إلكترونيات","الكترونيات"].includes(s)) return "electronics";
-  if (["fashion","clothing","ملابس"].includes(s)) return "fashion";
+  // primaryTypeFilter values
+  if (["cars","car","سيارات","سيارة"].includes(s)) return "car";
+  if (["realestate","estate","عقارات","عقار"].includes(s)) return "estate";
+  if (["electronics","electronic","إلكترونيات","الكترونيات","appliances","كهربائيات"].includes(s)) return "electronics";
+  if (["clothing","fashion","ملابس","shoes","أحذية"].includes(s)) return "fashion";
   return s;
 },
 
+syncSubTypeFilterOptions(){
+  const p = (this.el.primaryTypeFilter?.value || "").trim();
+  const s = this.el.subTypeFilter;
+  if (!s) return;
+  s.innerHTML = '<option value="">كل الأنواع</option>';
+  const subs = getSubOptions(p);
+  if (subs.length){
+    for (const o of subs){
+      const opt = document.createElement("option");
+      opt.value = o.id;
+      opt.textContent = o.ar;
+      s.appendChild(opt);
+    }
+    s.disabled = false;
+  }else{
+    s.disabled = true;
+  }
+},
+
 syncAdvancedFiltersVisibility(){
-  const kind = this.normalizeKind(this.el.kindFilter?.value || "");
+  const kind = this.normalizeKind(this.el.primaryTypeFilter?.value || "");
 
   // ✅ Layout modes + Sale/Rent filter
   const deluxe = document.querySelector('.deluxeFilters');
@@ -587,7 +612,8 @@ syncAdvancedFiltersVisibility(){
 
   resetFiltersUI(){
     if (this.el.cityFilter) this.el.cityFilter.value = "";
-    if (this.el.kindFilter) this.el.kindFilter.value = "";
+    if (this.el.primaryTypeFilter) this.el.primaryTypeFilter.value = "";
+    if (this.el.subTypeFilter) { this.el.subTypeFilter.value = ""; this.el.subTypeFilter.disabled = true; }
     if (this.el.qSearch) this.el.qSearch.value = "";
 
     if (this.el.typeFilter) this.el.typeFilter.value = "";

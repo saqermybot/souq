@@ -1181,7 +1181,8 @@ async function loadListings(reset = true){
   const useFilters = !!UI.state.filtersActive;
 
   const cityVal = useFilters ? (UI.el.cityFilter?.value || "") : "";
-  const kindVal  = useFilters ? normalizeKind(UI.el.kindFilter?.value || "") : "";
+  const primaryTypeVal = useFilters ? ((UI.el.primaryTypeFilter?.value || "").toString().trim()) : "";
+  const subTypeVal = useFilters ? ((UI.el.subTypeFilter?.value || "").toString().trim()) : "";
 
   const typeVal = useFilters ? readTypeFilter() : "";
   const { from: yearFrom, to: yearTo } = useFilters ? readYearRange() : { from: 0, to: 0 };
@@ -1208,9 +1209,43 @@ async function loadListings(reset = true){
     if (data.isActive === false) return;
     if (cityVal && data.city !== cityVal) return;
 
-    if (kindVal){
-      const docKind = getKind(data);
-      if (docKind !== kindVal) return;
+    if (primaryTypeVal){
+      const docPrimary = (data?.primaryType || "").toString().trim();
+      if (docPrimary){
+        if (docPrimary !== primaryTypeVal) return;
+      } else {
+        // fallback to legacy inference
+        const dk = getKind(data); // car|estate|electronics|fashion
+        const map = { car: "cars", estate: "realestate", electronics: "electronics", fashion: "clothing" };
+        const inferred = map[dk] || "";
+        // allow shoes ↔ clothing inference, appliances ↔ electronics inference
+        const ok =
+          (inferred === primaryTypeVal) ||
+          (primaryTypeVal === "shoes" && inferred === "clothing") ||
+          (primaryTypeVal === "appliances" && inferred === "electronics") ||
+          (primaryTypeVal === "other" && !inferred);
+        if (!ok) return;
+      }
+    }
+
+    if (subTypeVal){
+      const docSub = (data?.subType || "").toString().trim();
+      if (docSub){
+        if (docSub !== subTypeVal) return;
+      } else {
+        // fallback (legacy): sale/rent stored as type id
+        if (["sale","rent"].includes(subTypeVal)){
+          const t = normalizeTypeId(getTypeId(data));
+          if (t !== subTypeVal) return;
+        }
+        // fallback (legacy): fashion gender
+        if (["men","women","kids"].includes(subTypeVal)){
+          const g = getFashionGender(data);
+          const gm = { "رجالي":"men","رجال":"men","men":"men", "نسائي":"women","نساء":"women","women":"women", "ولادي":"kids","أطفال":"kids","kids":"kids" };
+          const gg = gm[g] || (g || "").toString().trim().toLowerCase();
+          if (gg !== subTypeVal) return;
+        }
+      }
     }
 
     if (typeVal){
