@@ -201,7 +201,12 @@ function ensureDynamicFields(){
 	            <span class="arrow">›</span>
 	          </div>
 	          <div class="field">
-	            <input id="aCarYear" type="number" min="1950" max="2035" placeholder="السنة (مثال: 2006)" />
+	            <div class="select-wrapper">
+	              <select id="aCarYear">
+	                <option value="">السنة</option>
+	              </select>
+	              <span class="arrow">›</span>
+	            </div>
 	          </div>
 	        </div>
 
@@ -226,7 +231,12 @@ function ensureDynamicFields(){
             <span class="arrow">›</span>
           </div>
           <div class="field">
-            <input id="aRooms" type="number" min="0" max="20" placeholder="عدد الغرف (مثال: 3)" />
+            <div class="select-wrapper">
+	              <select id="aRooms">
+	                <option value="">غرف</option>
+	              </select>
+	              <span class="arrow">›</span>
+	            </div>
           </div>
         </div>
 
