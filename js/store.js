@@ -171,9 +171,7 @@ function renderSellerHeader(profile){
 function cardHtml(id, data){
   const img = (data.images && data.images[0]) ? data.images[0] : "";
   const city = escapeHtml(data.city || "");
-  const kind = escapeHtml((data.detailsKindAr || "").toString().trim() || "");
-  const kind2 = kind || escapeHtml((({"car":"سيارات","estate":"عقارات","electronics":"إلكترونيات","fashion":"ملابس"}[(data.detailsKind||"").toString().trim()] ) || ""));
-  
+  const cat  = escapeHtml(data.category || data.categoryNameAr || data.categoryId || "");
   const title = escapeHtml(data.title || "بدون عنوان");
   const price = escapeHtml(formatPrice(data.price, data.currency));
 
@@ -184,7 +182,7 @@ function cardHtml(id, data){
       <img src="${img}" alt="" loading="lazy" />
       <div class="p">
         <div class="t">${title}</div>
-        <div class="m">${city}${(city && kind2) ? " • " : ""}${kind2}</div>
+        <div class="m">${city}${(city && cat) ? " • " : ""}${cat}</div>
         <div class="pr">${price}</div>
       </div>
     </div>

@@ -1,4 +1,4 @@
-import { TAXONOMY, getSubOptions, getPrimaryAr, getSubAr } from "./taxonomy.js";
+
 // =========================
 // Guest phone input (intl-tel-input)
 // =========================
@@ -113,25 +113,19 @@ let previewUrls = [];
 /* =========================
    ✅ HELPERS
 ========================= */
-function kindToAr(kind){
-  if (kind === "car") return "سيارات";
-  if (kind === "estate") return "عقارات";
-  if (kind === "electronics") return "إلكترونيات";
-  if (kind === "fashion") return "ملابس";
+function catToAr(catId){
+  if (catId === "cars") return "سيارات";
+  if (catId === "realestate") return "عقارات";
+  if (catId === "electronics") return "إلكترونيات";
+
+  // ✅ NEW
+  if (catId === "clothing") return "ملابس و أحذية";
+
   return "";
 }
 
-function getDetailsKind(){
-  return (document.getElementById("aDetailsKind")?.value || "").toString().trim();
-}
-
-function inferDetailsKind(extra){
-  // Infer from filled extra fields (best-effort)
-  if (extra?.car && (extra.car.model || extra.car.year || extra.car.typeId)) return "car";
-  if (extra?.estate && (extra.estate.kind || extra.estate.rooms || extra.estate.typeId)) return "estate";
-  if (extra?.elect && (extra.elect.kind)) return "electronics";
-  if (extra?.fashion && (extra.fashion.gender)) return "fashion";
-  return "";
+function getCategoryId(){
+  return (UI.el.aCat?.value || "").toString().trim();
 }
 
 // ✅ NEW: safe seller name (for store/profile page)
@@ -161,10 +155,16 @@ export function initAddListing() {
   if (UI.el.btnPublish) UI.el.btnPublish.onclick = publish;
 
   ensureDynamicFields();
-  
-// ✅ تفاصيل إضافية اختيارية (بدون أقسام)
-setupPrimaryTypeListener();
-syncDynamicFieldsVisibility();
+  if (UI.el.aCat) {
+    UI.el.aCat.addEventListener("change", () => {
+      syncDynamicFieldsVisibility();
+
+      // ✅ UX: after changing category, scroll to the extra fields area
+      requestAnimationFrame(() => {
+        const anchor = document.getElementById("dynamicFieldsWrap") || UI.el.aCat;
+        if (anchor && typeof anchor.scrollIntoView === "function") {
+          anchor.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
       });
     });
     syncDynamicFieldsVisibility();
@@ -186,19 +186,6 @@ function ensureDynamicFields(){
   wrap.className = "deluxeDyn";
 
   wrap.innerHTML = `
-    <div class="field span2" style="margin-bottom:10px;display:none">
-      <div class="select-wrapper">
-        <select id="aDetailsKind" aria-label="تفاصيل إضافية">
-          <option value="">تفاصيل إضافية (اختياري)</option>
-          <option value="car">تفاصيل سيارة</option>
-          <option value="estate">تفاصيل عقار</option>
-          <option value="electronics">تفاصيل إلكترونيات</option>
-          <option value="fashion">تفاصيل ملابس</option>
-        </select>
-        <span class="arrow">›</span>
-      </div>
-      <div class="muted small" style="margin-top:6px">إذا تركتها فارغة يمكنك نشر الإعلان مباشرة بدون أي تفاصيل إضافية.</div>
-    </div>
 <!-- ✅ سيارات -->
     <div id="carFields" class="hidden">
       <div class="formGrid">
@@ -317,86 +304,20 @@ function ensureDynamicFields(){
   UI.el.aFashionGender = document.getElementById("aFashionGender");
 }
 
-
-// =========================
-// ✅ PrimaryType/SubType (Static taxonomy - no Firestore categories)
-// =========================
-function setupPrimaryTypeListener(){
-  const p = document.getElementById("aPrimaryType");
-  const s = document.getElementById("aSubType");
-  const dk = document.getElementById("aDetailsKind"); // مخفي - فقط للتحكم بالتفاصيل الديناميكية
-  if(!p || !s) return;
-
-  const fillSub = () => {
-    const primary = (p.value || "").trim();
-    // reset
-    s.innerHTML = '<option value="">اختر النوع (اختياري)</option>';
-    const subs = getSubOptions(primary);
-    if (subs.length){
-      for (const o of subs){
-        const opt = document.createElement("option");
-        opt.value = o.id;
-        opt.textContent = o.ar;
-        s.appendChild(opt);
-      }
-      s.disabled = false;
-    } else {
-      s.disabled = true;
-    }
-
-    // map to hidden details kind for dynamic fields
-    if (dk){
-      const map = {
-        cars: "car",
-        realestate: "estate",
-        electronics: "electronics",
-        appliances: "electronics",
-        clothing: "fashion",
-        shoes: "fashion",
-        other: ""
-      };
-      dk.value = map[primary] || "";
-    }
-
-    syncDynamicFieldsVisibility();
-  };
-
-  p.addEventListener("change", fillSub);
-  // initial
-  fillSub();
-}
-
-function setupDetailsKindListener(){
-  const sel = document.getElementById("aDetailsKind");
-  if (!sel) return;
-  if (sel.dataset.bound === "1") return;
-  sel.dataset.bound = "1";
-
-  sel.addEventListener("change", () => {
-    syncDynamicFieldsVisibility();
-
-    // ✅ UX: بعد تغيير نوع التفاصيل، انزل على الحقول
-    requestAnimationFrame(() => {
-      const anchor = document.getElementById("dynamicFieldsWrap") || sel;
-      if (anchor && typeof anchor.scrollIntoView === "function") {
-        anchor.scrollIntoView({ behavior: "smooth", block: "start" });
-      }
-    });
-  });
-}
-
 function syncDynamicFieldsVisibility(){
-  const kind = getDetailsKind();
+  const catId = getCategoryId();
 
   const carBox = document.getElementById("carFields");
   const estBox = document.getElementById("estateFields");
   const eleBox = document.getElementById("electFields");
   const fashBox = document.getElementById("fashionFields");
 
-  if (carBox) carBox.classList.toggle("hidden", kind !== "car");
-  if (estBox) estBox.classList.toggle("hidden", kind !== "estate");
-  if (eleBox) eleBox.classList.toggle("hidden", kind !== "electronics");
-  if (fashBox) fashBox.classList.toggle("hidden", kind !== "fashion");
+  if (carBox) carBox.classList.toggle("hidden", catId !== "cars");
+  if (estBox) estBox.classList.toggle("hidden", catId !== "realestate");
+  if (eleBox) eleBox.classList.toggle("hidden", catId !== "electronics");
+
+  const isFashion = (catId === "clothing");
+  if (fashBox) fashBox.classList.toggle("hidden", !isFashion);
 }
 
 /* =========================
@@ -430,7 +351,7 @@ function clearForm() {
   if (UI.el.aCity) UI.el.aCity.value = "";
   const areaEl = document.getElementById("aArea");
   if (areaEl) areaEl.value = "";
-  if (document.getElementById("aDetailsKind")) document.getElementById("aDetailsKind").value = "";
+  if (UI.el.aCat) UI.el.aCat.value = "";
   if (UI.el.aImages) UI.el.aImages.value = "";
   if (UI.el.imgPreview) UI.el.imgPreview.innerHTML = "";
 
@@ -494,8 +415,8 @@ function previewImages() {
 /* =========================
    ✅ EXTRA FIELDS + VALIDATION
 ========================= */
-function collectExtraFields(kind){
-  if (kind === "car") {
+function collectExtraFields(catId){
+  if (catId === "cars") {
     const typeId = (UI.el.aTypeCar?.value || "").trim();
     const carModel = (UI.el.aCarModel?.value || "").trim();
     const y = Number(UI.el.aCarYear?.value || 0);
@@ -509,7 +430,7 @@ function collectExtraFields(kind){
     };
   }
 
-  if (kind === "estate") {
+  if (catId === "realestate") {
     const typeId = (UI.el.aTypeEstate?.value || "").trim();
     const estateKind = (UI.el.aEstateKind?.value || "").trim();
     const r = Number(UI.el.aRooms?.value || 0);
@@ -523,14 +444,14 @@ function collectExtraFields(kind){
     };
   }
 
-  if (kind === "electronics") {
+  if (catId === "electronics") {
     const kindRaw = (UI.el.aElectKind?.value || "").trim();
     const kind = normalizeElectKind(kindRaw);
     return { electronics: { kind }, electKind: kind };
   }
 
   // ✅ NEW: ملابس و أحذية (القسم إلزامي) -> نخزنها باسم gender للفلترة
-  if (kind === "fashion") {
+  if (catId === "clothing") {
     const gender = (UI.el.aFashionGender?.value || "").trim();
     return {
       gender,
@@ -541,7 +462,7 @@ function collectExtraFields(kind){
   return {};
 }
 
-function validateForm({ title, description, price, city, files }) {
+function validateForm({ title, description, price, city, placeText, catId, files, extra }) {
   if (!title) return "اكتب عنوان الإعلان";
   if (title.length < 3) return "العنوان قصير جداً";
   if (!description) return "اكتب وصف الإعلان";
@@ -549,10 +470,27 @@ function validateForm({ title, description, price, city, files }) {
   if (!price || Number.isNaN(price) || price <= 0) return "اكتب سعر صحيح";
   // ✅ المدينة (إجباري)
   if (!city) return "اختر المدينة";
+  if (!catId) return "اختر الصنف";
   if (!files.length) return `اختر صورة واحدة على الأقل (حد أقصى ${MAX_IMAGES})`;
+
+  if (catId === "cars") {
+    if (!extra.typeId) return "اختر (بيع/إيجار) للسيارة";
+    if (!extra.carModel) return "اكتب موديل السيارة";
+    if (!extra.carYear) return "اكتب سنة الموديل";
+  }
+
+  if (catId === "realestate") {
+    if (!extra.typeId) return "اختر (بيع/إيجار) للعقار";
+    if (!extra.estateKind) return "اختر نوع العقار";
+  }
+
+  // ✅ NEW (إجباري فعلياً)
+  if (catId === "clothing") {
+    if (!extra.gender) return "اختر القسم (رجالي / نسائي / ولادي)";
+  }
+
   return null;
 }
-
 
 /* =========================
    ✅ PUBLISH
@@ -574,22 +512,13 @@ async function publish() {
   const placeHidden = document.getElementById("aPlaceText");
   if (placeHidden) placeHidden.value = placeText;
 
+  const categoryId = getCategoryId();
+  const categoryNameAr = catToAr(categoryId);
 
-const primaryType = (document.getElementById("aPrimaryType")?.value || "").trim();
-const subType = (document.getElementById("aSubType")?.value || "").trim();
-const primaryTypeAr = getPrimaryAr(primaryType);
-const subTypeAr = getSubAr(primaryType, subType);
-
-const selectedKind = getDetailsKind();
-const extra = collectExtraFields(selectedKind);
-
-// ✅ kind داخلي (اختياري): إما من اختيار "تفاصيل إضافية" أو استنتاج من الحقول
-const inferredKind = inferDetailsKind(extra);
-const detailsKind = selectedKind || inferredKind;
-const detailsKindAr = kindToAr(detailsKind);
+  const extra = collectExtraFields(categoryId);
   const files = Array.from(UI.el.aImages?.files || []).slice(0, MAX_IMAGES);
 
-  const err = validateForm({ title, description, price, city, files });
+  const err = validateForm({ title, description, price, city, placeText, catId: categoryId, files, extra });
   if (err) return alert(err);
 
   publishing = true;
@@ -657,15 +586,9 @@ const detailsKindAr = kindToAr(detailsKind);
       city: city || null,
       placeText: placeText,
 
-      // ✅ بدون أقسام: تصنيف داخلي اختياري لتحسين الفلاتر والبحث
-      detailsKind: detailsKind || null,
-      detailsKindAr: detailsKindAr || null,
-
-      // ✅ قسم/نوع (اختياري) - static taxonomy (no Firestore categories)
-      primaryType: primaryType || null,
-      primaryTypeAr: primaryTypeAr || null,
-      subType: subType || null,
-      subTypeAr: subTypeAr || null,
+      categoryId,
+      categoryNameAr,
+      category: categoryNameAr || categoryId,
 
       ...extra,
 

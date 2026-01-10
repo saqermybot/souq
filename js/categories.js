@@ -1,6 +1,5 @@
 // categories.js (نسخة مرتبة: عربي + value=id + كاش + دعم قوائم فرعية اختياري)
 
-import { db } from "./firebase.js";
 import { UI } from "./ui.js";
 import { escapeHtml } from "./utils.js";
 
@@ -9,7 +8,6 @@ import {
   getDocs,
   orderBy,
   query
-} from "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js";
 
 // ✅ كاش للأنواع: categoryId -> types[]
 
@@ -25,6 +23,36 @@ function arabicElectLabel(id){
 }
 
 const _typesCache = new Map();
+
+// ✅ مصدر احتياطي ثابت للأصناف (يضمن عدم انهيار الواجهة إذا تعطل Firestore داخل بعض الدول)
+const DEFAULT_CATEGORIES = [
+  { id: "cars", name_ar: "سيارات", order: 10, isActive: true },
+  { id: "realestate", name_ar: "عقارات", order: 20, isActive: true },
+  { id: "electronics", name_ar: "إلكترونيات", order: 30, isActive: true },
+];
+
+async function loadCategoriesFromFile() {
+  // يمكن وضع الملف في: /data/categories.json داخل GitHub/Hosting
+  const url = `/data/categories.json?v=${Date.now()}`;
+  const res = await fetch(url, { cache: "no-store" });
+  if (!res.ok) throw new Error(`categories.json HTTP ${res.status}`);
+  const data = await res.json();
+  if (!Array.isArray(data) || data.length === 0) throw new Error("categories.json invalid");
+  return data;
+}
+
+async function loadCategoriesFromFirestore() {
+  // تحميل Firebase/Firestore عند الحاجة فقط (يقلل الأعطال إذا كانت Google endpoints غير مستقرة)
+  const fb = await import("./firebase.js");
+  const { collection, getDocs, orderBy, query } = await import(
+    "https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore.js"
+  );
+
+  const qy = query(collection(fb.db, "categories"), orderBy("order", "asc"));
+  const snap = await getDocs(qy);
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }));
+}
+
 
 export async function initCategories() {
   // خيارات افتراضية
@@ -62,12 +90,37 @@ export async function initCategories() {
  * - كاش إلى UI.state.categories
  */
 async function loadCategories() {
-  const qy = query(collection(db, "categories"), orderBy("order", "asc"));
-  const snap = await getDocs(qy);
+  let raw = null;
 
-  const active = snap.docs
-    .map((d) => ({ id: d.id, ...d.data() }))
-    .filter((x) => x.isActive === true);
+  // 1) حاول جلب الأصناف من ملف ثابت (أفضل لسوريا لأنه لا يعتمد على Google endpoints)
+  try {
+    raw = await loadCategoriesFromFile();
+  } catch (e) {
+    console.warn("[categories] file source failed:", e?.message || e);
+  }
+
+  // 2) إذا فشل الملف، جرّب Firestore
+  if (!raw) {
+    try {
+      raw = await loadCategoriesFromFirestore();
+    } catch (e) {
+      console.warn("[categories] firestore source failed:", e?.message || e);
+    }
+  }
+
+  // 3) آخر حل: default ثابت
+  if (!raw) raw = DEFAULT_CATEGORIES;
+
+  // ✅ فعّال فقط + ترتيب ثابت
+  const active = raw
+    .map((x) => ({
+      id: (x.id || "").toString().trim(),
+      name_ar: x.name_ar || x.title || x.name || x.nameAr || x.label,
+      order: Number(x.order ?? 999),
+      isActive: (x.isActive === undefined ? true : !!x.isActive),
+    }))
+    .filter((x) => x.id && x.isActive === true)
+    .sort((a, b) => a.order - b.order);
 
   // ✅ خزّن بالكاش لتستخدمها بأي ملف
   UI.state.categories = active;
