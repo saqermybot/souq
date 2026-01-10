@@ -148,23 +148,20 @@
       <div class="formGrid" id="filtersBody">
 
         <div class="field span2">
-          <label class="flabel">عن ماذا تبحث؟</label>
-          <input id="qSearch" placeholder="بحث عن إعلان..." />
+          <input id="qSearch" placeholder="عن ماذا تبحث؟ (بحث عن إعلان...)" />
         </div>
 
-        <div class="field">
-          <label class="flabel">المدينة</label>
-          <select id="cityFilter"></select>
-        </div>
-
-        <div class="field">
-          <label class="flabel">القسم</label>
-          <select id="catFilter"></select>
+        <!-- ✅ (مُرتّبة) المدينة + القسم جنب بعض -->
+        <div class="field span2">
+          <div class="range2 keep2">
+            <select id="cityFilter" aria-label="المدينة"></select>
+            <select id="catFilter" aria-label="القسم"></select>
+          </div>
         </div>
 
         <!-- ✅ نوع الإعلان (Segemented) -->
         <div class="field span2">
-          <label class="flabel">نوع الإعلان</label>
+          
 
           <div class="segWrap" role="group" aria-label="نوع الإعلان">
             <button id="typeAll" class="segBtn active" type="button">الكل</button>
@@ -177,7 +174,7 @@
 
         <!-- ✅ سنة السيارات (من/إلى) -->
         <div id="carFilters" class="field span2 hidden">
-          <label class="flabel">سنة (سيارات)</label>
+          
           <div class="range2">
             <input id="yearFrom" type="number" min="1950" max="2035" placeholder="من" />
             <input id="yearTo" type="number" min="1950" max="2035" placeholder="إلى" />
@@ -186,7 +183,7 @@
 
         <!-- ✅ فلاتر العقارات -->
         <div id="estateFilters" class="field span2 hidden">
-          <label class="flabel">تفاصيل العقار</label>
+          
           <div class="range2">
             <select id="estateKindFilter">
               <option value="">كل أنواع العقارات</option>
@@ -336,8 +333,22 @@
         <option value="EUR">EUR</option>
       </select>
     </div>
-    <!-- ✅ مكان الإعلان (إجباري) - بدون خريطة -->
-<input id="aPlaceText" placeholder="مثال: حمص - الدبلان" />
+    <!-- ✅ الموقع (مدينة + منطقة) -->
+<div class="inlineRow">
+  <div class="select-wrapper w33">
+    <select id="aCity" class="fieldInput" required>
+      <option value="">المدينة (إجباري)</option>
+    </select>
+    <span class="arrow">›</span>
+  </div>
+
+  <div class="w67">
+    <input id="aArea" class="fieldInput" placeholder="المنطقة / الشارع (اختياري)" />
+  </div>
+</div>
+<!-- hidden value used for search/DB compatibility -->
+<input id="aPlaceText" type="hidden" />
+
 
     <!-- ✅ رقم التواصل -->
 <input id="aPhone" type="tel" placeholder="اختياري: اختر البلد ثم اكتب رقمك" autocomplete="tel" />
