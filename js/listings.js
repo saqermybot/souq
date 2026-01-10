@@ -706,6 +706,10 @@ async function openDetails(id, data = null, fromHash = false){
         if (!(await requireUserForFav())) return;
 
         UI.el.btnFav.disabled = true;
+        UI.el.btnFav.classList.remove("pulse");
+        // force reflow for restart animation
+        void UI.el.btnFav.offsetWidth;
+        UI.el.btnFav.classList.add("pulse");
         try{
           const res = await toggleFavorite(id);
           if (!res?.ok) return;

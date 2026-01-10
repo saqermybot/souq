@@ -43,30 +43,22 @@ function readCache() {
   }
 }
 
-async function reverseGeocodeOSM(lat, lng) {
-  // One call on confirm/use location (not continuous)
-  const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&zoom=12&addressdetails=1`;
-  const r = await fetch(url, { headers: { "Accept": "application/json" } });
-  if (!r.ok) throw new Error("reverse failed");
-  const j = await r.json();
-  const a = j.address || {};
-  const city = a.city || a.town || a.village || a.county || a.state || "";
-  const suburb = a.suburb || a.neighbourhood || a.hamlet || "";
-  const label = [city, suburb].filter(Boolean).join(" - ");
-  return label || (j.display_name ? j.display_name.split(",").slice(0, 2).join(" - ") : "");
-}
+// NOTE: We intentionally do NOT reverse-geocode to a place name.
+// OSM/Nominatim can return far administrative names in Syria.
+// We keep only an approximate coordinate (privacy-friendly) and show a neutral label.
 
-function setPlace({ lat, lng, label }) {
+function setPlace({ lat, lng }) {
   const els = getEls();
   const rLat = roundCoord(lat, 2);
   const rLng = roundCoord(lng, 2);
   if (els.lat) els.lat.value = String(rLat);
   if (els.lng) els.lng.value = String(rLng);
-  if (els.city) els.city.value = label || "موقع تقريبي";
+  // For compatibility with existing filters, store a neutral city label.
+  if (els.city) els.city.value = "موقع تقريبي";
   if (els.preview) {
-    els.preview.textContent = label ? `📍 ${label} (تقريبي)` : "📍 تم تحديد موقع تقريبي";
+    els.preview.textContent = "📍 تم تحديد مكان الإعلان (تقريبي)";
   }
-  saveCache({ lat: rLat, lng: rLng, label: label || "" });
+  saveCache({ lat: rLat, lng: rLng, label: "" });
 }
 
 function loadLeaflet() {
@@ -151,9 +143,7 @@ async function useMyLocationIntoPlace() {
   });
   const lat = roundCoord(pos.coords.latitude, 2);
   const lng = roundCoord(pos.coords.longitude, 2);
-  let label = "";
-  try { label = await reverseGeocodeOSM(lat, lng); } catch {}
-  setPlace({ lat, lng, label });
+  setPlace({ lat, lng });
 }
 
 async function init() {
@@ -163,7 +153,7 @@ async function init() {
   // Restore cached preview if available
   const cached = readCache();
   if (cached && els.preview && (!els.lat.value || !els.lng.value)) {
-    setPlace({ lat: cached.lat, lng: cached.lng, label: cached.label || "" });
+    setPlace({ lat: cached.lat, lng: cached.lng });
   }
 
   els.btnUse && els.btnUse.addEventListener("click", async () => {
@@ -209,9 +199,7 @@ async function init() {
       const ll = marker.getLatLng();
       const lat = roundCoord(ll.lat, 2);
       const lng = roundCoord(ll.lng, 2);
-      let label = "";
-      try { label = await reverseGeocodeOSM(lat, lng); } catch {}
-      setPlace({ lat, lng, label });
+      setPlace({ lat, lng });
       closeModal();
     } catch {
       alert("تعذر تأكيد المكان.");

@@ -158,6 +158,14 @@ export function initAddListing() {
   if (UI.el.aCat) {
     UI.el.aCat.addEventListener("change", () => {
       syncDynamicFieldsVisibility();
+
+      // ✅ UX: after changing category, scroll to the extra fields area
+      requestAnimationFrame(() => {
+        const anchor = document.getElementById("dynamicFieldsWrap") || UI.el.aCat;
+        if (anchor && typeof anchor.scrollIntoView === "function") {
+          anchor.scrollIntoView({ behavior: "smooth", block: "start" });
+        }
+      });
     });
     syncDynamicFieldsVisibility();
   }
@@ -315,6 +323,13 @@ function openAdd() {
   cleanupPreviewUrls();
   ensureDynamicFields();
   syncDynamicFieldsVisibility();
+
+  // ✅ UX: always start at top when opening Add Listing
+  requestAnimationFrame(() => {
+    const inner = document.querySelector("#addBox .pageInner");
+    if (inner) inner.scrollTop = 0;
+    window.scrollTo({ top: 0, behavior: "smooth" });
+  });
 }
 
 function clearForm() {
