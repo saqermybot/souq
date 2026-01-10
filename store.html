@@ -248,5 +248,51 @@
   </div>
 
   <script type="module" src="./js/store.js"></script>
+
+  <!-- ACCOUNT MODAL (Upgrade / Recover) -->
+  <div id="accountModal" class="modal hidden">
+    <div class="modalCard">
+      <div class="modalHead">
+        <div style="font-weight:900">حسابك (بدون توثيق)</div>
+        <button id="btnCloseAccount" class="ghost" type="button">إغلاق</button>
+      </div>
+
+      <div class="tabsRow">
+        <button id="accTabUpgrade" class="tabBtn active" type="button">ترقية لحساب</button>
+        <button id="accTabRecover" class="tabBtn" type="button">استرجاع حساب</button>
+      </div>
+
+      <div id="accPaneUpgrade">
+        <div class="row" style="margin-top:10px">
+          <input id="accDisplayName" placeholder="اسمك / اسم المتجر" autocomplete="name" />
+        </div>
+        <div class="row" style="margin-top:10px">
+          <input id="accContact" placeholder="رقم هاتف أو إيميل (للاسترجاع)" autocomplete="email" />
+        </div>
+        <div class="row" style="margin-top:10px">
+          <input id="accPin" placeholder="PIN (5 أرقام أو أكثر)" inputmode="numeric" autocomplete="one-time-code" />
+        </div>
+        <div class="row" style="margin-top:12px">
+          <button id="btnDoUpgrade" class="primary" type="button">إنشاء الحساب</button>
+        </div>
+        <p class="muted small" style="margin-top:10px">
+          ملاحظة: بدون توثيق. إذا مسحت المتصفح، بتسترجع حسابك عبر (الهاتف/الإيميل + PIN).
+        </p>
+      </div>
+
+      <div id="accPaneRecover" style="display:none">
+        <div class="row" style="margin-top:10px">
+          <input id="recIdentifier" placeholder="رقم هاتف أو إيميل أو اسم المتجر" autocomplete="username" />
+        </div>
+        <div class="row" style="margin-top:10px">
+          <input id="recPin" placeholder="PIN" inputmode="numeric" autocomplete="current-password" />
+        </div>
+        <div class="row" style="margin-top:12px">
+          <button id="btnDoRecover" class="primary" type="button">استرجاع</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
 </body>
 </html>

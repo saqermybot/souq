@@ -7,6 +7,7 @@ import { initCategories } from "./js/categories.js";
 import { initChat } from "./js/chat.js";
 import { Notify } from "./js/notify.js";
 import { initGuestUI } from "./js/guest.js";
+import { initAccountsUI } from "./js/accounts.js";
 
 // ✅ ثبّت الوضع الداكن دائماً
 document.documentElement.setAttribute("data-theme", "dark");
