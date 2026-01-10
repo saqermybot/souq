@@ -276,10 +276,12 @@ function ensureDynamicFields(){
     </div>
   `;
 
-  const parent = imagesEl.parentElement;
+  const anchor = document.getElementById("dynWrapAnchor");
+  const parent = anchor.parentElement;
   if (!parent) return;
 
-  parent.insertBefore(wrap, imagesEl);
+  if (anchor) parent.insertBefore(wrap, anchor);
+  else parent.appendChild(wrap);
 
   // اربط عناصر UI.el الجديدة
   UI.el.aTypeCar = document.getElementById("aTypeCar");
@@ -337,13 +339,8 @@ function clearForm() {
   if (UI.el.aDesc) UI.el.aDesc.value = "";
   if (UI.el.aPrice) UI.el.aPrice.value = "";
   if (UI.el.aCurrency) UI.el.aCurrency.value = "SYP";
-  if (UI.el.aCity) UI.el.aCity.value = "";
-  const latEl = document.getElementById("aLat");
-  const lngEl = document.getElementById("aLng");
-  if (latEl) latEl.value = "";
-  if (lngEl) lngEl.value = "";
-  const pp = document.getElementById("placePreview");
-  if (pp) pp.textContent = "لم يتم تحديد مكان الإعلان بعد.";
+  const placeEl = document.getElementById("aPlaceText");
+  if (placeEl) placeEl.value = "";
   if (UI.el.aCat) UI.el.aCat.value = "";
   if (UI.el.aImages) UI.el.aImages.value = "";
   if (UI.el.imgPreview) UI.el.imgPreview.innerHTML = "";
@@ -454,14 +451,14 @@ function collectExtraFields(catId){
   return {};
 }
 
-function validateForm({ title, description, price, placeLat, placeLng, catId, files, extra }) {
+function validateForm({ title, description, price, placeText, catId, files, extra }) {
   if (!title) return "اكتب عنوان الإعلان";
   if (title.length < 3) return "العنوان قصير جداً";
   if (!description) return "اكتب وصف الإعلان";
   if (description.length < 10) return "الوصف قصير جداً";
   if (!price || Number.isNaN(price) || price <= 0) return "اكتب سعر صحيح";
-  // مكان الإعلان (إجباري) عبر الخريطة/الموقع
-  if (!placeLat || !placeLng) return "حدد مكان الإعلان على الخريطة";
+  // ✅ الموقع النصّي (إجباري)
+  if (!placeText) return "اكتب الموقع (مثال: حمص - الدبلان)";
   if (!catId) return "اختر الصنف";
   if (!files.length) return `اختر صورة واحدة على الأقل (حد أقصى ${MAX_IMAGES})`;
 
@@ -488,83 +485,6 @@ function validateForm({ title, description, price, placeLat, placeLng, catId, fi
    ✅ PUBLISH
 ========================= */
 
-/* =========================
-   📍 LOCATION (Approx) - optional
-   - Tries to capture user's approximate device location when publishing.
-   - Never blocks publishing if denied/failed.
-   - Stores ONLY approximate coords (rounded) for privacy.
-========================= */
-const LOC_CACHE_KEY = "my_loc_v1";
-const LOC_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
-
-function roundCoord(x, decimals = 2) {
-  const p = Math.pow(10, decimals);
-  return Math.round(x * p) / p;
-}
-
-function readCachedLoc() {
-  try {
-    const raw = localStorage.getItem(LOC_CACHE_KEY);
-    if (!raw) return null;
-    const obj = JSON.parse(raw);
-    if (!obj || typeof obj.lat !== "number" || typeof obj.lng !== "number") return null;
-    if (obj.ts && (Date.now() - obj.ts) > LOC_TTL_MS) return null;
-    return obj;
-  } catch {
-    return null;
-  }
-}
-
-function writeCachedLoc(obj) {
-  try { localStorage.setItem(LOC_CACHE_KEY, JSON.stringify(obj)); } catch {}
-}
-
-async function reverseGeocodeOSM(lat, lng) {
-  // One reverse call per publish at most (and cached afterwards).
-  // Note: Nominatim has usage policies; keep calls minimal.
-  const url = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${encodeURIComponent(lat)}&lon=${encodeURIComponent(lng)}&zoom=12&addressdetails=1&accept-language=ar`;
-  const r = await fetch(url, { headers: { "Accept": "application/json" } });
-  if (!r.ok) throw new Error("reverse_failed");
-  const j = await r.json();
-
-  const a = j.address || {};
-  const city = a.city || a.town || a.village || a.county || "";
-  const area = a.suburb || a.neighbourhood || a.hamlet || "";
-  const label = [city, area].filter(Boolean).join(" - ");
-  return label || "";
-}
-
-async function getMyLocationApproxOptional() {
-  // 1) Cached
-  const cached = readCachedLoc();
-  if (cached) return cached;
-
-  // 2) Geolocation (optional)
-  if (!navigator.geolocation) return null;
-
-  const pos = await new Promise((resolve, reject) => {
-    navigator.geolocation.getCurrentPosition(resolve, reject, {
-      enableHighAccuracy: false,
-      timeout: 8000,
-      maximumAge: 60 * 60 * 1000
-    });
-  });
-
-  const lat = roundCoord(pos.coords.latitude, 2); // ~1km
-  const lng = roundCoord(pos.coords.longitude, 2);
-
-  let label = "";
-  try {
-    label = await reverseGeocodeOSM(lat, lng);
-  } catch {
-    label = "";
-  }
-
-  const obj = { lat, lng, label, ts: Date.now() };
-  writeCachedLoc(obj);
-  return obj;
-}
-
 
 async function publish() {
   await ensureUser();
@@ -574,9 +494,7 @@ async function publish() {
   const description = (UI.el.aDesc?.value || "").trim();
   const price = Number(UI.el.aPrice?.value || 0);
   const currency = (UI.el.aCurrency?.value || "SYP").trim();
-  const city = (UI.el.aCity?.value || "").trim(); // يتم تعبئته تلقائياً من الخريطة/الموقع
-  const placeLat = Number(document.getElementById("aLat")?.value || "");
-  const placeLng = Number(document.getElementById("aLng")?.value || "");
+  const placeText = (document.getElementById("aPlaceText")?.value || "").trim();
 
   const categoryId = getCategoryId();
   const categoryNameAr = catToAr(categoryId);
@@ -584,7 +502,7 @@ async function publish() {
   const extra = collectExtraFields(categoryId);
   const files = Array.from(UI.el.aImages?.files || []).slice(0, MAX_IMAGES);
 
-  const err = validateForm({ title, description, price, placeLat, placeLng, catId: categoryId, files, extra });
+  const err = validateForm({ title, description, price, placeText, catId: categoryId, files, extra });
   if (err) return alert(err);
 
   publishing = true;
@@ -641,17 +559,16 @@ async function publish() {
         console.warn("Failed to save user phone", e);
       }
     }
+    // 📍 الموقع النصّي (بدون خريطة)
+    const city = (placeText.split(/[-–—,،]/)[0] || "").trim();
 
-    // 📍 مكان الإعلان المختار (مقرب للخصوصية)
-    const placeCity = city || "موقع تقريبي";
     await addDoc(collection(db, "listings"), {
       title,
       description,
       price,
       currency,
-      city: placeCity,
-      // 📍 Location of the item/place (chosen on map or from device), always approximate
-      location: { lat: placeLat, lng: placeLng, acc: "approx", label: placeCity, capturedAt: serverTimestamp() },
+      city: city || null,
+      placeText: placeText,
 
       categoryId,
       categoryNameAr,
@@ -755,4 +672,3 @@ if (document.readyState === 'loading') {
 } else {
   initPhoneInput();
 }
-

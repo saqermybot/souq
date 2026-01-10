@@ -38,6 +38,19 @@ function readMyLoc(){
   } catch { return null; }
 }
 
+function getPlaceLabel(data){
+  try{
+    const t = String(data?.placeText || "").trim();
+    if (t) return t;
+    const l = data?.location && data.location.label ? String(data.location.label).trim() : "";
+    if (l) return l;
+    const c = String(data?.city || "").trim();
+    return c;
+  }catch{
+    return "";
+  }
+}
+
 function kmBetween(lat1, lng1, lat2, lng2){
   const R = 6371;
   const dLat = (lat2 - lat1) * Math.PI / 180;
@@ -233,7 +246,8 @@ function renderInfoCards(data){
   const cards = [];
 
   // أساسي
-  if (data.city) cards.push({ icon:"📍", label:"المدينة", value: String(data.city) });
+  const placeTxt = getPlaceLabel(data);
+  if (placeTxt) cards.push({ icon:"📍", label:"الموقع", value: String(placeTxt) });
   if (catTxt)   cards.push({ icon:"🏷️", label:"القسم", value: catTxt });
   if (typeTxt)  cards.push({ icon:"🤝", label:"النوع", value: typeTxt });
   if (created)  cards.push({ icon:"🗓️", label:"تاريخ النشر", value: created });
@@ -510,7 +524,7 @@ async function loadFavorites(){
     const catTxt  = escapeHtml(data.category || data.categoryNameAr || data.categoryId || "");
 
     const distTxt = escapeHtml(getDistanceTextForListing(data));
-    const locLabel = escapeHtml((data.location && data.location.label) ? String(data.location.label) : "");
+    const placeLabel = escapeHtml(String(data.placeText || (data.location && data.location.label) || data.city || ""));
 
     const sellerUid = getSellerUid(data);
     const sellerName = escapeHtml(getSellerNameFallback(data));
@@ -536,7 +550,7 @@ async function loadFavorites(){
         <div class="t">${escapeHtml(data.title || "بدون عنوان")}</div>
         ${extraMeta ? `<div class="carMeta">${escapeHtml(extraMeta)}</div>` : ``}
         <div class="m">${cityTxt}${(cityTxt && catTxt) ? " • " : ""}${catTxt}</div>
-        ${(distTxt || locLabel) ? `<div class="m muted small">${distTxt ? `📏 ${distTxt}` : ""}${(distTxt && locLabel) ? " • " : ""}${locLabel ? `📍 ${locLabel} (تقريبي)` : ""}</div>` : ""}
+        ${(distTxt || placeLabel) ? `<div class="m muted small">${distTxt ? `📏 ${distTxt}` : ""}${(distTxt && placeLabel) ? " • " : ""}${placeLabel ? `📍 ${placeLabel}` : ""}</div>` : ""}
         ${sellerHtml}
         <div class="pr">${escapeHtml(formatPrice(data.price, data.currency))}</div>
         <div class="cardStats">
@@ -652,17 +666,17 @@ async function openDetails(id, data = null, fromHash = false){
 
     // ✅ Distance + approximate location (if available)
     const distInfo = getDistanceTextForListing(data);
-    const locLabel = (data.location && data.location.label) ? String(data.location.label) : "";
+    const placeLabel = String(data.placeText || (data.location && data.location.label) || data.city || "");
 
     let metaLine = extraMeta ? `${baseMeta} • ${extraMeta}` : baseMeta;
     if (distInfo) metaLine = `${metaLine} • ${distInfo}`;
     UI.el.dMeta && (UI.el.dMeta.textContent = metaLine);
 
     // show approximate label near seller (does not override city)
-    if (UI.el.dSeller && locLabel) {
+    if (UI.el.dSeller && placeLabel) {
       const line = document.createElement("div");
       line.className = "muted small";
-      line.textContent = `📍 ${locLabel} (تقريبي)`;
+      line.textContent = `📍 ${placeLabel}`;
       // avoid duplicates
       const exists = UI.el.dSeller.querySelector(".muted.small[data-loc='1']");
       if (!exists){
@@ -1170,7 +1184,7 @@ async function loadListings(reset = true){
 	    const catTxt  = escapeHtml(data.category || data.categoryNameAr || data.categoryId || "");
 
 	    const distTxt = escapeHtml(getDistanceTextForListing(data));
-	    const locLabel = escapeHtml((data.location && data.location.label) ? String(data.location.label) : "");
+	    const placeLabel = escapeHtml(String(data.placeText || (data.location && data.location.label) || data.city || ""));
 
 	    const sellerUid = getSellerUid(data);
     const sellerName = escapeHtml(getSellerNameFallback(data));
@@ -1195,7 +1209,7 @@ async function loadListings(reset = true){
         <div class="t">${escapeHtml(data.title || "بدون عنوان")}</div>
         ${extraMeta ? `<div class="carMeta">${escapeHtml(extraMeta)}</div>` : ``}
         <div class="m">${cityTxt}${(cityTxt && catTxt) ? " • " : ""}${catTxt}</div>
-        ${(distTxt || locLabel) ? `<div class="m muted small">${distTxt ? `📏 ${distTxt}` : ""}${(distTxt && locLabel) ? " • " : ""}${locLabel ? `📍 ${locLabel} (تقريبي)` : ""}</div>` : ""}
+        ${(distTxt || placeLabel) ? `<div class="m muted small">${distTxt ? `📏 ${distTxt}` : ""}${(distTxt && placeLabel) ? " • " : ""}${placeLabel ? `📍 ${placeLabel}` : ""}</div>` : ""}
         ${sellerHtml}
         
         
