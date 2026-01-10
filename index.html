@@ -316,63 +316,57 @@
     <!-- ADD LISTING -->
     
     <section id="addBox" class="page hidden">
-      <div class="pageInner card">
-        <div class="pageHead">
-          <button id="btnAddBack" class="ghost" type="button">رجوع</button>
-          <div class="muted small" id="uploadStatus"></div>
-        </div>
+  <div class="pageInner card">
+    <div class="pageHead addHead">
+      <button id="btnAddBack" class="ghost backBtn" type="button" aria-label="رجوع">←</button>
+      <div class="addHeadTitle">إعلان جديد</div>
+      <div class="muted small" id="uploadStatus"></div>
+    </div>
 
-        <h2>إعلان جديد</h2>
+    <!-- ✅ ثوابت (لا تتحرك) -->
+    <input id="aTitle" placeholder="ماذا تبيع؟ (مثال: موبايل سامسونغ A51)" />
+    <textarea id="aDesc" placeholder="الوصف" rows="4"></textarea>
 
-        <input id="aTitle" placeholder="ماذا تبيع؟ (مثال: موبايل سامسونغ A51)" />
-        <textarea id="aDesc" placeholder="الوصف" rows="4"></textarea>
+    <!-- ✅ السعر + العملة بنفس السطر -->
+    <div class="grid priceRow">
+      <input id="aPrice" type="number" placeholder="السعر" />
+      <select id="aCurrency">
+        <option value="ل.س">SYP</option>
+        <option value="USD">USD</option>
+        <option value="EUR">EUR</option>
+      </select>
+    </div>
+    <!-- ✅ مكان الإعلان (إجباري) - بدون خريطة -->
+    <label class="lbl" for="aPlaceText">الموقع (إجباري)</label>
+    <input id="aPlaceText" placeholder="مثال: حمص - الدبلان" />
 
-        <!-- ✅ الصنف (ضعه مبكراً حتى لا يضيع المستخدم) -->
-        <label class="lbl" for="aCat">اختر صنف الإعلان</label>
-        <div class="grid" style="margin-top:-6px">
-          <select id="aCat"></select>
-        </div>
+    <!-- ✅ رقم التواصل -->
+    <label class="lbl" for="aPhone">رقم الهاتف / واتساب (اختياري)</label>
+    <input id="aPhone" type="tel" placeholder="اختياري: اختر البلد ثم اكتب رقمك" autocomplete="tel" />
+    <input id="aPhoneE164" type="hidden" />
 
-        <!-- ✅ صور الإعلان (من فوق) -->
-        <label class="lbl">صور الإعلان</label>
-        <div class="muted small" style="margin-top:-6px;margin-bottom:8px">اختر من 1 إلى 3 صور (حد أقصى 3)</div>
-        <input id="aImages" type="file" accept="image/*" multiple />
-        <div id="imgPreview" class="preview" style="margin-top:10px"></div>
+    <!-- ✅ الصور (ثابتة) -->
+    <label class="lbl" for="aImages">تحميل صور</label>
+    <input id="aImages" type="file" accept="image/*" multiple />
+    <div id="imgPreview" class="preview" style="margin-top:10px"></div>
 
-        <label class="lbl" for="aPhone">رقم الهاتف / واتساب (اختياري)</label>
-        <input id="aPhone" type="tel" placeholder="اختياري: اختر البلد ثم اكتب رقمك" autocomplete="tel" />
-        <input id="aPhoneE164" type="hidden" />
-        <div class="muted small" style="margin-top:6px">اختياري: إذا وضعت رقمك سيظهر داخل الإعلان للتواصل عبر واتساب/اتصال. يمكنك أيضاً الاعتماد على المراسلة داخل الموقع.</div>
-
-        <!-- ✅ السعر + العملة بنفس السطر -->
-        <div class="grid priceRow">
-          <input id="aPrice" type="number" placeholder="السعر" />
-          <select id="aCurrency">
-            <option value="ل.س">SYP</option>
-            <option value="USD">USD</option>
-            <option value="EUR">EUR</option>
-          </select>
-        </div>
-
-        <!-- ✅ مكان الإعلان (إجباري) -->
-        <label class="lbl">مكان الإعلان (إجباري)</label>
-        <div class="muted small" style="margin-top:-6px">حدد مكان السلعة/العقار على الخريطة. هذا المكان يمكن أن يكون مختلفاً عن مكانك الحالي.</div>
-        <div class="placeRow">
-          <button id="btnUseMyLocPlace" class="secondary" type="button">📍 استخدم موقعي</button>
-          <button id="btnPickPlace" type="button">🗺️ اختيار على الخريطة</button>
-        </div>
-        <div id="placePreview" class="placePreview muted small">لم يتم تحديد مكان الإعلان بعد.</div>
-        <!-- نخزن المدينة كنص تقريبي للتوافق مع النظام الحالي، لكن المستخدم ما بيختارها يدوياً -->
-        <input id="aCity" type="hidden" value="" />
-        <input id="aLat" type="hidden" value="" />
-        <input id="aLng" type="hidden" value="" />
-
-        <div class="row actions">
-          <button id="btnPublish" type="button">نشر</button>
-          <button id="btnClear" class="secondary" type="button">مسح</button>
-        </div>
+    <!-- ✅ الأقسام (بعد الصور) -->
+    <div id="categoryBlock">
+      <label class="lbl" for="aCat">اختر صنف الإعلان</label>
+      <div class="grid" style="margin-top:-6px">
+        <select id="aCat"></select>
       </div>
-    </section>
+    </div>
+
+    <!-- ✅ الحقول المتغيرة (يتم حقنها بالـ JS داخل هذا الصندوق) -->
+    <div id="dynWrapAnchor"></div>
+
+    <div class="row actions">
+      <button id="btnPublish" type="button">نشر</button>
+      <button id="btnClear" class="secondary" type="button">مسح</button>
+    </div>
+  </div>
+</section>
 
 
     <!-- CHAT -->
@@ -440,20 +434,6 @@
     <img id="imgFull" class="imgFull" alt="full" />
     <button id="imgNext" class="imgNav" type="button">›</button>
   </div>
-
-  <!-- MAP PICKER MODAL (lazy loads Leaflet only when opened) -->
-  <div id="mapModal" class="mapModal hidden" aria-hidden="true">
-    <div class="mapCard">
-      <div class="mapHead">
-        <div class="title">🗺️ اختر مكان الإعلان</div>
-        <button id="btnCloseMap" class="ghost" type="button">إغلاق</button>
-      </div>
-      <div id="pickMap"></div>
-      <div class="mapFoot">
-        <button id="btnMapUseMyLoc" class="secondary" type="button">📍 موقعي</button>
-        <button id="btnMapConfirm" type="button">تأكيد المكان</button>
-      </div>
-    </div>
   </div>
 
   <script src="https://cdn.jsdelivr.net/npm/intl-tel-input@23.8.0/build/js/intlTelInput.min.js"></script>
