@@ -362,6 +362,10 @@ function getElectKind(data){
   return normalizeElectKind(raw);
 }
 
+function getFashionGender(data){
+  return (data?.fashion?.gender || data?.gender || "").toString().trim();
+}
+
 function getEstateKind(data){
   return (data.estate?.kind ?? data.estateKind ?? data.kind ?? data.subType ?? "").toString().trim();
 }
@@ -1168,6 +1172,7 @@ async function loadListings(reset = true){
   const estateKindVal = useFilters ? (($id("estateKindFilter")?.value || "").toString().trim()) : "";
   const roomsVal = useFilters ? Number(($id("roomsFilter")?.value || "").toString().trim() || 0) : 0;
   const electKindVal = useFilters ? normalizeElectKind(($id("electKindFilter")?.value || "").toString().trim()) : "";
+  const fashionGenderVal = useFilters ? (($id("fashionGenderFilter")?.value || "").toString().trim()) : "";
 
   const frag = document.createDocumentFragment();
 
@@ -1220,6 +1225,18 @@ async function loadListings(reset = true){
         const ek = getElectKind(data);
         if (ek !== electKindVal) return;
       }
+
+    // ✅ ملابس/أحذية: رجالي/نسائي/ولادي
+    if (fashionGenderVal){
+      const docCat = getCatId(data);
+      if (docCat === "clothing" || docCat === "fashion" || docCat === "clothes"){
+        const g = getFashionGender(data);
+        if (g !== fashionGenderVal) return;
+      } else {
+        // لو مختار جنس لكن الصنف ليس ملابس، ما نطبق فلترة
+      }
+    }
+
     }
 
     if (keyword){

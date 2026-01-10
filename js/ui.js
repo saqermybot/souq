@@ -64,10 +64,44 @@ export const UI = {
       "estateFilters","estateKindFilter","roomsFilter",
 
       // ✅ إلكترونيات
-      "electFilters","electKindFilter"
+      "electFilters","electKindFilter",
+      // ✅ ملابس
+      "fashionFilters","fashionGenderFilter"
     ];
 
     for (const id of ids) this.el[id] = document.getElementById(id);
+
+    // ✅ Presets: years (2000..2026) for car filters + rooms (1..10)
+    const fillYearSelect = (sel, label) => {
+      if (!sel) return;
+      // keep first option (placeholder)
+      const first = sel.querySelector("option")?.cloneNode(true);
+      sel.innerHTML = "";
+      if (first) sel.appendChild(first);
+      for (let y = 2000; y <= 2026; y++){
+        const opt = document.createElement("option");
+        opt.value = String(y);
+        opt.textContent = String(y);
+        sel.appendChild(opt);
+      }
+      if (label) sel.setAttribute("aria-label", label);
+    };
+
+    fillYearSelect(this.el.yearFrom, "سنة السيارات من");
+    fillYearSelect(this.el.yearTo, "سنة السيارات إلى");
+
+    if (this.el.roomsFilter){
+      const first = this.el.roomsFilter.querySelector("option")?.cloneNode(true);
+      this.el.roomsFilter.innerHTML = "";
+      if (first) this.el.roomsFilter.appendChild(first);
+      for (let i=1;i<=10;i++){
+        const opt=document.createElement("option");
+        opt.value=String(i);
+        opt.textContent=String(i);
+        this.el.roomsFilter.appendChild(opt);
+      }
+    }
+
 
     // ✅ Ensure floating inbox bubble exists (Messenger-like)
     // يظهر فقط عند وجود رسائل غير مقروءة، ويقوم بفتح Inbox عند الضغط.
@@ -196,6 +230,7 @@ export const UI = {
 
     this.el.estateKindFilter?.addEventListener("change", liveReload);
     this.el.roomsFilter?.addEventListener("change", debounce(liveReload, 150));
+    this.el.fashionGenderFilter?.addEventListener("change", debounce(liveReload, 150));
 
     // ✅ gallery controls
     this.el.gPrev && (this.el.gPrev.onclick = () => this.setGalleryIdx(this.state.gallery.idx - 1));
