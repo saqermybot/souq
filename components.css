@@ -828,15 +828,13 @@ button.sm{
   align-items:start;
 }
 
-/* City + Address row: keep 2 columns even on mobile */
-.grid.locRow{ grid-template-columns: 1fr 1fr; }
-
 @media (max-width: 560px){
   .grid{ grid-template-columns: 1fr; }
   /* Keep price + currency on one row even on small screens */
   .grid.priceRow{ grid-template-columns: 1fr 96px; }
-  /* Keep city + address on one row as requested */
-  .grid.locRow{ grid-template-columns: 1fr 1fr; }
+  .grid.placeRow{ grid-template-columns: 160px 1fr; }
+  /* Keep city + address on one row even on small screens */
+  .grid.locRow{ grid-template-columns: 140px 1fr; }
 }
 .actionsGrid button{
   height:40px;
@@ -892,6 +890,9 @@ button.sm{
 /* موبايل */
 @media (max-width:520px){
   .formGrid{ grid-template-columns: 1fr; }
+  /* Keep filters (city + category) side-by-side on mobile when requested */
+  .formGrid.keep2{ grid-template-columns: 1fr 1fr; }
+  .formGrid.keep2 .span2{ grid-column: 1 / -1; }
   .span2{ grid-column: 1; }
   .actionsGrid{ grid-template-columns: 1fr 1fr !important; }
 }
@@ -1412,3 +1413,6 @@ button.sm{
    ADD LISTING (UX)
 ========================= */
 .pageTitle{font-size:18px;margin:10px 0 12px;}
+
+/* City + address row */
+.grid.placeRow{ grid-template-columns: 180px 1fr; }

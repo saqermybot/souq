@@ -145,7 +145,7 @@
 
     </div>
 
-      <div class="formGrid" id="filtersBody">
+      <div class="formGrid keep2" id="filtersBody">
 
         <div class="field span2">
           <label class="flabel">عن ماذا تبحث؟</label>
@@ -336,19 +336,24 @@
         <option value="EUR">EUR</option>
       </select>
     </div>
-    <!-- ✅ المدينة + العنوان (المدينة إجباري) -->
-    <div class="grid locRow" style="margin-top:2px">
+        <!-- ✅ المدينة (إجباري) + العنوان/المنطقة (اختياري) بنفس السطر -->
+    <div class="grid locRow">
       <div>
         <label class="lbl" for="aCity">المدينة (إجباري)</label>
-        <select id="aCity" required></select>
+        <select id="aCity"></select>
       </div>
+
       <div>
-        <label class="lbl" for="aAddress">العنوان / المنطقة (اختياري)</label>
-        <input id="aAddress" placeholder="مثال: المزة - أوتستراد / الدبلان" />
+    <!-- ✅ مكان الإعلان (المدينة إلزامي + العنوان اختياري) -->
+    <label class="lbl">الموقع</label>
+    <div class="grid placeRow" style="margin-top:-6px">
+      <select id="aCity" required></select>
+      <input id="aPlaceText" placeholder="العنوان/المنطقة (اختياري) مثل: المزة، الدبلان" />
+    </div>
       </div>
     </div>
 
-    <!-- ✅ رقم التواصل -->
+<!-- ✅ رقم التواصل -->
     <label class="lbl" for="aPhone">رقم الهاتف / واتساب (اختياري)</label>
     <input id="aPhone" type="tel" placeholder="اختياري: اختر البلد ثم اكتب رقمك" autocomplete="tel" />
     <input id="aPhoneE164" type="hidden" />
@@ -360,7 +365,7 @@
 
     <!-- ✅ الأقسام (بعد الصور) -->
     <div id="categoryBlock">
-      <label class="lbl" for="aCat">اختر صنف الإعلان</label>
+      <label class="lbl" for="aCat">القسم</label>
       <div class="grid" style="margin-top:-6px">
         <select id="aCat"></select>
       </div>
