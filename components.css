@@ -1442,9 +1442,19 @@ button.sm{
 
 .select-wrapper{ position:relative; }
 .select-wrapper select{
+  width:100%;
+  background: rgba(31,41,55,0.9);
+  border: 1px solid rgba(255,255,255,0.08);
+  border-radius: 14px;
+  padding: 12px 14px;
+  padding-right:40px;
+  color:#fff;
+  font-size:16px;
+  min-height:48px;
+  line-height:1.2;
+  text-align:right;
   appearance:none;
   -webkit-appearance:none;
-  padding-right:40px;
 }
 .select-wrapper .arrow{
   position:absolute;
@@ -1488,3 +1498,7 @@ button.sm{
 .deluxeFilters #carFilters select option {
   font-size: 15px;
 }
+
+/* ✅ وضوح نصوص الفلاتر (خاصة على iPhone) */
+.deluxeFilters .field, .deluxeFilters select{ font-size:16px; }
+.deluxeFilters .segBtn{ font-size:15px; }

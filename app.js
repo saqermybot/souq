@@ -47,6 +47,8 @@ function initPresetSelects() {
   fillNumberSelect(document.getElementById('roomsFilter'), 1, 10);
 }
 initPresetSelects();
+// ✅ إعادة تعبئة القوائم بعد تحميل الواجهة (احتياط)
+setTimeout(initPresetSelects, 600);
 
 
 // ✅ Expose UI for inline scripts (FAB button)
