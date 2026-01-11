@@ -1,7 +1,7 @@
 export const CLOUDINARY = {
   cloudName: "dr59awqcq",
   uploadPreset: "souq_unsigned",
-  folder: "souq/listings"
+  folder: "souq/listings" // إذا ما بدك مجلد اتركها ""
 };
 
 export const SY_CITIES = [
