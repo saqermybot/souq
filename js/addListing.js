@@ -629,9 +629,13 @@ const payload = {
   city: city || null,
   category_id: finalCategoryId,
   created_at: new Date().toISOString(),
-  is_active: true
+  is_active: true,
+
+  // ✅ هنا الصور (روابط Cloudinary)
+  images: urls
 };
 
+const { error: insErr } = await sb.from("listings").insert(payload);
 // ملاحظة: حقول إضافية (صور/تواصل/تفاصيل) يمكن إضافتها لاحقاً بعمود JSONB.
 const { error: insErr } = await sb.from("listings").insert(payload);
 if (insErr) throw insErr;
