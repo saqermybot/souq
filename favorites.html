@@ -1,0 +1,37 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>مفضلتي - Souq Syria</title>
+  <link rel="stylesheet" href="./base.css">
+  <link rel="stylesheet" href="./components.css">
+  <script>
+    document.documentElement.setAttribute("data-theme", "dark");
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="ghost sm" href="./index.html" style="text-decoration:none;">› رجوع</a>
+    <div class="brand" style="gap:10px;">
+      <span class="dot"></span>
+      <span>مفضلتي</span>
+    </div>
+    <div style="width:80px"></div>
+  </header>
+
+  <main class="container">
+    <section class="card">
+      <div class="sectionHead">
+        <div class="h">الإعلانات المفضلة</div>
+        <div class="muted small" id="favHint">المفضلة محفوظة على هذا الجهاز.</div>
+      </div>
+      <div id="favList" class="grid"></div>
+      <div id="favEmpty" class="emptyState" style="display:none;">لا يوجد مفضلة بعد.</div>
+    </section>
+  </main>
+
+  <div id="toast" class="toast hidden"></div>
+  <script type="module" src="./js/favoritesPage.js"></script>
+</body>
+</html>
