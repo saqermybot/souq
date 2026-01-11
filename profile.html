@@ -85,41 +85,21 @@
     </section>
   </main>
 
-  <script type="module" src="./js/profile.js?v=2"></script>
+  <script type="module" src="./js/profile.js?v=3"></script>
 
-  <!-- ✅ منطق المشاركة (بسيط + مضمون) -->
+  <!-- ✅ مشاركة بسيطة بدون تسجيل (نسخ رابط الصفحة الحالية) -->
   <script type="module">
-    import { auth } from "./js/firebase.js";
-    import { UI } from "./js/ui.js";
-
     const btnShare = document.getElementById("btnSharePage");
-
     if (btnShare) {
       btnShare.onclick = async () => {
-        const user = auth.currentUser;
-        if (!user) {
-          UI.toast?.("لازم تسجل دخول أولاً") || alert("لازم تسجل دخول أولاً");
-          return;
-        }
-
-        const name =
-          document.getElementById("displayName")?.value ||
-          user.displayName ||
-          "تاجر سوق سوريا";
-
-        const url = new URL("./store.html", location.href);
-        url.searchParams.set("u", user.uid);
-
+        const name = document.getElementById("displayName")?.value || "بروفايلي";
+        const url = location.href;
         try {
           if (navigator.share) {
-            await navigator.share({
-              title: name,
-              text: `شاهد إعلانات ${name} على سوق سوريا`,
-              url: url.toString()
-            });
+            await navigator.share({ title: name, url });
           } else {
-            await navigator.clipboard.writeText(url.toString());
-            UI.toast?.("تم نسخ رابط الصفحة 📋") || alert("تم نسخ رابط الصفحة");
+            await navigator.clipboard.writeText(url);
+            alert("تم نسخ الرابط");
           }
         } catch {}
       };
