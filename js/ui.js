@@ -250,6 +250,40 @@ export const UI = {
 
     // ✅ أول مرة: نخفي/نظهر فلاتر العقارات حسب القسم
     this.syncEstateFiltersVisibility();
+
+    // =========================
+    // ✅ Guest menu (old UX): My Listings / Favorites / Profile
+    // We keep it simple: show menu for everyone (guest_id), no Firebase auth.
+    // =========================
+    try{
+      const wrap = document.getElementById("userMenuWrap");
+      const avatar = document.getElementById("userAvatar");
+      const menu = document.getElementById("userMenu");
+      if (wrap && avatar && menu){
+        wrap.style.display = "block";
+
+        const toggle = () => menu.classList.toggle("hidden");
+        avatar.addEventListener("click", (e)=>{ e.preventDefault(); e.stopPropagation(); toggle(); });
+
+        // close on outside click
+        document.addEventListener("click", (e)=>{
+          if (!menu.classList.contains("hidden")){
+            const t = e.target;
+            if (t !== menu && !menu.contains(t) && t !== avatar) menu.classList.add("hidden");
+          }
+        });
+
+        menu.addEventListener("click", (e)=>{
+          const btn = e.target?.closest?.("button[data-act]");
+          if (!btn) return;
+          const act = btn.getAttribute("data-act");
+          menu.classList.add("hidden");
+          if (act === "favorites") location.href = "./favorites.html";
+          if (act === "myListings") location.href = "./my-listings.html";
+          if (act === "profile") location.href = "./profile.html";
+        });
+      }
+    }catch{}
   },
 
   /* =========================

@@ -35,13 +35,23 @@ async function bumpViewCount(listingId){
 
   const sb = getSupabase();
   // Atomic increment via RPC (security definer)
-  try{ await sb.rpc("listing_inc_view", { p_id: listingId }); }catch{}
+  // Support both parameter names (older/newer SQL)
+  try{
+    await sb.rpc("listing_inc_view", { p_id: listingId });
+  }catch{
+    try{ await sb.rpc("listing_inc_view", { p_listing_id: listingId }); }catch{}
+  }
 }
 
 async function toggleFavorite(listingId){
   const sb = getSupabase();
   const guestId = getGuestId();
-  const { data, error } = await sb.rpc("listing_toggle_fav", { p_id: listingId, p_guest: guestId });
+  // Support both parameter names (older/newer SQL)
+  let data, error;
+  ({ data, error } = await sb.rpc("listing_toggle_fav", { p_id: listingId, p_guest: guestId }));
+  if (error){
+    ({ data, error } = await sb.rpc("listing_toggle_fav", { p_listing_id: listingId, p_guest_id: guestId }));
+  }
   if (error) throw error;
   // data is an array with 1 row in PostgREST
   const row = Array.isArray(data) ? data[0] : data;
