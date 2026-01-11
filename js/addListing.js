@@ -554,19 +554,8 @@ async function publish() {
       }
       finalPhone = phoneE164;
 
-      // ✅ خزّن رقم الهاتف على حساب الزائر/المستخدم (حتى لو Anonymous) فقط إذا موجود
-      try {
-        const uref = doc(db, "users", getGuestId());
-        await setDoc(uref, {
-          displayName: sellerName,
-          phone: finalPhone,
-          whatsapp: finalPhone,
-          updatedAt: serverTimestamp(),
-          isAnonymous: !!true
-        }, { merge: true });
-      } catch (e) {
-        console.warn("Failed to save user phone", e);
-      }
+      // ملاحظة: بعد الانتقال إلى Supabase، لا نستخدم Firebase (doc/setDoc).
+      // إذا أردت حفظ أرقام المستخدمين لاحقاً، نضيف جدول users على Supabase.
     }
     // 📍 الموقع النصّي (بدون خريطة)
     const city = (placeText.split(/[-–—,،]/)[0] || "").trim();
@@ -635,7 +624,6 @@ const payload = {
   images: urls
 };
 
-const { error: insErr } = await sb.from("listings").insert(payload);
 // ملاحظة: حقول إضافية (صور/تواصل/تفاصيل) يمكن إضافتها لاحقاً بعمود JSONB.
 const { error: insErr } = await sb.from("listings").insert(payload);
 if (insErr) throw insErr;
