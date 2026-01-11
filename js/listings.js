@@ -41,7 +41,13 @@ async function loadFavSet(){
     if (error) throw error;
     const s = getFavSet();
     s.clear();
-    (data || []).forEach(r => r?.listing_id && s.add(r.listing_id));
+    (data || []).forEach(r => r?.listing_id && s.add(String(r.listing_id)));
+
+    // If DB returns empty (e.g. toggle function only updated counters or policies block insert)
+    // keep UI consistent by also honoring local fallback.
+    if (!s.size) {
+      loadFavIdsLocal().forEach(id => s.add(String(id)));
+    }
   }catch(e){
     console.warn("loadFavSet failed", e);
     // Fallback to local storage so UI stays consistent even if DB policies block select.
@@ -111,32 +117,56 @@ async function bumpViewCount(listingId){
 }
 
 async function toggleFavorite(listingId){
+  // IMPORTANT:
+  // We intentionally avoid relying on an RPC here because parameter-name
+  // mismatches across migrations cause silent "it increments but doesn't save".
+  // Instead we do a direct toggle against listing_favorites + update fav_count.
   const sb = getSupabase();
   const guestId = getGuestId();
-  // Support both parameter names (older/newer SQL)
-  let data, error;
-  // Try common parameter name combinations across migrations
-  const tries = [
-    { p_id: listingId, p_guest: guestId },
-    { p_id: listingId, p_guest_id: guestId },
-    { p_listing_id: listingId, p_guest: guestId },
-    { p_listing_id: listingId, p_guest_id: guestId },
-  ];
+  const idStr = String(listingId);
 
-  for (const params of tries){
-    ({ data, error } = await sb.rpc("listing_toggle_fav", params));
-    if (!error) break;
+  // 1) check current state
+  const { data: existing, error: exErr } = await sb
+    .from("listing_favorites")
+    .select("listing_id")
+    .eq("listing_id", idStr)
+    .eq("guest_id", guestId)
+    .limit(1);
+  if (exErr) throw exErr;
+  const wasFav = Array.isArray(existing) && existing.length > 0;
+
+  // 2) toggle row
+  if (wasFav) {
+    const { error: delErr } = await sb
+      .from("listing_favorites")
+      .delete()
+      .eq("listing_id", idStr)
+      .eq("guest_id", guestId);
+    if (delErr) throw delErr;
+  } else {
+    const { error: insErr } = await sb
+      .from("listing_favorites")
+      .insert({ listing_id: idStr, guest_id: guestId });
+    if (insErr) throw insErr;
   }
-  if (error) throw error;
-  // data is an array with 1 row in PostgREST
-  const row = Array.isArray(data) ? data[0] : data;
-  const isFav = !!row?.is_fav;
-  const favCount = Number(row?.fav_count || 0) || 0;
+
+  // 3) re-count favs for this listing (source of truth)
+  const { count, error: cntErr } = await sb
+    .from("listing_favorites")
+    .select("listing_id", { count: "exact", head: true })
+    .eq("listing_id", idStr);
+  if (cntErr) throw cntErr;
+  const favCount = Number(count || 0) || 0;
+
+  // 4) best-effort update on listings (for fast UI)
+  await sb.from("listings").update({ fav_count: favCount }).eq("id", idStr);
+
+  const isFav = !wasFav;
 
   // Keep local fallback in sync
   const ids = loadFavIdsLocal();
   const set = new Set(ids);
-  if (isFav) set.add(String(listingId)); else set.delete(String(listingId));
+  if (isFav) set.add(idStr); else set.delete(idStr);
   saveFavIdsLocal(Array.from(set));
 
   return { isFav, favCount };

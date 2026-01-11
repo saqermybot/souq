@@ -74,7 +74,9 @@ async function loadFavorites(){
     if (favErr) throw favErr;
 
     const ids = (favRows || []).map(r => r.listing_id).filter(Boolean);
-    if (!ids.length){
+    // If DB returns empty (common when only counters were updated), honor local fallback.
+    const idsFinal = ids.length ? ids : loadFavIdsLocal();
+    if (!idsFinal.length){
       listEl.innerHTML = "";
       emptyEl && (emptyEl.style.display = "block");
       return;
@@ -84,7 +86,7 @@ async function loadFavorites(){
     const { data: items, error: itemsErr } = await sb
       .from("listings")
       .select("*")
-      .in("id", ids)
+      .in("id", idsFinal)
       .order("created_at", { ascending: false });
     if (itemsErr) throw itemsErr;
 

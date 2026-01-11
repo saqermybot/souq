@@ -33,7 +33,7 @@ function renderCard(it){
       <div class="pr">${price || ""}</div>
       <div class="cardStats">
         <span>👁 ${viewCount}</span>
-        <span>❤ ${favCount}</span>
+        <span><span class="heartIcon" aria-hidden="true">♥</span> ${favCount}</span>
       </div>
     </div>
   `;
