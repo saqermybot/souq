@@ -1,26 +1,54 @@
-// listings.js (Supabase minimal)
-// هدف هذا الملف: عرض الإعلانات + فلترة أساسية + تحميل المزيد
-// ملاحظة: تم إلغاء الاعتماد على Firebase/Firestore لتجنب مشاكل الوصول في سوريا.
+// listings.js (Supabase)
+// - Home cards (تصميم قديم) + تفاصيل + معرض صور
+// - Counters: view_count / fav_count on listings + toggle via RPC
 
 import { UI } from "./ui.js";
 import { escapeHtml, formatPrice } from "./utils.js";
 import { getSupabase } from "./supabase.js";
+import { getGuestId } from "./guest.js";
 
 const LIST_PAGE_SIZE = 12;
+const VIEW_TTL_MS = 2 * 60 * 1000; // 2 minutes
 
 function el(id){ return document.getElementById(id); }
 
-function getCatMaps(){
-  return globalThis.__CATS || null;
-}
+function getCatMaps(){ return globalThis.__CATS || null; }
 
 function expandCategoryFilter(catId){
   const maps = getCatMaps();
   if (!maps || !catId) return [catId];
   const children = maps.getChildren(catId) || [];
   const ids = [catId, ...children.map(c => c.id)];
-  // remove duplicates
-  return [...new Set(ids)];
+  return [...new Set(ids.filter(Boolean))];
+}
+
+function viewKey(listingId){ return `viewed:${listingId}`; }
+
+async function bumpViewCount(listingId){
+  if (!listingId) return;
+  try{
+    const last = Number(localStorage.getItem(viewKey(listingId)) || 0) || 0;
+    const now = Date.now();
+    if (last && (now - last) < VIEW_TTL_MS) return;
+    localStorage.setItem(viewKey(listingId), String(now));
+  }catch{}
+
+  const sb = getSupabase();
+  // Atomic increment via RPC (security definer)
+  try{ await sb.rpc("listing_inc_view", { p_id: listingId }); }catch{}
+}
+
+async function toggleFavorite(listingId){
+  const sb = getSupabase();
+  const guestId = getGuestId();
+  const { data, error } = await sb.rpc("listing_toggle_fav", { p_id: listingId, p_guest: guestId });
+  if (error) throw error;
+  // data is an array with 1 row in PostgREST
+  const row = Array.isArray(data) ? data[0] : data;
+  return {
+    isFav: !!row?.is_fav,
+    favCount: Number(row?.fav_count || 0) || 0,
+  };
 }
 
 async function fetchListings({ reset = true } = {}){
@@ -39,20 +67,13 @@ async function fetchListings({ reset = true } = {}){
     .order("created_at", { ascending: false })
     .range(offset, to);
 
-  // public active
   query = query.eq("is_active", true);
-
   if (city) query = query.eq("city", city);
-
   if (cat){
     const ids = expandCategoryFilter(cat);
-    // in() expects array
     query = query.in("category_id", ids);
   }
-
-  // بحث بسيط: على العنوان (إن توفر) + الوصف
   if (q){
-    // ilike يحتاج PostgREST؛ نستخدم OR
     const safe = q.replace(/[%_]/g, "\\$&");
     query = query.or(`title.ilike.%${safe}%,description.ilike.%${safe}%`);
   }
@@ -60,66 +81,125 @@ async function fetchListings({ reset = true } = {}){
   const { data, error, count } = await query;
   if (error) throw error;
 
-  // next offset
   UI.state.lastDoc = offset + (data?.length || 0);
   const hasMore = (UI.state.lastDoc || 0) < (count || 0);
-
   return { items: data || [], hasMore, count: count || 0 };
 }
 
 function renderListings(items, { append = false } = {}){
   const wrap = UI.el.listings || el("listings");
   if (!wrap) return;
-
   if (!append) wrap.innerHTML = "";
 
   const frag = document.createDocumentFragment();
-
-  for (const it of items){
-    frag.appendChild(renderCard(it));
-  }
-
+  for (const it of items) frag.appendChild(renderCard(it));
   wrap.appendChild(frag);
+
+  UI.setEmptyState?.((!wrap.children.length));
 }
 
 function renderCard(it){
   const card = document.createElement("div");
-  card.className = "listingCard";
+  card.className = "cardItem";
 
+  const id = it.id;
   const title = escapeHtml(it.title || "");
   const city = escapeHtml(it.city || "");
   const price = (it.price != null && it.price !== "") ? formatPrice(it.price) : "";
-  const category = escapeHtml(it.category_id || "");
   const img = (it.images && Array.isArray(it.images) && it.images[0]) ? it.images[0] : "";
+  const viewCount = Number(it.view_count || 0) || 0;
+  const favCount = Number(it.fav_count || 0) || 0;
 
   card.innerHTML = `
-    <div class="lcImg">${img ? `<img src="${escapeHtml(img)}" alt="">` : ""}</div>
-    <div class="lcBody">
-      <div class="lcTitle">${title || "بدون عنوان"}</div>
-      <div class="lcMeta">
-        ${city ? `<span>${city}</span>` : ""}
-        ${category ? `<span>•</span><span>${category}</span>` : ""}
+    <div class="cardMedia">
+      ${img ? `<img src="${escapeHtml(img)}" alt="">` : `<img src="" alt="" style="display:none">`}
+      <div class="favOverlay" data-fav="${escapeHtml(String(id))}" title="مفضلة">♡</div>
+    </div>
+    <div class="p">
+      <div class="t">${title || "بدون عنوان"}</div>
+      <div class="m">${city || ""}</div>
+      <div class="pr">${price || ""}</div>
+      <div class="cardStats">
+        <span>👁 ${viewCount}</span>
+        <span>❤ ${favCount}</span>
       </div>
-      <div class="lcPrice">${price}</div>
     </div>
   `;
 
-  // open details (simple)
+  // Favorite button
+  const favBtn = card.querySelector(".favOverlay");
+  favBtn?.addEventListener("click", async (ev) => {
+    ev.preventDefault();
+    ev.stopPropagation();
+    try{
+      const { isFav, favCount: n } = await toggleFavorite(id);
+      favBtn.classList.toggle("isFav", isFav);
+      favBtn.textContent = isFav ? "❤" : "♡";
+      const stat = card.querySelector(".cardStats span:nth-child(2)");
+      if (stat) stat.textContent = `❤ ${n}`;
+    }catch(e){
+      console.warn(e);
+      UI.toast?.("تعذر تحديث المفضلة");
+    }
+  });
+
+  // Open details
   card.addEventListener("click", () => {
-    UI.toast?.(title || "إعلان") || alert(title || "إعلان");
+    UI.actions.openDetails?.(id);
   });
 
   return card;
+}
+
+async function openDetails(listingId){
+  if (!listingId) return;
+  const sb = getSupabase();
+
+  try{
+    // Fetch item
+    const { data, error } = await sb
+      .from("listings")
+      .select("*")
+      .eq("id", listingId)
+      .maybeSingle();
+    if (error) throw error;
+    const it = data;
+    if (!it) throw new Error("NOT_FOUND");
+
+    // bump views (best-effort)
+    bumpViewCount(listingId);
+
+    // Render details UI
+    UI.showDetailsPage?.();
+    if (UI.el.dTitle) UI.el.dTitle.textContent = it.title || "بدون عنوان";
+    if (UI.el.dPrice) UI.el.dPrice.textContent = (it.price != null && it.price !== "") ? formatPrice(it.price) : "";
+    if (UI.el.dDesc) UI.el.dDesc.textContent = it.description || "";
+
+    const metaParts = [];
+    if (it.city) metaParts.push(it.city);
+    if (it.category_id) metaParts.push(it.category_id);
+    if (UI.el.dMeta) UI.el.dMeta.textContent = metaParts.join(" • ");
+
+    const views = Number(it.view_count || 0) || 0;
+    const favs = Number(it.fav_count || 0) || 0;
+    if (UI.el.dStats) UI.el.dStats.innerHTML = `<span>👁 ${views}</span> <span>❤ ${favs}</span>`;
+
+    const imgs = (it.images && Array.isArray(it.images)) ? it.images.filter(Boolean) : [];
+    UI.renderGallery?.(imgs);
+
+    // hash for share/back
+    try{ location.hash = `#listing=${encodeURIComponent(listingId)}`; }catch{}
+  }catch(e){
+    console.warn(e);
+    UI.toast?.("تعذر فتح الإعلان");
+  }
 }
 
 async function loadListings(reset = true){
   const btn = UI.el.btnMore || el("btnMore");
   if (reset){
     UI.state.lastDoc = 0;
-    if (btn){
-      btn.disabled = true;
-      btn.classList.add("hidden");
-    }
+    if (btn){ btn.disabled = true; btn.classList.add("hidden"); }
   }
 
   try{
@@ -133,27 +213,23 @@ async function loadListings(reset = true){
   }catch(e){
     console.error(e);
     UI.toast?.("تعذر تحميل الإعلانات") || alert("تعذر تحميل الإعلانات");
-    if (btn){
-      btn.disabled = true;
-      btn.classList.add("hidden");
-    }
+    if (btn){ btn.disabled = true; btn.classList.add("hidden"); }
   }
 }
 
 export function initListings(){
-  // cache elements
   UI.el.listings = UI.el.listings || el("listings");
   UI.el.btnMore = UI.el.btnMore || el("btnMore");
 
-  // initial load
+  // expose actions
+  UI.actions.openDetails = openDetails;
+
   loadListings(true);
 
-  // More
   if (UI.el.btnMore){
     UI.el.btnMore.addEventListener("click", () => loadListings(false));
   }
 
-  // Filters triggers
   const reload = () => loadListings(true);
   el("cityFilter")?.addEventListener("change", reload);
   el("catFilter")?.addEventListener("change", reload);
@@ -162,7 +238,6 @@ export function initListings(){
     globalThis.__qT = setTimeout(reload, 300);
   });
 
-  // Reset button if exists
   el("btnResetFilters")?.addEventListener("click", () => {
     const q = el("qSearch"); if (q) q.value = "";
     const c = el("cityFilter"); if (c) c.value = "";
