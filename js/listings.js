@@ -30,6 +30,23 @@ function saveFavIdsLocal(ids){
   try{ localStorage.setItem(favStoreKey(), JSON.stringify(Array.from(new Set(ids.filter(Boolean))))); }catch{}
 }
 
+// Call Supabase RPC for favorite toggle and return {is_fav, fav_count}
+async function rpcToggleFav(sb, listingId, guestId){
+  const tries = [
+    { p_listing_id: listingId, p_guest_id: guestId },
+    { listing_id: listingId, guest_id: guestId },
+    { p_id: listingId, p_guest: guestId },
+    { id: listingId, guest: guestId },
+  ];
+  let lastErr = null;
+  for (const args of tries){
+    const { data, error } = await sb.rpc("listing_toggle_fav", args);
+    if (!error && data && data[0]) return data[0];
+    lastErr = error;
+  }
+  throw lastErr || new Error("RPC listing_toggle_fav failed");
+}
+
 async function loadFavSet(){
   const sb = getSupabase();
   const guestId = getGuestId();
@@ -141,45 +158,23 @@ async function toggleFavorite(listingId){
 
   // Try to sync with Supabase (best-effort). If it fails, do NOT throw.
   try{
-    // 1) check current state in DB
-    const { data: existing, error: exErr } = await sb
-      .from("listing_favorites")
-      .select("listing_id")
-      .eq("listing_id", idStr)
-      .eq("guest_id", guestId)
-      .limit(1);
-    if (exErr) throw exErr;
-    const wasFav = Array.isArray(existing) && existing.length > 0;
+    const res = await rpcToggleFav(sb, idStr, guestId);
+    const isFav = !!res.is_fav;
+    const favCount = Number(res.fav_count || 0) || 0;
 
-    // 2) toggle row
-    if (wasFav) {
-      const { error: delErr } = await sb
-        .from("listing_favorites")
-        .delete()
-        .eq("listing_id", idStr)
-        .eq("guest_id", guestId);
-      if (delErr) throw delErr;
-    } else {
-      const { error: insErr } = await sb
-        .from("listing_favorites")
-        .insert({ listing_id: idStr, guest_id: guestId });
-      if (insErr) throw insErr;
-    }
+    // Reconcile local storage to match server truth
+    const ids2 = loadFavIdsLocal();
+    const set2 = new Set(ids2);
+    if (isFav) set2.add(idStr); else set2.delete(idStr);
+    saveFavIdsLocal(Array.from(set2));
+    try{
+      const s = getFavSet();
+      if (isFav) s.add(idStr); else s.delete(idStr);
+    }catch{}
 
-    // 3) re-count favs for this listing
-    const { count, error: cntErr } = await sb
-      .from("listing_favorites")
-      .select("listing_id", { count: "exact", head: true })
-      .eq("listing_id", idStr);
-    if (cntErr) throw cntErr;
-    const favCount = Number(count || 0) || 0;
-
-    // 4) best-effort update on listings
-    await sb.from("listings").update({ fav_count: favCount }).eq("id", idStr);
-
-    return { isFav: !wasFav, favCount };
+    return { isFav, favCount };
   }catch(e){
-    console.warn("favorite sync failed; keeping local state", e);
+    console.warn("favorite rpc failed; keeping local state", e);
     // We do not know the global count here; keep UI count unchanged.
     return { isFav: isFavLocal, favCount: null };
   }
@@ -310,7 +305,29 @@ async function openDetails(listingId){
     UI.showDetailsPage?.();
     if (UI.el.dTitle) UI.el.dTitle.textContent = it.title || "بدون عنوان";
     if (UI.el.dPrice) UI.el.dPrice.textContent = (it.price != null && it.price !== "") ? formatPrice(it.price, it.currency) : "";
-    if (UI.el.dDesc) UI.el.dDesc.textContent = it.description || "";
+
+    // ✅ Description: 2 lines + "read more" like old version
+    const descText = (it.description || "").trim();
+    if (UI.el.dDesc) {
+      UI.el.dDesc.textContent = descText;
+      UI.el.dDesc.classList.remove("collapsed");
+    }
+    if (UI.el.btnReadMore && UI.el.dDesc){
+      const needs = descText.length > 140 || descText.split("\n").length > 3;
+      UI.el.btnReadMore.classList.toggle("hidden", !needs);
+      UI.el.btnReadMore.textContent = "قراءة المزيد";
+      if (needs) UI.el.dDesc.classList.add("collapsed");
+      UI.el.btnReadMore.onclick = () => {
+        const isCollapsed = UI.el.dDesc.classList.contains("collapsed");
+        if (isCollapsed){
+          UI.el.dDesc.classList.remove("collapsed");
+          UI.el.btnReadMore.textContent = "إخفاء";
+        } else {
+          UI.el.dDesc.classList.add("collapsed");
+          UI.el.btnReadMore.textContent = "قراءة المزيد";
+        }
+      };
+    }
 
     const metaParts = [];
     if (it.city) metaParts.push(it.city);
