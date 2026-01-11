@@ -10,6 +10,57 @@ import { getGuestId } from "./guest.js";
 const LIST_PAGE_SIZE = 12;
 const VIEW_TTL_MS = 2 * 60 * 1000; // 2 minutes
 
+// In-memory favorites for current guest (to keep UI consistent across cards + details)
+// Filled once on init, then updated on each toggle.
+function getFavSet(){
+  UI.state.favSet = UI.state.favSet || new Set();
+  return UI.state.favSet;
+}
+
+async function loadFavSet(){
+  const sb = getSupabase();
+  const guestId = getGuestId();
+  try{
+    const { data, error } = await sb
+      .from("listing_favorites")
+      .select("listing_id")
+      .eq("guest_id", guestId);
+    if (error) throw error;
+    const s = getFavSet();
+    s.clear();
+    (data || []).forEach(r => r?.listing_id && s.add(r.listing_id));
+  }catch(e){
+    // If favorites table/policies are missing, do not break listings.
+    console.warn("loadFavSet failed", e);
+  }
+}
+
+function syncFavUi(listingId, { isFav, favCount } = {}){
+  if (!listingId) return;
+
+  // Card overlay(s)
+  document.querySelectorAll(`[data-fav="${CSS.escape(String(listingId))}"]`).forEach((el) => {
+    el.classList.toggle("isFav", !!isFav);
+    // Use plain heart (colored via CSS), not emoji.
+    el.innerHTML = `<span class="heartIcon" aria-hidden="true">♥</span>`;
+  });
+
+  // Card stats (2nd span is heart)
+  document.querySelectorAll(`[data-card="${CSS.escape(String(listingId))}"] .cardStats .favStat`).forEach((el) => {
+    el.textContent = String(Number(favCount || 0));
+  });
+
+  // Details button
+  const btn = document.getElementById("btnFav");
+  if (btn && btn.dataset?.listingId === String(listingId)) {
+    btn.classList.toggle("isFav", !!isFav);
+  }
+  const dCount = document.getElementById("dFavCount");
+  if (dCount && btn && btn.dataset?.listingId === String(listingId)) {
+    dCount.textContent = String(Number(favCount || 0));
+  }
+}
+
 function el(id){ return document.getElementById(id); }
 
 function getCatMaps(){ return globalThis.__CATS || null; }
@@ -48,9 +99,17 @@ async function toggleFavorite(listingId){
   const guestId = getGuestId();
   // Support both parameter names (older/newer SQL)
   let data, error;
-  ({ data, error } = await sb.rpc("listing_toggle_fav", { p_id: listingId, p_guest: guestId }));
-  if (error){
-    ({ data, error } = await sb.rpc("listing_toggle_fav", { p_listing_id: listingId, p_guest_id: guestId }));
+  // Try common parameter name combinations across migrations
+  const tries = [
+    { p_id: listingId, p_guest: guestId },
+    { p_id: listingId, p_guest_id: guestId },
+    { p_listing_id: listingId, p_guest: guestId },
+    { p_listing_id: listingId, p_guest_id: guestId },
+  ];
+
+  for (const params of tries){
+    ({ data, error } = await sb.rpc("listing_toggle_fav", params));
+    if (!error) break;
   }
   if (error) throw error;
   // data is an array with 1 row in PostgREST
@@ -111,6 +170,7 @@ function renderListings(items, { append = false } = {}){
 function renderCard(it){
   const card = document.createElement("div");
   card.className = "cardItem";
+  card.dataset.card = String(it.id || "");
 
   const id = it.id;
   const title = escapeHtml(it.title || "");
@@ -119,11 +179,14 @@ function renderCard(it){
   const img = (it.images && Array.isArray(it.images) && it.images[0]) ? it.images[0] : "";
   const viewCount = Number(it.view_count || 0) || 0;
   const favCount = Number(it.fav_count || 0) || 0;
+  const isFav = getFavSet().has(id);
 
   card.innerHTML = `
     <div class="cardMedia">
       ${img ? `<img src="${escapeHtml(img)}" alt="">` : `<img src="" alt="" style="display:none">`}
-      <div class="favOverlay" data-fav="${escapeHtml(String(id))}" title="مفضلة">♡</div>
+      <div class="favOverlay ${isFav ? "isFav" : ""}" data-fav="${escapeHtml(String(id))}" title="مفضلة">
+        <span class="heartIcon" aria-hidden="true">♥</span>
+      </div>
     </div>
     <div class="p">
       <div class="t">${title || "بدون عنوان"}</div>
@@ -131,7 +194,7 @@ function renderCard(it){
       <div class="pr">${price || ""}</div>
       <div class="cardStats">
         <span>👁 ${viewCount}</span>
-        <span>❤ ${favCount}</span>
+        <span><span class="heartIcon" aria-hidden="true">♥</span> <span class="favStat">${favCount}</span></span>
       </div>
     </div>
   `;
@@ -143,10 +206,9 @@ function renderCard(it){
     ev.stopPropagation();
     try{
       const { isFav, favCount: n } = await toggleFavorite(id);
-      favBtn.classList.toggle("isFav", isFav);
-      favBtn.textContent = isFav ? "❤" : "♡";
-      const stat = card.querySelector(".cardStats span:nth-child(2)");
-      if (stat) stat.textContent = `❤ ${n}`;
+      const s = getFavSet();
+      if (isFav) s.add(id); else s.delete(id);
+      syncFavUi(id, { isFav, favCount: n });
     }catch(e){
       console.warn(e);
       UI.toast?.("تعذر تحديث المفضلة");
@@ -192,10 +254,35 @@ async function openDetails(listingId){
 
     const views = Number(it.view_count || 0) || 0;
     const favs = Number(it.fav_count || 0) || 0;
-    if (UI.el.dStats) UI.el.dStats.innerHTML = `<span>👁 ${views}</span> <span>❤ ${favs}</span>`;
+    if (UI.el.dStats) UI.el.dStats.innerHTML = `<span>👁 ${views}</span> <span><span class="heartIcon" aria-hidden="true">♥</span> ${favs}</span>`;
 
     const imgs = (it.images && Array.isArray(it.images)) ? it.images.filter(Boolean) : [];
     UI.renderGallery?.(imgs);
+
+    // Wire details favorite button (top of gallery)
+    const btnFav = document.getElementById("btnFav");
+    if (btnFav){
+      btnFav.dataset.listingId = String(listingId);
+      const isFav = getFavSet().has(listingId);
+      btnFav.classList.toggle("isFav", isFav);
+      const dFavCount = document.getElementById("dFavCount");
+      if (dFavCount) dFavCount.textContent = String(favs);
+
+      // avoid stacking listeners
+      btnFav.onclick = async (ev) => {
+        ev.preventDefault();
+        ev.stopPropagation();
+        try{
+          const { isFav, favCount: n } = await toggleFavorite(listingId);
+          const s = getFavSet();
+          if (isFav) s.add(listingId); else s.delete(listingId);
+          syncFavUi(listingId, { isFav, favCount: n });
+        }catch(e){
+          console.warn(e);
+          UI.toast?.("تعذر تحديث المفضلة");
+        }
+      };
+    }
 
     // hash for share/back
     try{ location.hash = `#listing=${encodeURIComponent(listingId)}`; }catch{}
@@ -234,7 +321,8 @@ export function initListings(){
   // expose actions
   UI.actions.openDetails = openDetails;
 
-  loadListings(true);
+  // Load favorites first so hearts are consistent on first render
+  loadFavSet().finally(() => loadListings(true));
 
   if (UI.el.btnMore){
     UI.el.btnMore.addEventListener("click", () => loadListings(false));

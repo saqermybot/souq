@@ -25,7 +25,7 @@ function renderCard(it){
   wrap.innerHTML = `
     <div class="cardMedia">
       ${img ? `<img src="${escapeHtml(img)}" alt="">` : `<img src="" alt="" style="display:none">`}
-      <div class="favOverlay isFav" title="مفضلة">❤</div>
+      <div class="favOverlay isFav" title="مفضلة"><span class="heartIcon" aria-hidden="true">♥</span></div>
     </div>
     <div class="p">
       <div class="t">${title || "بدون عنوان"}</div>
@@ -33,7 +33,7 @@ function renderCard(it){
       <div class="pr">${price || ""}</div>
       <div class="cardStats">
         <span>👁 ${viewCount}</span>
-        <span>❤ ${favCount}</span>
+        <span><span class="heartIcon" aria-hidden="true">♥</span> ${favCount}</span>
       </div>
     </div>
   `;
