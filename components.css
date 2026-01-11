@@ -1278,7 +1278,16 @@ button.sm{
   #detailsPage .infoGrid{ grid-template-columns:1fr 1fr; }
 }
 .heartIcon {
-  color: #22c55e; /* أخضر */
+  color: rgba(255,255,255,.92);
+  opacity: .92;
+}
+
+/* Active (favorited) state: white -> soft green */
+.favOverlay.isFav .heartIcon,
+.heroFav.isFav .heartIcon,
+#btnFav.isFav .heartIcon{
+  color: rgb(34,197,94);
+  opacity: 1;
 }
 
 
