@@ -615,6 +615,7 @@ const payload = {
   title,
   description,
   price: price ? Number(price) : null,
+  currency,
   city: city || null,
   category_id: finalCategoryId,
   created_at: new Date().toISOString(),

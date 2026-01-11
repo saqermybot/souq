@@ -32,6 +32,18 @@ export async function fileToResizedJpeg(file, maxSide=1280, quality=0.82){
 }
 
 export function formatPrice(price, currency){
-  const p = (price ?? "").toString();
-  return `${p} ${currency || ""}`.trim();
+  if (price == null || price === "" || Number.isNaN(Number(price))) return "";
+  const n = Number(price);
+
+  // Format with thousands separators (Arabic/Syria locale works well for Arabic UI)
+  const formatted = new Intl.NumberFormat("ar-SY").format(n);
+
+  const c = (currency || "SYP").toString().trim().toUpperCase();
+
+  // Common symbols
+  if (c === "SYP" || c === "SYR" || c === "SP" || c === "S.P") return `${formatted} ل.س`;
+  if (c === "USD" || c === "$") return `${formatted} $`;
+  if (c === "EUR" || c === "€") return `${formatted} €`;
+
+  return `${formatted} ${c}`.trim();
 }

@@ -105,7 +105,7 @@ function renderCard(it){
   const id = it.id;
   const title = escapeHtml(it.title || "");
   const city = escapeHtml(it.city || "");
-  const price = (it.price != null && it.price !== "") ? formatPrice(it.price) : "";
+  const price = (it.price != null && it.price !== "") ? formatPrice(it.price, it.currency) : "";
   const img = (it.images && Array.isArray(it.images) && it.images[0]) ? it.images[0] : "";
   const viewCount = Number(it.view_count || 0) || 0;
   const favCount = Number(it.fav_count || 0) || 0;
@@ -172,7 +172,7 @@ async function openDetails(listingId){
     // Render details UI
     UI.showDetailsPage?.();
     if (UI.el.dTitle) UI.el.dTitle.textContent = it.title || "بدون عنوان";
-    if (UI.el.dPrice) UI.el.dPrice.textContent = (it.price != null && it.price !== "") ? formatPrice(it.price) : "";
+    if (UI.el.dPrice) UI.el.dPrice.textContent = (it.price != null && it.price !== "") ? formatPrice(it.price, it.currency) : "";
     if (UI.el.dDesc) UI.el.dDesc.textContent = it.description || "";
 
     const metaParts = [];
