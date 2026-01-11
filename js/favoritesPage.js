@@ -2,6 +2,16 @@ import { getSupabase } from "./supabase.js";
 import { getGuestId } from "./guest.js";
 import { escapeHtml, formatPrice } from "./utils.js";
 
+
+function favStoreKey(){ return `souq_favs:${getGuestId()}`; }
+function loadFavIdsLocal(){
+  try{
+    const raw = localStorage.getItem(favStoreKey());
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr.filter(Boolean) : [];
+  }catch{ return []; }
+}
+
 function toast(msg){
   const el = document.getElementById("toast");
   if (!el) return;
@@ -83,6 +93,22 @@ async function loadFavorites(){
     (items || []).forEach(it => listEl.appendChild(renderCard(it)));
   }catch(e){
     console.warn(e);
+    const idsLocal = loadFavIdsLocal();
+    if (idsLocal.length){
+      try{
+        const { data: items, error: itemsErr } = await sb
+          .from("listings")
+          .select("*")
+          .in("id", idsLocal)
+          .order("created_at", { ascending: false });
+        if (!itemsErr){
+          listEl.innerHTML = "";
+          emptyEl && (emptyEl.style.display = (items?.length ? "none" : "block"));
+          (items || []).forEach(it => listEl.appendChild(renderCard(it)));
+          return;
+        }
+      }catch{}
+    }
     toast("تعذر تحميل المفضلة");
   }
 }

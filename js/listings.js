@@ -17,6 +17,19 @@ function getFavSet(){
   return UI.state.favSet;
 }
 
+
+function favStoreKey(){ return `souq_favs:${getGuestId()}`; }
+function loadFavIdsLocal(){
+  try{
+    const raw = localStorage.getItem(favStoreKey());
+    const arr = raw ? JSON.parse(raw) : [];
+    return Array.isArray(arr) ? arr.filter(Boolean) : [];
+  }catch{ return []; }
+}
+function saveFavIdsLocal(ids){
+  try{ localStorage.setItem(favStoreKey(), JSON.stringify(Array.from(new Set(ids.filter(Boolean))))); }catch{}
+}
+
 async function loadFavSet(){
   const sb = getSupabase();
   const guestId = getGuestId();
@@ -30,8 +43,11 @@ async function loadFavSet(){
     s.clear();
     (data || []).forEach(r => r?.listing_id && s.add(r.listing_id));
   }catch(e){
-    // If favorites table/policies are missing, do not break listings.
     console.warn("loadFavSet failed", e);
+    // Fallback to local storage so UI stays consistent even if DB policies block select.
+    const s = getFavSet();
+    s.clear();
+    loadFavIdsLocal().forEach(id => s.add(id));
   }
 }
 
@@ -114,10 +130,16 @@ async function toggleFavorite(listingId){
   if (error) throw error;
   // data is an array with 1 row in PostgREST
   const row = Array.isArray(data) ? data[0] : data;
-  return {
-    isFav: !!row?.is_fav,
-    favCount: Number(row?.fav_count || 0) || 0,
-  };
+  const isFav = !!row?.is_fav;
+  const favCount = Number(row?.fav_count || 0) || 0;
+
+  // Keep local fallback in sync
+  const ids = loadFavIdsLocal();
+  const set = new Set(ids);
+  if (isFav) set.add(String(listingId)); else set.delete(String(listingId));
+  saveFavIdsLocal(Array.from(set));
+
+  return { isFav, favCount };
 }
 
 async function fetchListings({ reset = true } = {}){
