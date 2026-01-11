@@ -117,72 +117,59 @@ async function bumpViewCount(listingId){
 }
 
 async function toggleFavorite(listingId){
-  // ✅ Single source of truth for UI: localStorage (per guest) + in-memory favSet.
-  // We then do a best-effort sync to Supabase (listing_favorites + fav_count).
-  // This avoids "تعذر إضافة للمفضلة" from breaking the UI flow when RLS/GRANT isn't ready.
-
+  // IMPORTANT:
+  // We intentionally avoid relying on an RPC here because parameter-name
+  // mismatches across migrations cause silent "it increments but doesn't save".
+  // Instead we do a direct toggle against listing_favorites + update fav_count.
   const sb = getSupabase();
   const guestId = getGuestId();
-  const idStr = String(listingId || "");
+  const idStr = String(listingId);
 
-  if (!idStr) return { isFav: false, favCount: 0 };
+  // 1) check current state
+  const { data: existing, error: exErr } = await sb
+    .from("listing_favorites")
+    .select("listing_id")
+    .eq("listing_id", idStr)
+    .eq("guest_id", guestId)
+    .limit(1);
+  if (exErr) throw exErr;
+  const wasFav = Array.isArray(existing) && existing.length > 0;
 
-  // --- Local toggle first (so UI is always consistent) ---
-  const ids = loadFavIdsLocal();
-  const set = new Set(ids.map(String));
-  const wasFavLocal = set.has(idStr);
-  const isFavLocal = !wasFavLocal;
-
-  if (isFavLocal) set.add(idStr);
-  else set.delete(idStr);
-
-  saveFavIdsLocal(Array.from(set));
-
-  // keep in-memory set in sync
-  const favSet = getFavSet();
-  if (isFavLocal) favSet.add(idStr);
-  else favSet.delete(idStr);
-
-  // default favCount fallback (UI may override later)
-  let favCount = null;
-
-  // --- Best effort remote sync ---
-  try{
-    // 1) Toggle row in listing_favorites
-    if (wasFavLocal) {
-      const { error: delErr } = await sb
-        .from("listing_favorites")
-        .delete()
-        .eq("listing_id", idStr)
-        .eq("guest_id", guestId);
-      if (delErr) throw delErr;
-    } else {
-      const { error: insErr } = await sb
-        .from("listing_favorites")
-        .insert({ listing_id: idStr, guest_id: guestId });
-      if (insErr) throw insErr;
-    }
-
-    // 2) Re-count (source of truth)
-    const { count, error: cntErr } = await sb
+  // 2) toggle row
+  if (wasFav) {
+    const { error: delErr } = await sb
       .from("listing_favorites")
-      .select("listing_id", { count: "exact", head: true })
-      .eq("listing_id", idStr);
-    if (cntErr) throw cntErr;
-
-    favCount = Number(count || 0) || 0;
-
-    // 3) Best-effort update on listings for fast cards
-    await sb.from("listings").update({ fav_count: favCount }).eq("id", idStr);
-  }catch(e){
-    console.warn("toggleFavorite remote sync failed", e);
-    // Do NOT throw — keep local favorite as the UX truth.
-    // If you want, you can toast here.
-    // favCount stays null, so caller can keep previous displayed count.
+      .delete()
+      .eq("listing_id", idStr)
+      .eq("guest_id", guestId);
+    if (delErr) throw delErr;
+  } else {
+    const { error: insErr } = await sb
+      .from("listing_favorites")
+      .insert({ listing_id: idStr, guest_id: guestId });
+    if (insErr) throw insErr;
   }
 
-  return { isFav: isFavLocal, favCount };
-}
+  // 3) re-count favs for this listing (source of truth)
+  const { count, error: cntErr } = await sb
+    .from("listing_favorites")
+    .select("listing_id", { count: "exact", head: true })
+    .eq("listing_id", idStr);
+  if (cntErr) throw cntErr;
+  const favCount = Number(count || 0) || 0;
+
+  // 4) best-effort update on listings (for fast UI)
+  await sb.from("listings").update({ fav_count: favCount }).eq("id", idStr);
+
+  const isFav = !wasFav;
+
+  // Keep local fallback in sync
+  const ids = loadFavIdsLocal();
+  const set = new Set(ids);
+  if (isFav) set.add(idStr); else set.delete(idStr);
+  saveFavIdsLocal(Array.from(set));
+
+  return { isFav, favCount };
 }
 
 async function fetchListings({ reset = true } = {}){
