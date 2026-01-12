@@ -39,3 +39,28 @@ export async function startConversation(listingId: string, guest: GuestSession) 
     listing_id: listingId,
   });
 }
+export async function getInbox(guest: GuestSession) {
+  return callFunction<{ ok: true; items: any[] }>("inbox", {
+    guest_id: guest.guest_id,
+    guest_secret: guest.guest_secret,
+  });
+}
+
+export async function getConversation(conversationId: string, guest: GuestSession, before?: string) {
+  return callFunction<{ ok: true; messages: any[]; next_before: string | null }>("conversation_get", {
+    guest_id: guest.guest_id,
+    guest_secret: guest.guest_secret,
+    conversation_id: conversationId,
+    limit: 50,
+    before: before ?? null,
+  });
+}
+
+export async function sendMessage(conversationId: string, text: string, guest: GuestSession) {
+  return callFunction<{ ok: true }>("messages_send", {
+    guest_id: guest.guest_id,
+    guest_secret: guest.guest_secret,
+    conversation_id: conversationId,
+    body: text,
+  });
+}
