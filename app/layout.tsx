@@ -5,10 +5,14 @@ export const metadata = {
   description: "Marketplace",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   return (
-    <html>
-      <body className="bg-gray-50 text-gray-900">{children}</body>
+    <html lang="ar">
+      <body>{children}</body>
     </html>
   );
 }
