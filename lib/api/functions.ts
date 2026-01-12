@@ -6,6 +6,7 @@ async function callFunction<T>(fn: string, body: any): Promise<T> {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
+      apikey: SUPABASE_ANON_KEY,                 // ✅ أضف هذا
       Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
     },
     body: JSON.stringify(body),
