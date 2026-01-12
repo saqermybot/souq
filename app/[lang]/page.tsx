@@ -2,6 +2,7 @@ import type { Lang } from "@/lib/i18n/lang";
 import { isLang } from "@/lib/i18n/lang";
 import { t } from "@/lib/i18n/dict";
 import ListingCard from "@/components/listing/ListingCard";
+import SmartFiltersDrawer from "@/components/listing/SmartFiltersDrawer";
 import { getRootCategories, getFirstImagesForListings } from "@/lib/api/home";
 import { searchListings } from "@/lib/api/searchListings";
 
@@ -16,8 +17,11 @@ export default async function HomePage({
   const lang = params.lang as Lang;
   const copy = t(lang);
 
+  // Convert searchParams to simple string map (supports attr.* too)
   const sp: Record<string, string | undefined> = {};
-  for (const [k, v] of Object.entries(searchParams)) if (typeof v === "string") sp[k] = v;
+  for (const [k, v] of Object.entries(searchParams)) {
+    if (typeof v === "string") sp[k] = v;
+  }
 
   const [categories, listings] = await Promise.all([
     getRootCategories(),
@@ -31,10 +35,7 @@ export default async function HomePage({
       <section className="bg-white rounded-lg border p-3 space-y-3">
         <div className="flex items-center justify-between">
           <h2 className="font-semibold">{copy.categories}</h2>
-          {/* Drawer الذكي سنضيفه في الدفعة 2 */}
-          <a className="rounded-md border bg-white px-3 py-2 text-sm" href="#">
-            {lang === "ar" ? "فلترة" : "Filters"}
-          </a>
+          <SmartFiltersDrawer lang={lang} />
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2">
