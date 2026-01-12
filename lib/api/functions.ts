@@ -24,6 +24,14 @@ export async function recordListingView(listingId: string, guest: GuestSession) 
   });
 }
 
+export async function getFavorites(guest: GuestSession) {
+  return callFunction<{ ok: true; items: any[] }>("favorites_list", {
+    guest_id: guest.guest_id,
+    guest_secret: guest.guest_secret,
+    limit: 50,
+  });
+}
+
 export async function toggleFavorite(listingId: string, guest: GuestSession) {
   return callFunction<{ ok: true; favorited: boolean; favorites_count?: number }>("favorites_toggle", {
     guest_id: guest.guest_id,
