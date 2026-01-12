@@ -64,3 +64,49 @@ export async function sendMessage(conversationId: string, text: string, guest: G
     body: text,
   });
 }
+export async function createListing(payload: {
+  guest: GuestSession;
+  title: string;
+  description: string;
+  category_id: number;
+  price: number | null;
+  currency: string;
+  city: string;
+  condition: "new" | "used";
+  phone_public: string | null;
+  attributes: Record<string, any>;
+}) {
+  const { guest, ...rest } = payload;
+  return callFunction<{ ok: true; listing_id: string }>("listings_create", {
+    guest_id: guest.guest_id,
+    guest_secret: guest.guest_secret,
+    ...rest,
+  });
+}
+
+export async function cloudinarySign(payload: { folder?: string; public_id?: string; tags?: string[] }) {
+  return callFunction<{
+    ok: true;
+    cloud_name: string;
+    api_key: string;
+    timestamp: number;
+    signature: string;
+    folder: string;
+    public_id: string | null;
+    tags: string[];
+  }>("cloudinary_sign", payload);
+}
+
+export async function addListingImage(payload: {
+  guest: GuestSession;
+  listing_id: string;
+  url: string;
+  sort_order: number;
+}) {
+  const { guest, ...rest } = payload;
+  return callFunction<{ ok: true }>("listing_images_add", {
+    guest_id: guest.guest_id,
+    guest_secret: guest.guest_secret,
+    ...rest,
+  });
+}
