@@ -23,9 +23,10 @@ export async function ensureGuest(): Promise<GuestSession> {
   const res = await fetch(`${SUPABASE_URL}/functions/v1/guest_init`, {
     method: "POST",
     headers: {
-      "Content-Type": "application/json",
-      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-    },
+  "Content-Type": "application/json",
+  apikey: SUPABASE_ANON_KEY,
+  Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+},
     body: JSON.stringify({ guest_id: current.guest_id, guest_secret: current.guest_secret }),
   });
   const data = await res.json();
