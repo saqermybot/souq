@@ -3,7 +3,10 @@ import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/config";
 const LS_GUEST_ID = "mp_guest_id";
 const LS_GUEST_SECRET = "mp_guest_secret";
 
-export type GuestSession = { guest_id: string; guest_secret: string };
+export type GuestSession = {
+  guest_id: string;
+  guest_secret: string;
+};
 
 export function getGuestLocal(): Partial<GuestSession> {
   if (typeof window === "undefined") return {};
@@ -20,18 +23,28 @@ export function setGuestLocal(s: GuestSession) {
 
 export async function ensureGuest(): Promise<GuestSession> {
   const current = getGuestLocal();
+
   const res = await fetch(`${SUPABASE_URL}/functions/v1/guest_init`, {
     method: "POST",
     headers: {
-  "Content-Type": "application/json",
-  apikey: SUPABASE_ANON_KEY,
-  Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
-},
-    body: JSON.stringify({ guest_id: current.guest_id, guest_secret: current.guest_secret }),
+      "Content-Type": "application/json",
+      apikey: SUPABASE_ANON_KEY,
+      Authorization: `Bearer ${SUPABASE_ANON_KEY}`,
+    },
+    body: JSON.stringify({
+      guest_id: current.guest_id,
+      guest_secret: current.guest_secret,
+    }),
   });
+
   const data = await res.json();
-  if (!res.ok || !data.ok) throw new Error(data.error || "guest_init failed");
-  const session = { guest_id: data.guest_id, guest_secret: data.guest_secret };
+  if (!res.ok || !data.ok) throw new Error(data?.error || "guest_init failed");
+
+  const session: GuestSession = {
+    guest_id: data.guest_id,
+    guest_secret: data.guest_secret,
+  };
+
   setGuestLocal(session);
   return session;
 }
