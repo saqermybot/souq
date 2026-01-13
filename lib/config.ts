@@ -1,8 +1,5 @@
-export const SUPABASE_URL = process.env.NEXT_PUBLIC_SUPABASE_URL!;
-export const SUPABASE_ANON_KEY = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
+// lib/config.ts
 
-export function assertEnv() {
-  if (!SUPABASE_URL || !SUPABASE_ANON_KEY) {
-    throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL or NEXT_PUBLIC_SUPABASE_ANON_KEY");
-  }
-}
+// مفاتيح عامة (publishable) – لا يوجد فيها أي خطر فعلي
+export const SUPABASE_URL = "https://bneysxoawxwtfepzidja.supabase.co";
+export const SUPABASE_ANON_KEY = "sb_publishable_uobDad8Ca7REt8W1NlXP5Q_sLmN9uSA";
