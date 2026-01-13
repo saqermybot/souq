@@ -1,4 +1,4 @@
-import { SUPABASE_URL, SUPABASE_ANON_KEY, assertEnv } from "@/lib/config";
+import { SUPABASE_URL, SUPABASE_ANON_KEY } from "@/lib/config";
 
 type Opts = {
   method?: "GET" | "POST" | "PATCH" | "DELETE";
@@ -15,7 +15,6 @@ function buildUrl(path: string, query?: Record<string, string>) {
 }
 
 export async function supabaseRest<T>(path: string, opts: Opts = {}): Promise<T> {
-  assertEnv();
   const url = buildUrl(path, opts.query);
 
   const res = await fetch(url, {
